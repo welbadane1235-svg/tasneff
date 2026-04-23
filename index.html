@@ -5851,5 +5851,636 @@ function generateUsersFromSupervisors(){
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();
+  /* ====== ADMIN CLOUD SYNC START ====== */
+(function () {
+  const cfg = window.APP_CONFIG || {};
+  const SUPABASE_URL = cfg.supabaseUrl || '';
+  const SUPABASE_ANON_KEY = cfg.supabaseAnonKey || '';
+
+  if (!window.supabase || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn('Supabase config missing in admin page');
+    return;
+  }
+
+  const cloudDb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let cloudSyncTimer = null;
+  let cloudBootstrapDone = false;
+  let cloudSyncRunning = false;
+
+  function adminNorm(v) {
+    return String(v || '').trim();
+  }
+
+  function adminEsc(v) {
+    return String(v || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function uniqueList(arr) {
+    return [...new Set((arr || []).map(x => adminNorm(x)).filter(Boolean))];
+  }
+
+  function callIfExists(name) {
+    if (typeof window[name] === 'function') {
+      try { window[name](); } catch (e) { console.warn(name, e); }
+    }
+  }
+
+  function rerenderAdminAfterCloudLoad() {
+    [
+      'ensureUsersState',
+      'ensureProfilesSync',
+      'refreshAllPickers',
+      'renderEntriesTable',
+      'renderMonthlyTimes',
+      'updateKPIs',
+      'renderProjectSupervisorRules',
+      'renderDistributionErrors',
+      'renderUsersTable',
+      'renderSupervisorSalaryTable',
+      'renderWorkerSalaryTable',
+      'renderManagePersonSummary',
+      'renderSupervisorCards',
+      'renderAlerts'
+    ].forEach(callIfExists);
+  }
+
+  function inferProjectSupervisor(projectName) {
+    const p = adminNorm(projectName);
+    if (!p) return '';
+
+    if (window.state?.projectSupervisorRules && adminNorm(window.state.projectSupervisorRules[p])) {
+      return adminNorm(window.state.projectSupervisorRules[p]);
+    }
+
+    if (window.state?.supervisorProfiles) {
+      for (const sup of Object.keys(window.state.supervisorProfiles)) {
+        const projects = window.state.supervisorProfiles[sup]?.projects || [];
+        if (projects.some(x => adminNorm(x) === p)) return adminNorm(sup);
+      }
+    }
+
+    return '';
+  }
+
+  function buildCloudUsers() {
+    const users = Array.isArray(window.state?.users) ? window.state.users : [];
+    return users.map(u => ({
+      username: adminNorm(u.username).toLowerCase(),
+      password: adminNorm(u.password),
+      role: adminNorm(u.role || 'admin'),
+      supervisor_name: adminNorm(
+        u.role === 'supervisor'
+          ? (u.linkedSupervisor || u.fullName || u.supervisor_name || '')
+          : (u.linkedSupervisor || '')
+      ),
+      full_name: adminNorm(u.fullName || ''),
+      linked_supervisor: adminNorm(u.linkedSupervisor || ''),
+      is_active: !!u.isActive,
+      permissions_json: u.permissions || {}
+    }))
+    .filter(u => u.username && u.password);
+  }
+
+  function buildCloudProjects() {
+    const projects = Array.isArray(window.state?.projects) ? window.state.projects : [];
+    return uniqueList(projects).map(projectName => ({
+      project_name: projectName,
+      supervisor_name: inferProjectSupervisor(projectName),
+      is_active: true
+    }));
+  }
+
+  function buildCloudWorkers() {
+    const rows = [];
+    const workers = Array.isArray(window.state?.workers) ? window.state.workers : [];
+    const workerProfiles = window.state?.workerProfiles || {};
+
+    uniqueList(workers).forEach(workerName => {
+      const profile = workerProfiles[workerName] || {};
+      const projects = uniqueList(profile.projects || []);
+
+      if (!projects.length) return;
+
+      projects.forEach(projectName => {
+        rows.push({
+          worker_name: workerName,
+          project_name: projectName,
+          is_active: true
+        });
+      });
+    });
+
+    return rows;
+  }
+
+  async function replaceTableRows(tableName, rows) {
+    const { error: delErr } = await cloudDb.from(tableName).delete().not('id', 'is', null);
+    if (delErr) throw delErr;
+
+    if (rows.length) {
+      const { error: insErr } = await cloudDb.from(tableName).insert(rows);
+      if (insErr) throw insErr;
+    }
+  }
+
+  async function syncAdminMasterToCloud() {
+    if (cloudSyncRunning) return;
+    cloudSyncRunning = true;
+
+    try {
+      if (!window.state) throw new Error('state not ready');
+
+      const usersRows = buildCloudUsers();
+      const projectsRows = buildCloudProjects();
+      const workersRows = buildCloudWorkers();
+
+      await replaceTableRows('users', usersRows);
+      await replaceTableRows('projects', projectsRows);
+      await replaceTableRows('workers', workersRows);
+
+      console.log('Admin cloud sync completed');
+    } catch (e) {
+      console.error('Admin cloud sync failed', e);
+      if (typeof window.showToast === 'function') {
+        window.showToast('فشل مزامنة الإدارة مع السحابة: ' + (e.message || e), 'error');
+      }
+    } finally {
+      cloudSyncRunning = false;
+    }
+  }
+
+  function queueAdminCloudSync() {
+    clearTimeout(cloudSyncTimer);
+    cloudSyncTimer = setTimeout(syncAdminMasterToCloud, 1200);
+  }
+
+  async function loadAdminMasterFromCloud() {
+    try {
+      const [
+        usersRes,
+        projectsRes,
+        workersRes
+      ] = await Promise.all([
+        cloudDb.from('users').select('*').order('id'),
+        cloudDb.from('projects').select('*').eq('is_active', true).order('project_name'),
+        cloudDb.from('workers').select('*').eq('is_active', true).order('worker_name')
+      ]);
+
+      if (usersRes.error) throw usersRes.error;
+      if (projectsRes.error) throw projectsRes.error;
+      if (workersRes.error) throw workersRes.error;
+
+      window.state = window.state || {};
+
+      const cloudUsers = usersRes.data || [];
+      const cloudProjects = projectsRes.data || [];
+      const cloudWorkers = workersRes.data || [];
+
+      // users
+      window.state.users = cloudUsers.map(u => ({
+        id: 'u-cloud-' + (u.id || Date.now()),
+        fullName: adminNorm(u.full_name || u.supervisor_name || u.username),
+        username: adminNorm(u.username || '').toLowerCase(),
+        password: adminNorm(u.password || ''),
+        role: adminNorm(u.role || 'admin'),
+        linkedSupervisor: adminNorm(u.linked_supervisor || u.supervisor_name || ''),
+        isActive: !!u.is_active,
+        permissions: u.permissions_json || {},
+        createdAt: u.created_at || new Date().toISOString()
+      }));
+
+      // supervisors
+      const supSet = new Set();
+      (window.state.users || []).forEach(u => {
+        if (adminNorm(u.role) === 'supervisor') {
+          const s = adminNorm(u.linkedSupervisor || u.fullName);
+          if (s) supSet.add(s);
+        }
+      });
+      cloudProjects.forEach(p => {
+        const s = adminNorm(p.supervisor_name);
+        if (s) supSet.add(s);
+      });
+      window.state.supervisors = [...supSet];
+
+      // projects
+      window.state.projects = uniqueList(cloudProjects.map(p => p.project_name));
+
+      // project rules
+      window.state.projectSupervisorRules = window.state.projectSupervisorRules || {};
+      cloudProjects.forEach(p => {
+        window.state.projectSupervisorRules[p.project_name] = adminNorm(p.supervisor_name);
+      });
+
+      // workers
+      window.state.workers = uniqueList(cloudWorkers.map(w => w.worker_name));
+
+      // worker profiles
+      window.state.workerProfiles = window.state.workerProfiles || {};
+      window.state.workers.forEach(worker => {
+        const rows = cloudWorkers.filter(w => adminNorm(w.worker_name) === adminNorm(worker));
+        const projectNames = uniqueList(rows.map(r => r.project_name));
+        const supervisorName = inferProjectSupervisor(projectNames[0] || '');
+
+        window.state.workerProfiles[worker] = {
+          ...(window.state.workerProfiles[worker] || {}),
+          supervisor: supervisorName,
+          projects: projectNames,
+          status: (window.state.workerProfiles[worker] && window.state.workerProfiles[worker].status) || 'أساسي'
+        };
+      });
+
+      // supervisor profiles
+      window.state.supervisorProfiles = window.state.supervisorProfiles || {};
+      window.state.supervisors.forEach(sup => {
+        const projects = cloudProjects
+          .filter(p => adminNorm(p.supervisor_name) === adminNorm(sup))
+          .map(p => p.project_name);
+
+        const workers = window.state.workers.filter(worker => {
+          const wp = window.state.workerProfiles[worker] || {};
+          return adminNorm(wp.supervisor) === adminNorm(sup);
+        });
+
+        window.state.supervisorProfiles[sup] = {
+          ...(window.state.supervisorProfiles[sup] || {}),
+          projects: uniqueList(projects),
+          workers: uniqueList(workers)
+        };
+      });
+
+      // sync local copy too
+      if (typeof STORAGE_KEY !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(window.state));
+      }
+
+      rerenderAdminAfterCloudLoad();
+      cloudBootstrapDone = true;
+
+      console.log('Admin cloud bootstrap loaded');
+    } catch (e) {
+      console.error('Admin cloud bootstrap failed', e);
+      if (typeof window.showToast === 'function') {
+        window.showToast('تعذر تحميل بيانات الإدارة من السحابة: ' + (e.message || e), 'error');
+      }
+    }
+  }
+
+  // wrap saveState so every local save also syncs cloud
+  const oldSaveState = window.saveState;
+  window.saveState = function (silent = false) {
+    if (typeof oldSaveState === 'function') oldSaveState(silent);
+    queueAdminCloudSync();
+  };
+
+  // force sync after these actions if they exist
+  const fnNames = ['addWorker', 'addSupervisor', 'addProject', 'saveUserAccount', 'editProjectByName'];
+  fnNames.forEach(fnName => {
+    if (typeof window[fnName] === 'function') {
+      const oldFn = window[fnName];
+      window[fnName] = async function (...args) {
+        const result = await oldFn.apply(this, args);
+        queueAdminCloudSync();
+        return result;
+      };
+    }
+  });
+
+  // cloud bootstrap after page is ready
+  window.addEventListener('load', () => {
+    setTimeout(loadAdminMasterFromCloud, 700);
+  });
+
+  // optional manual call
+  window.syncAdminCloudNow = async function () {
+    await syncAdminMasterToCloud();
+    await loadAdminMasterFromCloud();
+    if (typeof window.showToast === 'function') {
+      window.showToast('تمت مزامنة الإدارة مع السحابة');
+    }
+  };
+})();
+/* ====== ADMIN CLOUD SYNC START ====== */
+(function () {
+  const cfg = window.APP_CONFIG || {};
+  const SUPABASE_URL = cfg.supabaseUrl || '';
+  const SUPABASE_ANON_KEY = cfg.supabaseAnonKey || '';
+
+  if (!window.supabase || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn('Supabase config missing in admin page');
+    return;
+  }
+
+  const cloudDb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let cloudSyncTimer = null;
+  let cloudBootstrapDone = false;
+  let cloudSyncRunning = false;
+
+  function adminNorm(v) {
+    return String(v || '').trim();
+  }
+
+  function adminEsc(v) {
+    return String(v || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function uniqueList(arr) {
+    return [...new Set((arr || []).map(x => adminNorm(x)).filter(Boolean))];
+  }
+
+  function callIfExists(name) {
+    if (typeof window[name] === 'function') {
+      try { window[name](); } catch (e) { console.warn(name, e); }
+    }
+  }
+
+  function rerenderAdminAfterCloudLoad() {
+    [
+      'ensureUsersState',
+      'ensureProfilesSync',
+      'refreshAllPickers',
+      'renderEntriesTable',
+      'renderMonthlyTimes',
+      'updateKPIs',
+      'renderProjectSupervisorRules',
+      'renderDistributionErrors',
+      'renderUsersTable',
+      'renderSupervisorSalaryTable',
+      'renderWorkerSalaryTable',
+      'renderManagePersonSummary',
+      'renderSupervisorCards',
+      'renderAlerts'
+    ].forEach(callIfExists);
+  }
+
+  function inferProjectSupervisor(projectName) {
+    const p = adminNorm(projectName);
+    if (!p) return '';
+
+    if (window.state?.projectSupervisorRules && adminNorm(window.state.projectSupervisorRules[p])) {
+      return adminNorm(window.state.projectSupervisorRules[p]);
+    }
+
+    if (window.state?.supervisorProfiles) {
+      for (const sup of Object.keys(window.state.supervisorProfiles)) {
+        const projects = window.state.supervisorProfiles[sup]?.projects || [];
+        if (projects.some(x => adminNorm(x) === p)) return adminNorm(sup);
+      }
+    }
+
+    return '';
+  }
+
+  function buildCloudUsers() {
+    const users = Array.isArray(window.state?.users) ? window.state.users : [];
+    return users.map(u => ({
+      username: adminNorm(u.username).toLowerCase(),
+      password: adminNorm(u.password),
+      role: adminNorm(u.role || 'admin'),
+      supervisor_name: adminNorm(
+        u.role === 'supervisor'
+          ? (u.linkedSupervisor || u.fullName || u.supervisor_name || '')
+          : (u.linkedSupervisor || '')
+      ),
+      full_name: adminNorm(u.fullName || ''),
+      linked_supervisor: adminNorm(u.linkedSupervisor || ''),
+      is_active: !!u.isActive,
+      permissions_json: u.permissions || {}
+    }))
+    .filter(u => u.username && u.password);
+  }
+
+  function buildCloudProjects() {
+    const projects = Array.isArray(window.state?.projects) ? window.state.projects : [];
+    return uniqueList(projects).map(projectName => ({
+      project_name: projectName,
+      supervisor_name: inferProjectSupervisor(projectName),
+      is_active: true
+    }));
+  }
+
+  function buildCloudWorkers() {
+    const rows = [];
+    const workers = Array.isArray(window.state?.workers) ? window.state.workers : [];
+    const workerProfiles = window.state?.workerProfiles || {};
+
+    uniqueList(workers).forEach(workerName => {
+      const profile = workerProfiles[workerName] || {};
+      const projects = uniqueList(profile.projects || []);
+
+      if (!projects.length) return;
+
+      projects.forEach(projectName => {
+        rows.push({
+          worker_name: workerName,
+          project_name: projectName,
+          is_active: true
+        });
+      });
+    });
+
+    return rows;
+  }
+
+  async function replaceTableRows(tableName, rows) {
+    const { error: delErr } = await cloudDb.from(tableName).delete().not('id', 'is', null);
+    if (delErr) throw delErr;
+
+    if (rows.length) {
+      const { error: insErr } = await cloudDb.from(tableName).insert(rows);
+      if (insErr) throw insErr;
+    }
+  }
+
+  async function syncAdminMasterToCloud() {
+    if (cloudSyncRunning) return;
+    cloudSyncRunning = true;
+
+    try {
+      if (!window.state) throw new Error('state not ready');
+
+      const usersRows = buildCloudUsers();
+      const projectsRows = buildCloudProjects();
+      const workersRows = buildCloudWorkers();
+
+      await replaceTableRows('users', usersRows);
+      await replaceTableRows('projects', projectsRows);
+      await replaceTableRows('workers', workersRows);
+
+      console.log('Admin cloud sync completed');
+    } catch (e) {
+      console.error('Admin cloud sync failed', e);
+      if (typeof window.showToast === 'function') {
+        window.showToast('فشل مزامنة الإدارة مع السحابة: ' + (e.message || e), 'error');
+      }
+    } finally {
+      cloudSyncRunning = false;
+    }
+  }
+
+  function queueAdminCloudSync() {
+    clearTimeout(cloudSyncTimer);
+    cloudSyncTimer = setTimeout(syncAdminMasterToCloud, 1200);
+  }
+
+  async function loadAdminMasterFromCloud() {
+    try {
+      const [
+        usersRes,
+        projectsRes,
+        workersRes
+      ] = await Promise.all([
+        cloudDb.from('users').select('*').order('id'),
+        cloudDb.from('projects').select('*').eq('is_active', true).order('project_name'),
+        cloudDb.from('workers').select('*').eq('is_active', true).order('worker_name')
+      ]);
+
+      if (usersRes.error) throw usersRes.error;
+      if (projectsRes.error) throw projectsRes.error;
+      if (workersRes.error) throw workersRes.error;
+
+      window.state = window.state || {};
+
+      const cloudUsers = usersRes.data || [];
+      const cloudProjects = projectsRes.data || [];
+      const cloudWorkers = workersRes.data || [];
+
+      // users
+      window.state.users = cloudUsers.map(u => ({
+        id: 'u-cloud-' + (u.id || Date.now()),
+        fullName: adminNorm(u.full_name || u.supervisor_name || u.username),
+        username: adminNorm(u.username || '').toLowerCase(),
+        password: adminNorm(u.password || ''),
+        role: adminNorm(u.role || 'admin'),
+        linkedSupervisor: adminNorm(u.linked_supervisor || u.supervisor_name || ''),
+        isActive: !!u.is_active,
+        permissions: u.permissions_json || {},
+        createdAt: u.created_at || new Date().toISOString()
+      }));
+
+      // supervisors
+      const supSet = new Set();
+      (window.state.users || []).forEach(u => {
+        if (adminNorm(u.role) === 'supervisor') {
+          const s = adminNorm(u.linkedSupervisor || u.fullName);
+          if (s) supSet.add(s);
+        }
+      });
+      cloudProjects.forEach(p => {
+        const s = adminNorm(p.supervisor_name);
+        if (s) supSet.add(s);
+      });
+      window.state.supervisors = [...supSet];
+
+      // projects
+      window.state.projects = uniqueList(cloudProjects.map(p => p.project_name));
+
+      // project rules
+      window.state.projectSupervisorRules = window.state.projectSupervisorRules || {};
+      cloudProjects.forEach(p => {
+        window.state.projectSupervisorRules[p.project_name] = adminNorm(p.supervisor_name);
+      });
+
+      // workers
+      window.state.workers = uniqueList(cloudWorkers.map(w => w.worker_name));
+
+      // worker profiles
+      window.state.workerProfiles = window.state.workerProfiles || {};
+      window.state.workers.forEach(worker => {
+        const rows = cloudWorkers.filter(w => adminNorm(w.worker_name) === adminNorm(worker));
+        const projectNames = uniqueList(rows.map(r => r.project_name));
+        const supervisorName = inferProjectSupervisor(projectNames[0] || '');
+
+        window.state.workerProfiles[worker] = {
+          ...(window.state.workerProfiles[worker] || {}),
+          supervisor: supervisorName,
+          projects: projectNames,
+          status: (window.state.workerProfiles[worker] && window.state.workerProfiles[worker].status) || 'أساسي'
+        };
+      });
+
+      // supervisor profiles
+      window.state.supervisorProfiles = window.state.supervisorProfiles || {};
+      window.state.supervisors.forEach(sup => {
+        const projects = cloudProjects
+          .filter(p => adminNorm(p.supervisor_name) === adminNorm(sup))
+          .map(p => p.project_name);
+
+        const workers = window.state.workers.filter(worker => {
+          const wp = window.state.workerProfiles[worker] || {};
+          return adminNorm(wp.supervisor) === adminNorm(sup);
+        });
+
+        window.state.supervisorProfiles[sup] = {
+          ...(window.state.supervisorProfiles[sup] || {}),
+          projects: uniqueList(projects),
+          workers: uniqueList(workers)
+        };
+      });
+
+      // sync local copy too
+      if (typeof STORAGE_KEY !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(window.state));
+      }
+
+      rerenderAdminAfterCloudLoad();
+      cloudBootstrapDone = true;
+
+      console.log('Admin cloud bootstrap loaded');
+    } catch (e) {
+      console.error('Admin cloud bootstrap failed', e);
+      if (typeof window.showToast === 'function') {
+        window.showToast('تعذر تحميل بيانات الإدارة من السحابة: ' + (e.message || e), 'error');
+      }
+    }
+  }
+
+  // wrap saveState so every local save also syncs cloud
+  const oldSaveState = window.saveState;
+  window.saveState = function (silent = false) {
+    if (typeof oldSaveState === 'function') oldSaveState(silent);
+    queueAdminCloudSync();
+  };
+
+  // force sync after these actions if they exist
+  const fnNames = ['addWorker', 'addSupervisor', 'addProject', 'saveUserAccount', 'editProjectByName'];
+  fnNames.forEach(fnName => {
+    if (typeof window[fnName] === 'function') {
+      const oldFn = window[fnName];
+      window[fnName] = async function (...args) {
+        const result = await oldFn.apply(this, args);
+        queueAdminCloudSync();
+        return result;
+      };
+    }
+  });
+
+  // cloud bootstrap after page is ready
+  window.addEventListener('load', () => {
+    setTimeout(loadAdminMasterFromCloud, 700);
+  });
+
+  // optional manual call
+  window.syncAdminCloudNow = async function () {
+    await syncAdminMasterToCloud();
+    await loadAdminMasterFromCloud();
+    if (typeof window.showToast === 'function') {
+      window.showToast('تمت مزامنة الإدارة مع السحابة');
+    }
+  };
+})();
+/* ====== ADMIN CLOUD SYNC END ====== */
 </script>
 </body>
