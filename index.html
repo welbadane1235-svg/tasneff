@@ -1729,7 +1729,7 @@ function printDailyEntriesReport() {
   win.document.open(); win.document.write(html); win.document.close();
   setTimeout(()=>{ win.focus(); win.print(); }, 250);
 }
-function addWorker() {
+async function addWorker() {
   const name = norm(document.getElementById('newWorkerName').value);
   const salary = Number(document.getElementById('newWorkerSalary').value || 0);
   if (!name) return;
@@ -1738,9 +1738,13 @@ function addWorker() {
   if (!state.workerProfiles[name]) state.workerProfiles[name] = { supervisor:'', projects:[] };
   document.getElementById('newWorkerName').value = '';
   document.getElementById('newWorkerSalary').value = '';
+  try {
+    await replaceTable('workers', buildWorkersPayload());
+    await syncMasterDataToState(true);
+  } catch (err) { console.error(err); }
   refreshAllPickers(); renderMonthlyTimes(); updateKPIs(); saveState(true);
 }
-function addSupervisor() {
+async function addSupervisor() {
   const name = norm(document.getElementById('newSupervisorName').value);
   const salary = Number(document.getElementById('newSupervisorSalary').value || 0);
   if (!name) return;
@@ -1749,9 +1753,13 @@ function addSupervisor() {
   if (!state.supervisorProfiles[name]) state.supervisorProfiles[name] = { workers:[], projects:[] };
   document.getElementById('newSupervisorName').value = '';
   document.getElementById('newSupervisorSalary').value = '';
+  try {
+    await replaceTable('projects', buildProjectsPayload());
+    await syncMasterDataToState(true);
+  } catch (err) { console.error(err); }
   refreshAllPickers(); renderMonthlyTimes(); updateKPIs(); saveState(true);
 }
-function addProject() {
+async function addProject() {
   const name = norm(document.getElementById('newProjectName').value);
   if (!name) {
     alert('اكتب اسم المشروع أولًا');
@@ -1769,6 +1777,10 @@ function addProject() {
   };
   state.projects.push(name);
   document.getElementById('newProjectName').value = '';
+  try {
+    await replaceTable('projects', buildProjectsPayload());
+    await syncMasterDataToState(true);
+  } catch (err) { console.error(err); }
   refreshAllPickers();
   renderEntriesTable();
   renderMonthlyTimes();
@@ -5301,13 +5313,13 @@ initAll();
     return safeArray(rows).map(r => ({
       id: 'db-' + r.id,
       _dbId: r.id,
-      fullName: r.full_name || r.supervisor_name || r.username,
+      fullName: r.full_name || r.linked_supervisor || r.supervisor_name || r.username,
       username: r.username,
       password: r.password,
       role: r.role || 'supervisor',
-      linkedSupervisor: r.supervisor_name || '',
+      linkedSupervisor: r.linked_supervisor || r.supervisor_name || '',
       isActive: r.is_active !== false,
-      permissions: r.permissions || {},
+      permissions: r.permissions_json || r.permissions || {},
       createdAt: r.created_at || new Date().toISOString()
     }));
   }
@@ -5325,8 +5337,9 @@ initAll();
       role: u.role || 'supervisor',
       full_name: u.fullName || u.username || '',
       supervisor_name: u.linkedSupervisor || '',
+      linked_supervisor: u.linkedSupervisor || '',
       is_active: u.isActive !== false,
-      permissions: u.permissions || {}
+      permissions_json: u.permissions || {}
     })).filter(u => u.username);
   }
   function buildWorkersPayload(){
@@ -5337,28 +5350,27 @@ initAll();
       const projects = Array.isArray(p.projects) && p.projects.length ? p.projects : [''];
       projects.forEach(projectName => rows.push({
         worker_name: workerName,
-        supervisor_name: p.supervisor || '',
         project_name: projectName || '',
-        status_label: p.status || 'أساسي',
         is_active: true
       }));
     });
     if (!rows.length) {
-      safeArray(state.workers).forEach(name => rows.push({ worker_name:name, supervisor_name:'', project_name:'', status_label:'أساسي', is_active:true }));
+      safeArray(state.workers).forEach(name => rows.push({ worker_name:name, project_name:'', is_active:true }));
     }
     return rows;
   }
   async function replaceTable(tableName, rows){
-    if (!cloudReady()) return;
-    const { error: delErr } = await cloud.from(tableName).delete().neq('id', 0);
-    if (delErr) throw delErr;
-    if (rows && rows.length) {
-      const chunk = 200;
-      for (let i=0; i<rows.length; i+=chunk) {
-        const part = rows.slice(i, i+chunk);
-        const { error } = await cloud.from(tableName).insert(part);
-        if (error) throw error;
-      }
+    if (!cloudReady() || !rows || !rows.length) return;
+    const chunk = 200;
+    let onConflict = '';
+    if (tableName === 'users') onConflict = 'username';
+    else if (tableName === 'projects') onConflict = 'project_name';
+    else if (tableName === 'workers') onConflict = 'worker_name,project_name';
+    for (let i=0; i<rows.length; i+=chunk) {
+      const part = rows.slice(i, i+chunk);
+      const query = cloud.from(tableName).upsert(part, onConflict ? { onConflict } : {});
+      const { error } = await query;
+      if (error) throw error;
     }
   }
   async function syncMasterDataToState(silent=true){
@@ -5382,15 +5394,15 @@ initAll();
       const supSet = new Set();
       dbUsers.filter(u => u.role === 'supervisor' && u.isActive).forEach(u => { if (u.linkedSupervisor) supSet.add(u.linkedSupervisor); });
       projectRows.forEach(r => { if (r.supervisor_name) supSet.add(r.supervisor_name); });
-      workerRows.forEach(r => { if (r.supervisor_name) supSet.add(r.supervisor_name); });
       state.supervisors = [...supSet];
       state.workers = [...new Set(workerRows.filter(r => r.is_active !== false).map(r => r.worker_name).filter(Boolean))];
       state.workerProfiles = {};
       workerRows.filter(r => r.is_active !== false).forEach(r => {
         const key = r.worker_name;
-        if (!state.workerProfiles[key]) state.workerProfiles[key] = { supervisor:r.supervisor_name || '', projects:[], status:r.status_label || 'أساسي' };
+        const inferredSupervisor = (state.projectSupervisorRules || {})[r.project_name] || '';
+        if (!state.workerProfiles[key]) state.workerProfiles[key] = { supervisor: inferredSupervisor, projects:[], status:'أساسي' };
         if (r.project_name && !state.workerProfiles[key].projects.includes(r.project_name)) state.workerProfiles[key].projects.push(r.project_name);
-        if (!state.workerProfiles[key].supervisor && r.supervisor_name) state.workerProfiles[key].supervisor = r.supervisor_name;
+        if (!state.workerProfiles[key].supervisor && inferredSupervisor) state.workerProfiles[key].supervisor = inferredSupervisor;
       });
       state.supervisorProfiles = {};
       state.supervisors.forEach(s => state.supervisorProfiles[s] = { workers:[], projects:[] });
@@ -5710,7 +5722,7 @@ function fillAutoUsername(){ const full = document.getElementById('userFullName'
     }
   }
   
-function saveUserAccount(){
+async function saveUserAccount(){
     if (!canEditTab('usersTab')) { if (window.showToast) showToast('ليس لديك صلاحية تعديل إدارة المستخدمين'); return; }
     ensureUsersState();
     const fullName = norm(document.getElementById('userFullName')?.value);
@@ -5756,6 +5768,13 @@ function saveUserAccount(){
       getUsers().push({ id:'u-'+Date.now(), fullName, username, password, role, linkedSupervisor, isActive, permissions: perms, createdAt:new Date().toISOString() });
     }
     refreshLinkedSupervisorOptions(linkedSupervisor);
+    try {
+      await replaceTable('users', buildUsersPayload());
+      await syncMasterDataToState(true);
+    } catch (cloudErr) {
+      console.error(cloudErr);
+      if (err) { err.textContent = 'تم الحفظ محليًا لكن فشل رفع المستخدم للسحابة.'; err.style.display='block'; }
+    }
     if (window.saveState) saveState(true);
     renderUsersTable();
     clearUserForm();
@@ -5783,10 +5802,18 @@ function editUserAccount(id){
     const btn = document.querySelector('[data-tab="usersTab"]');
     if (btn && window.showTab) showTab('usersTab', btn);
   }
-  function toggleUserActive(id){
-    if (!canEditTab('usersTab')) { if (window.showToast) showToast('ليس لديك صلاحية تعديل إدارة المستخدمين'); return; } const user = getUsers().find(u => u.id === id); if (!user) return; user.isActive = !user.isActive; if (window.saveState) saveState(true); renderUsersTable(); }
-  function deleteUserAccount(id){
-    if (!canEditTab('usersTab')) { if (window.showToast) showToast('ليس لديك صلاحية تعديل إدارة المستخدمين'); return; } if (!confirm('حذف هذا المستخدم؟')) return; state.users = getUsers().filter(u => u.id !== id); if (window.saveState) saveState(true); renderUsersTable(); clearUserForm(); }
+  async function toggleUserActive(id){
+    if (!canEditTab('usersTab')) { if (window.showToast) showToast('ليس لديك صلاحية تعديل إدارة المستخدمين'); return; }
+    const user = getUsers().find(u => u.id === id); if (!user) return;
+    user.isActive = !user.isActive;
+    try { await replaceTable('users', buildUsersPayload()); await syncMasterDataToState(true); } catch (err) { console.error(err); }
+    if (window.saveState) saveState(true); renderUsersTable(); }
+  async function deleteUserAccount(id){
+    if (!canEditTab('usersTab')) { if (window.showToast) showToast('ليس لديك صلاحية تعديل إدارة المستخدمين'); return; }
+    if (!confirm('حذف هذا المستخدم؟')) return;
+    state.users = getUsers().filter(u => u.id !== id);
+    try { await replaceTable('users', buildUsersPayload()); await syncMasterDataToState(true); } catch (err) { console.error(err); }
+    if (window.saveState) saveState(true); renderUsersTable(); clearUserForm(); }
   
 function generateUsersFromSupervisors(){
     ensureUsersState();
