@@ -114,6 +114,78 @@ const SUPABASE_ANON_KEY = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || 'sb_pu
 const db = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 const state = { currentUser:null, currentSupervisor:'', projects:[], workers:[] };
+
+/* ===== توزيع ثابت معتمد من ملف أبو سامر بتاريخ 25-04-2026 =====
+   الهدف: نسخة المشرف تعرض مشاريع وعمّال كل مشرف بدقة حتى لو كانت بيانات جدول workers غير مكتملة. */
+const FIXED_SUPERVISOR_TEAMS = {
+  'فهد': {
+    'فارهين 11':['ميزان','سوجان','عليم','مهيد'],
+    'افاق العربية':['ميزان','سوجان','عليم','مهيد'],
+    'مغنى 29':['ميزان','سوجان','عليم','مهيد'],
+    'هاجر 32':['ميزان','سوجان','عليم','مهيد'],
+    'فرساي 7':['ميزان','سوجان','عليم','مهيد'],
+    'تعمير 17':['ميزان','سوجان','عليم','مهيد'],
+    'رايات نجد 5':['ميزان','سوجان','عليم','مهيد'],
+    'رؤيا 1':['ميزان','سوجان','عليم','مهيد'],
+    'عالم الابتكار 47':['ميزان','سوجان','عليم','مهيد'],
+    'الشعلان 50':['ياسر','راجو'],
+    'الشعلان 51':['ياسر','راجو']
+  },
+  'محمد إبراهيم': {
+    'كاف A':['عجائب','اوسيس','كوثر','راهي'],
+    'كاف B':['عجائب','اوسيس','كوثر','راهي'],
+    'كاف C':['عجائب','اوسيس','كوثر','راهي'],
+    'واجهة قرطبة':['عجائب','اوسيس','كوثر','راهي'],
+    'الماجدية 107':['عجائب','اوسيس','كوثر','راهي'],
+    'صفاء 50':['عجائب','اوسيس','كوثر','راهي'],
+    'مغنى 14':['عجائب','اوسيس','كوثر','راهي'],
+    'الماجدية 88':['رحمن','رقيب'],
+    'العجلان 19':['رؤوف','اوميت']
+  },
+  'محمود': {
+    'مكين 37':['جهيد','ركيب','اكتار','جوناب علي']
+  },
+  'مازن': {
+    'جادة 39':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+    'الين 32':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+    'اثل 12':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+    'فرساي 4':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+    'فرساي 10':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+    'فرساي 11':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+    'اتحاد العاصمة':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول']
+  },
+  'مازن الخطيب': {
+    'وجود الياسمين':['إبراهيم','شميم','أنور','تيفور','ناظمون','جابيت','ديكسان','الونجير','هلال','اشرف','روبل','فضل']
+  },
+  'محمد عبده': {
+    'صفا 28':['راسيل','مهيب','عريف','اكرامول'],
+    'صفا 65':['السيد علي','ليتون','همينتو'],
+    'جمال الاندلس':['السيد علي','راسيل','مهيب'],
+    'برج جوديا - الفترة الصباحية':['علم','فلومية'],
+    'برج جوديا - الفترة المسائية':['بتشا','مساد']
+  }
+};
+function fixedSupervisorName(name){
+  const key = normalizeArabic(name);
+  return Object.keys(FIXED_SUPERVISOR_TEAMS).find(s => normalizeArabic(s) === key) || '';
+}
+function fixedProjectsForSupervisor(name){
+  const sup = fixedSupervisorName(name);
+  if(!sup) return [];
+  return Object.keys(FIXED_SUPERVISOR_TEAMS[sup]).map(project_name => ({project_name, supervisor_name:sup, is_active:true, source:'fixed'}));
+}
+function fixedWorkersForProject(projectName){
+  const pKey = normalizeArabic(projectName);
+  for(const sup of Object.keys(FIXED_SUPERVISOR_TEAMS)){
+    for(const p of Object.keys(FIXED_SUPERVISOR_TEAMS[sup])){
+      if(normalizeArabic(p) === pKey){
+        return FIXED_SUPERVISOR_TEAMS[sup][p].map(name => ({name, status:'present'}));
+      }
+    }
+  }
+  return [];
+}
+
 const workersList = document.getElementById('workersList');
 const recentRecords = document.getElementById('recentRecords');
 const presentEl = document.getElementById('kpiPresent');
@@ -161,6 +233,15 @@ function fillProjectSelect(projects){
 async function loadSupervisorProjects(){
   showError('');
   try{
+    // الأولوية للتوزيع المعتمد يدويًا حتى تكون نسخة المشرف دقيقة.
+    const fixedList = fixedProjectsForSupervisor(state.currentSupervisor);
+    if(fixedList.length){
+      state.projects = fixedList;
+      fillProjectSelect(fixedList);
+      return;
+    }
+
+    // احتياط: لو دخل مشرف غير موجود في التوزيع الثابت، نقرأ من قاعدة البيانات.
     const data = await selectRows('projects','*');
     const sup = state.currentSupervisor;
     const list=(data||[]).filter(activeRow).filter(r => sameName(r.supervisor_name||r.linked_supervisor||'', sup));
@@ -172,6 +253,16 @@ async function loadSupervisorProjects(){
 
 async function loadProjectWorkers(projectName){
   state.workers=[]; renderWorkers(); if(!projectName) return;
+
+  // الأولوية لعمّال المشروع حسب التوزيع المعتمد يدويًا.
+  const fixedWorkers = fixedWorkersForProject(projectName);
+  if(fixedWorkers.length){
+    state.workers = fixedWorkers;
+    renderWorkers();
+    return;
+  }
+
+  // احتياط: لو المشروع غير موجود في التوزيع الثابت، نقرأ من قاعدة البيانات.
   try{
     const data = await selectRows('workers','*');
     const rows=(data||[]).filter(activeRow).filter(r=> sameName(r.project_name||r.project||'', projectName));
