@@ -4550,57 +4550,31 @@ initAll();
     }
   };
 
-<script>
-(function(){
+  const oldInitAll = window.initAll;
+  window.initAll = function(){
+    if (oldInitAll) oldInitAll();
+    window.renderDashboard();
+  };
 
-async function fixDashboardKPIs(){
-  try{
-    if(!window.db) return;
+  const oldUpdateKPIs = window.updateKPIs;
+  window.updateKPIs = function(){
+    if (oldUpdateKPIs) oldUpdateKPIs();
+    window.renderDashboard();
+  };
 
-    const [usersRes, projectsRes, workersRes, recordsRes] = await Promise.all([
-      db.from('users').select('id,role'),
-      db.from('projects').select('id'),
-      db.from('workers').select('id'),
-      db.from('daily_records').select('id,record_date')
-    ]);
+  const oldRenderEntriesTable = window.renderEntriesTable;
+  window.renderEntriesTable = function(){
+    if (oldRenderEntriesTable) oldRenderEntriesTable();
+    window.renderDashboard();
+  };
 
-    const users = usersRes.data || [];
-    const projects = projectsRes.data || [];
-    const workers = workersRes.data || [];
-    const records = recordsRes.data || [];
-
-    const today = new Date().toISOString().slice(0,10);
-
-    const set = (id,val)=>{
-      const el = document.getElementById(id);
-      if(el) el.textContent = val;
-    };
-
-    set('kpiProjects', projects.length);
-    set('kpiEntries', records.length);
-    set('kpiSups', users.filter(u => u.role === 'supervisor').length);
-    set('kpiWorkers', workers.length);
-
-    const todayCount = records.filter(r => r.record_date === today).length;
-    const todayEl = document.getElementById('entryTodayCount');
-    if(todayEl) todayEl.textContent = todayCount;
-
-  }catch(e){
-    console.error('fixDashboardKPIs error:', e);
-  }
-}
-
-window.fixDashboardKPIs = fixDashboardKPIs;
-
-document.addEventListener('DOMContentLoaded', function(){
-  setTimeout(fixDashboardKPIs, 800);
-});
-
-setTimeout(fixDashboardKPIs, 1500);
-setInterval(fixDashboardKPIs, 10000);
-
+  ensureDashboardShell();
+  window.renderDashboard();
 })();
 </script>
+
+
+<script>
 (function(){
   function ensureAttendanceState(){
     if (!window.state) return;
@@ -6576,4 +6550,354 @@ window.addEventListener(
 })();
 /* ===== END TASNEEF MASTER DATA FIX ===== */
 </script>
+
+<script>
+/* ===== TASNEEF FINAL CLOUD DASHBOARD + ATTENDANCE FIX ===== */
+(function(){
+  const STATUS_AR = {
+    present:'حاضر', حاضر:'حاضر',
+    absent:'غائب', غائب:'غائب',
+    late:'متأخر', متأخر:'متأخر',
+    substitute:'بدل', sub:'بدل', بدل:'بدل'
+  };
+  function esc(v){ return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function clean(v){ return String(v || '').trim(); }
+  function todayISO(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+  function getArabicDayName(dateStr){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr||''))) return '—';
+    const d=new Date(dateStr+'T12:00:00');
+    return ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][d.getDay()] || '—';
+  }
+  function durationMinutes(start,end){
+    if(!start || !end) return 0;
+    const [sh,sm]=String(start).split(':').map(Number);
+    const [eh,em]=String(end).split(':').map(Number);
+    if(Number.isNaN(sh)||Number.isNaN(sm)||Number.isNaN(eh)||Number.isNaN(em)) return 0;
+    let mins=(eh*60+em)-(sh*60+sm);
+    if(mins<0) mins+=1440;
+    return mins;
+  }
+  function formatHM(mins){
+    mins=Number(mins)||0;
+    return `${String(Math.floor(mins/60)).padStart(2,'0')}:${String(mins%60).padStart(2,'0')}`;
+  }
+  function setText(id,val){
+    const el=document.getElementById(id);
+    if(el) el.textContent=String(val);
+  }
+  function getCloud(){
+    if(window.appCloud) return window.appCloud;
+    const cfg=window.APP_CONFIG || {};
+    const url=cfg.supabaseUrl || cfg.SUPABASE_URL || 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
+    const key=cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
+    if(window.supabase && url && key){
+      window.appCloud = window.supabase.createClient(url,key);
+      return window.appCloud;
+    }
+    return null;
+  }
+  async function fetchAllCloud(){
+    const cloud=getCloud();
+    if(!cloud) return null;
+    const [usersRes, projectsRes, workersRes, recordsRes, attendanceRes] = await Promise.all([
+      cloud.from('users').select('*'),
+      cloud.from('projects').select('*'),
+      cloud.from('workers').select('*'),
+      cloud.from('daily_records').select('*').order('record_date',{ascending:false}).order('id',{ascending:false}).limit(3000),
+      cloud.from('attendance_records').select('*').order('id',{ascending:false}).limit(12000)
+    ]);
+    [usersRes,projectsRes,workersRes,recordsRes,attendanceRes].forEach(r=>{ if(r.error) throw r.error; });
+    return {
+      users: usersRes.data || [],
+      projects: projectsRes.data || [],
+      workers: workersRes.data || [],
+      records: recordsRes.data || [],
+      attendance: attendanceRes.data || []
+    };
+  }
+  function groupAttendance(rows){
+    const g={};
+    (rows||[]).forEach(r=>{
+      const k=String(r.daily_record_id || '');
+      if(!k) return;
+      if(!g[k]) g[k]=[];
+      g[k].push(r);
+    });
+    return g;
+  }
+  function cloudRowsToState(data){
+    if(!window.state || !data) return;
+    const groups=groupAttendance(data.attendance);
+    const cloudEntries=(data.records||[]).map(r=>({
+      _id:'db-record-'+r.id,
+      _cloudId:r.id,
+      _source:'daily_records',
+      project: clean(r.project_name),
+      date: clean(r.record_date),
+      login: clean(r.login_time),
+      exit: clean(r.logout_time),
+      supervisor: clean(r.supervisor_name),
+      workers: (groups[String(r.id)] || []).map(x=>clean(x.worker_name)).filter(Boolean),
+      workerStatuses: (groups[String(r.id)] || []).map(x=>({name:clean(x.worker_name),status:STATUS_AR[clean(x.status)] || clean(x.status) || 'حاضر'})),
+      cleaningType: clean(r.cleaning_type),
+      approvalStatus: clean(r.approval_status) || 'مسجل',
+      note: clean(r.note)
+    }));
+    const localOnly=(Array.isArray(state.entries)?state.entries:[]).filter(e=>!String(e._id||'').startsWith('db-record-') && !e._cloudId);
+    state.entries=[...cloudEntries,...localOnly];
+
+    const cloudAttendance=(data.records||[]).map(r=>{
+      const workers=(groups[String(r.id)] || []).map(x=>({
+        name: clean(x.worker_name),
+        status: STATUS_AR[clean(x.status)] || clean(x.status) || 'حاضر'
+      })).filter(x=>x.name);
+      return {
+        _id:'cloud-att-'+r.id,
+        _cloudId:r.id,
+        project: clean(r.project_name),
+        date: clean(r.record_date),
+        supervisor: clean(r.supervisor_name),
+        actualStart: clean(r.login_time),
+        actualEnd: clean(r.logout_time),
+        expectedDuration: (window.state && state.projectMeta && state.projectMeta[clean(r.project_name)] && state.projectMeta[clean(r.project_name)].expectedTime) || '01:00',
+        workers,
+        readiness:{tasksDistributed:true,equipmentReady:true,materialsReady:true,noShortage:true},
+        statusSummary:null,
+        note:clean(r.note)
+      };
+    });
+    const manualOnly=(Array.isArray(state.attendance)?state.attendance:[]).filter(r=>!String(r._id||'').startsWith('cloud-att-') && !r._cloudId);
+    state.attendance=[...cloudAttendance,...manualOnly];
+  }
+  function ensureDashboardShellFinal(){
+    const tabs=document.querySelector('.tabs');
+    if(tabs && !document.querySelector('[data-tab="dashboardTab"]')){
+      tabs.insertAdjacentHTML('afterbegin', `<button class="tab active" data-tab="dashboardTab" onclick="showTab('dashboardTab', this)">الداشبورد</button>`);
+      const e=tabs.querySelector('[data-tab="entriesTab"]'); if(e) e.classList.remove('active');
+    }
+    const entries=document.getElementById('entriesTab');
+    if(entries && !document.getElementById('dashboardTab')){
+      entries.classList.add('hidden');
+      entries.insertAdjacentHTML('beforebegin', `
+      <div id="dashboardTab" class="tab-page">
+        <div class="dashboard-grid">
+          <div class="dashboard-main">
+            <div class="dashboard-kpis">
+              <div class="kpi"><div class="muted">آخر يوم مسجل</div><div class="v" id="dashLatestDate">—</div></div>
+              <div class="kpi"><div class="muted">سجلات اليوم</div><div class="v" id="dashEntriesToday">0</div></div>
+              <div class="kpi"><div class="muted">مشاريع اليوم</div><div class="v" id="dashProjectsToday">0</div></div>
+              <div class="kpi"><div class="muted">مشاريع غير مسجلة</div><div class="v" id="dashMissingProjects">0</div></div>
+            </div>
+            <div class="dashboard-kpis">
+              <div class="kpi"><div class="muted">ضمن الوقت</div><div class="v" id="dashGreenCount">0</div></div>
+              <div class="kpi"><div class="muted">أقل من المطلوب</div><div class="v" id="dashYellowCount">0</div></div>
+              <div class="kpi"><div class="muted">أكثر من المطلوب</div><div class="v" id="dashRedCount">0</div></div>
+              <div class="kpi"><div class="muted">سجلات ناقصة</div><div class="v" id="dashIncompleteCount">0</div></div>
+            </div>
+            <div class="dashboard-panels">
+              <div class="panel card-pad">
+                <h3 class="section-title">ملخص المشاريع في آخر يوم</h3>
+                <div class="table-wrap" style="max-height:340px"><table><thead><tr><th>المشروع</th><th>المشرف</th><th>السجلات</th><th>الساعات</th><th>الحالة</th></tr></thead><tbody id="dashProjectsBody"></tbody></table></div>
+              </div>
+              <div class="panel card-pad">
+                <h3 class="section-title">المشرفون الأكثر نشاطًا</h3>
+                <div class="table-wrap" style="max-height:340px"><table><thead><tr><th>المشرف</th><th>السجلات</th><th>المشاريع</th><th>الساعات</th></tr></thead><tbody id="dashSupervisorsBody"></tbody></table></div>
+              </div>
+            </div>
+          </div>
+          <div class="dashboard-side">
+            <div class="panel card-pad"><h3 class="section-title">تنبيه سريع</h3><div id="dashQuickAlert" class="dashboard-note">لا توجد بيانات بعد.</div></div>
+            <div class="panel card-pad"><h3 class="section-title">مشاريع تحتاج متابعة</h3><div id="dashFollowupList" class="dashboard-list"></div></div>
+            <div class="panel card-pad"><h3 class="section-title">مشاريع غير مسجلة</h3><div id="dashMissingList" class="dashboard-list"></div></div>
+          </div>
+        </div>
+      </div>`);
+    }
+    if(!document.getElementById('tasneefFinalDashStyle')){
+      const st=document.createElement('style');
+      st.id='tasneefFinalDashStyle';
+      st.textContent=`
+        .dashboard-grid{display:grid;grid-template-columns:1.6fr .9fr;gap:16px;max-width:1380px;margin:0 auto;padding:0 16px}
+        .dashboard-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+        .dashboard-panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        .dashboard-note,.dashboard-item{padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:#f7fbf9;line-height:1.8}
+        .dashboard-list{display:grid;gap:8px}.dashboard-item.warn{background:#fff8e3}.dashboard-item.danger{background:#fdeeee}.dashboard-item.ok{background:#eef8f2}
+        @media(max-width:1100px){.dashboard-grid,.dashboard-kpis,.dashboard-panels{grid-template-columns:1fr}}
+      `;
+      document.head.appendChild(st);
+    }
+  }
+  function renderDashboardFinal(){
+    ensureDashboardShellFinal();
+    const projects=(state?.projects||[]).map(clean).filter(Boolean);
+    const entries=(state?.entries||[]);
+    setText('kpiProjects', projects.length);
+    setText('kpiEntries', entries.length);
+    setText('kpiSups', (state?.supervisors||[]).length);
+    setText('kpiWorkers', (state?.workers||[]).length);
+
+    const dates=entries.map(e=>clean(e.date)).filter(Boolean).sort();
+    const latest=dates.length ? dates[dates.length-1] : '';
+    const latestRows=latest ? entries.filter(e=>clean(e.date)===latest) : [];
+    const latestProjects=[...new Set(latestRows.map(e=>clean(e.project)).filter(Boolean))];
+    const missing=projects.filter(p=>!latestProjects.includes(p));
+    let green=0,yellow=0,red=0,incomplete=0;
+    const byProject={}, bySup={};
+    latestRows.forEach(e=>{
+      const mins=durationMinutes(e.login,e.exit);
+      if(!e.supervisor || !(e.workers||[]).length || !e.login || !e.exit) incomplete++;
+      if(mins===0) yellow++; else green++;
+      const p=clean(e.project)||'—';
+      byProject[p]=byProject[p]||{project:p,supervisor:clean(e.supervisor),count:0,minutes:0};
+      byProject[p].count++; byProject[p].minutes+=mins;
+      const s=clean(e.supervisor)||'—';
+      bySup[s]=bySup[s]||{supervisor:s,count:0,projects:new Set(),minutes:0};
+      bySup[s].count++; bySup[s].projects.add(p); bySup[s].minutes+=mins;
+    });
+    setText('dashLatestDate', latest||'—');
+    setText('dashEntriesToday', latestRows.length);
+    setText('dashProjectsToday', latestProjects.length);
+    setText('dashMissingProjects', missing.length);
+    setText('dashGreenCount', green);
+    setText('dashYellowCount', yellow);
+    setText('dashRedCount', red);
+    setText('dashIncompleteCount', incomplete);
+    const pb=document.getElementById('dashProjectsBody');
+    if(pb) pb.innerHTML=Object.values(byProject).map(r=>`<tr><td>${esc(r.project)}</td><td>${esc(r.supervisor||'—')}</td><td>${r.count}</td><td>${formatHM(r.minutes)}</td><td><span class="status-pill status-ok">مسجل</span></td></tr>`).join('') || '<tr><td colspan="5" class="muted">لا توجد سجلات لعرضها.</td></tr>';
+    const sb=document.getElementById('dashSupervisorsBody');
+    if(sb) sb.innerHTML=Object.values(bySup).map(r=>`<tr><td>${esc(r.supervisor)}</td><td>${r.count}</td><td>${r.projects.size}</td><td>${formatHM(r.minutes)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">لا توجد بيانات.</td></tr>';
+    const q=document.getElementById('dashQuickAlert');
+    if(q) q.textContent=latest ? `آخر يوم مسجل ${latest} وفيه ${latestRows.length} سجل.` : 'لا توجد سجلات بعد.';
+    const fl=document.getElementById('dashFollowupList');
+    if(fl) fl.innerHTML=incomplete ? `<div class="dashboard-item warn">يوجد ${incomplete} سجل ناقص يحتاج مراجعة.</div>` : '<div class="dashboard-item ok">لا توجد ملاحظات تشغيلية حالية.</div>';
+    const ml=document.getElementById('dashMissingList');
+    if(ml) ml.innerHTML=missing.length ? missing.slice(0,12).map(p=>`<div class="dashboard-item warn">${esc(p)}</div>`).join('') : '<div class="dashboard-item ok">كل المشاريع مسجلة في آخر يوم.</div>';
+  }
+  function ensureAttendanceShellFinal(){
+    if(document.getElementById('attendanceTab')) return;
+    const tabs=document.querySelector('.tabs');
+    if(tabs && !document.querySelector('[data-tab="attendanceTab"]')){
+      const btn=document.createElement('button');
+      btn.className='tab'; btn.dataset.tab='attendanceTab'; btn.textContent='الحضور والغياب';
+      btn.onclick=function(){ showTab('attendanceTab', this); };
+      const exportBtn=tabs.querySelector('[data-tab="exportTab"]');
+      if(exportBtn) tabs.insertBefore(btn, exportBtn); else tabs.appendChild(btn);
+    }
+    const entries=document.getElementById('entriesTab');
+    if(entries){
+      entries.insertAdjacentHTML('afterend', `
+      <div id="attendanceTab" class="tab-page hidden">
+        <div class="entry-kpis">
+          <div class="entry-mini"><div class="muted">سجلات الحضور</div><div class="num" id="attendanceKpiRecords">0</div></div>
+          <div class="entry-mini"><div class="muted">الحاضرون</div><div class="num" id="attendanceKpiPresent">0</div></div>
+          <div class="entry-mini"><div class="muted">الغياب</div><div class="num" id="attendanceKpiAbsent">0</div></div>
+          <div class="entry-mini"><div class="muted">التأخير</div><div class="num" id="attendanceKpiLate">0</div></div>
+        </div>
+        <div class="panel card-pad">
+          <div class="search-grid">
+            <div><label>بحث</label><input id="attendanceSearch" oninput="renderAttendanceTable()" placeholder="مشروع، مشرف، عامل..."></div>
+            <div><label>فلتر شهر</label><input type="month" id="attendanceMonth" onchange="renderAttendanceTable()"></div>
+            <div><label>فلتر مشروع</label><select id="attendanceFilterProject" onchange="renderAttendanceTable()"></select></div>
+            <div><label>فلتر حالة</label><select id="attendanceFilterStatus" onchange="renderAttendanceTable()"><option value="">الكل</option><option value="حاضر">حاضر</option><option value="غائب">غائب</option><option value="متأخر">متأخر</option><option value="بدل">بدل</option></select></div>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>اليوم</th><th>المشروع</th><th>المشرف</th><th>الدخول</th><th>الخروج</th><th>المدة</th><th>حاضر</th><th>متأخر</th><th>غائب</th><th>بدل</th><th>العمال</th></tr></thead><tbody id="attendanceBody"></tbody></table></div>
+        </div>
+      </div>`);
+    }
+  }
+  function summarizeWorkers(workers){
+    const c={present:0,late:0,absent:0,sub:0};
+    (workers||[]).forEach(w=>{
+      const s=clean(w.status);
+      if(s==='حاضر') c.present++;
+      else if(s==='متأخر') c.late++;
+      else if(s==='غائب') c.absent++;
+      else if(s==='بدل') c.sub++;
+      else c.present++;
+    });
+    return c;
+  }
+  function renderAttendanceTableFinal(){
+    ensureAttendanceShellFinal();
+    const body=document.getElementById('attendanceBody');
+    if(!body) return;
+    const q=clean(document.getElementById('attendanceSearch')?.value).toLowerCase();
+    const month=clean(document.getElementById('attendanceMonth')?.value);
+    const project=clean(document.getElementById('attendanceFilterProject')?.value);
+    const status=clean(document.getElementById('attendanceFilterStatus')?.value);
+    const rows=(state?.attendance||[]).filter(r=>{
+      if(month && !clean(r.date).startsWith(month)) return false;
+      if(project && clean(r.project)!==project) return false;
+      if(status && !(r.workers||[]).some(w=>clean(w.status)===status)) return false;
+      if(q){
+        const hay=[r.date,r.project,r.supervisor,(r.workers||[]).map(w=>w.name).join(' ')].join(' ').toLowerCase();
+        if(!hay.includes(q)) return false;
+      }
+      return true;
+    });
+    let totals={present:0,late:0,absent:0,sub:0};
+    rows.forEach(r=>{ const c=summarizeWorkers(r.workers); totals.present+=c.present; totals.late+=c.late; totals.absent+=c.absent; totals.sub+=c.sub; });
+    setText('attendanceKpiRecords', rows.length);
+    setText('attendanceKpiPresent', totals.present);
+    setText('attendanceKpiAbsent', totals.absent);
+    setText('attendanceKpiLate', totals.late);
+    body.innerHTML=rows.length ? rows.map(r=>{
+      const c=summarizeWorkers(r.workers);
+      return `<tr>
+        <td>${esc(r.date)}</td><td>${esc(getArabicDayName(r.date))}</td><td>${esc(r.project)}</td><td>${esc(r.supervisor)}</td>
+        <td>${esc(r.actualStart||'—')}</td><td>${esc(r.actualEnd||'—')}</td><td>${formatHM(durationMinutes(r.actualStart,r.actualEnd))}</td>
+        <td>${c.present}</td><td>${c.late}</td><td>${c.absent}</td><td>${c.sub}</td>
+        <td>${esc((r.workers||[]).map(w=>`${w.name} (${w.status})`).join('، '))}</td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="12" class="muted">لا توجد سجلات حضور بعد.</td></tr>';
+  }
+  function refreshAttendanceFilters(){
+    const sel=document.getElementById('attendanceFilterProject');
+    if(sel){
+      const cur=sel.value;
+      const projects=[...new Set((state?.projects||[]).map(clean).filter(Boolean))];
+      sel.innerHTML='<option value="">كل المشاريع</option>'+projects.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+      if(projects.includes(cur)) sel.value=cur;
+    }
+  }
+  async function syncCloudFinal(){
+    try{
+      const data=await fetchAllCloud();
+      if(data){
+        cloudRowsToState(data);
+        refreshAttendanceFilters();
+        renderDashboardFinal();
+        renderAttendanceTableFinal();
+        if(typeof window.renderEntriesTable==='function') window.renderEntriesTable();
+        if(typeof window.renderMonthlyTimes==='function') window.renderMonthlyTimes();
+      }
+    }catch(e){ console.error('final cloud sync failed', e); }
+  }
+  window.renderDashboard = renderDashboardFinal;
+  window.renderAttendanceTable = renderAttendanceTableFinal;
+  window.tasneefFinalCloudSync = syncCloudFinal;
+  const oldShowTab=window.showTab;
+  if(typeof oldShowTab==='function'){
+    window.showTab=function(tabId, btn){
+      const r=oldShowTab.apply(this, arguments);
+      if(tabId==='dashboardTab') setTimeout(renderDashboardFinal,50);
+      if(tabId==='attendanceTab') setTimeout(()=>{refreshAttendanceFilters();renderAttendanceTableFinal();},50);
+      return r;
+    };
+  }
+  window.addEventListener('load', function(){
+    ensureDashboardShellFinal();
+    ensureAttendanceShellFinal();
+    refreshAttendanceFilters();
+    renderDashboardFinal();
+    renderAttendanceTableFinal();
+    setTimeout(syncCloudFinal, 700);
+    setTimeout(syncCloudFinal, 2200);
+    setInterval(syncCloudFinal, 30000);
+  });
+  setTimeout(()=>{ ensureDashboardShellFinal(); ensureAttendanceShellFinal(); syncCloudFinal(); }, 1200);
+})();
+/* ===== END TASNEEF FINAL CLOUD DASHBOARD + ATTENDANCE FIX ===== */
+</script>
+
 </body>
