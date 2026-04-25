@@ -984,28 +984,6 @@ const STORAGE_KEY = "fm_distribution_reset_apr2026_v3";
 let state = loadState();
 let editingEntryId = null;
 
-/* ===== TASNEEF CANONICAL TEAM DATA START ===== */
-const TASNEEF_CANONICAL_TEAM_DATA = {"projects": ["فارهين 11", "آفاق العربية", "مغنى 29", "هاجر 32", "فرساي 7", "تعمير 17", "رايات نجد 5", "رؤيا 1", "عالم الابتكار 47", "الشعلان 50", "الشعلان 51", "كاف A", "كاف B", "كاف C", "واجهة قرطبة", "الماجدية 107", "صفاء 50", "مغنى 14", "الماجدية 88", "العجلان 19", "مكين 37", "جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة", "وجود الياسمين", "صفاء 28", "صفاء 65", "جمال الأندلس", "برج جوديا"], "workers": ["ميزان", "سوجان", "عليم", "مهيد", "ياسر", "راجو", "عجائب", "اوسيس", "كوثر", "راهي", "رحمن", "رقيب", "رؤوف", "اوميت", "جهيد", "ركيب", "اكتار", "جوناب علي", "عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول", "إبراهيم", "شميم", "أنور", "تيفور", "ناظمون", "جابيت", "ديكسان", "الونجير", "هلال", "أشرف", "روبل", "فضل", "راسيل", "مهيب", "عريف", "اكرامول", "السيد علي", "ليتون", "همينتو", "علم", "فلومية", "بتشا", "مساد"], "supervisors": ["فهد", "محمد إبراهيم", "محمود", "مازن", "مازن الخطيب", "محمد عبده"], "workerProfiles": {"ميزان": {"supervisor": "فهد", "projects": ["فارهين 11", "آفاق العربية", "مغنى 29", "هاجر 32", "فرساي 7", "تعمير 17", "رايات نجد 5", "رؤيا 1", "عالم الابتكار 47"], "status": "أساسي"}, "سوجان": {"supervisor": "فهد", "projects": ["فارهين 11", "آفاق العربية", "مغنى 29", "هاجر 32", "فرساي 7", "تعمير 17", "رايات نجد 5", "رؤيا 1", "عالم الابتكار 47"], "status": "أساسي"}, "عليم": {"supervisor": "فهد", "projects": ["فارهين 11", "آفاق العربية", "مغنى 29", "هاجر 32", "فرساي 7", "تعمير 17", "رايات نجد 5", "رؤيا 1", "عالم الابتكار 47"], "status": "أساسي"}, "مهيد": {"supervisor": "فهد", "projects": ["فارهين 11", "آفاق العربية", "مغنى 29", "هاجر 32", "فرساي 7", "تعمير 17", "رايات نجد 5", "رؤيا 1", "عالم الابتكار 47"], "status": "أساسي"}, "ياسر": {"supervisor": "فهد", "projects": ["الشعلان 50", "الشعلان 51"], "status": "أساسي"}, "راجو": {"supervisor": "فهد", "projects": ["الشعلان 50", "الشعلان 51"], "status": "أساسي"}, "عجائب": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "الماجدية 107", "صفاء 50", "مغنى 14"], "status": "أساسي"}, "اوسيس": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "الماجدية 107", "صفاء 50", "مغنى 14"], "status": "أساسي"}, "كوثر": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "الماجدية 107", "صفاء 50", "مغنى 14"], "status": "أساسي"}, "راهي": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "الماجدية 107", "صفاء 50", "مغنى 14"], "status": "أساسي"}, "رحمن": {"supervisor": "محمد إبراهيم", "projects": ["الماجدية 88"], "status": "أساسي"}, "رقيب": {"supervisor": "محمد إبراهيم", "projects": ["الماجدية 88"], "status": "أساسي"}, "رؤوف": {"supervisor": "محمد إبراهيم", "projects": ["العجلان 19"], "status": "أساسي"}, "اوميت": {"supervisor": "محمد إبراهيم", "projects": ["العجلان 19"], "status": "أساسي"}, "جهيد": {"supervisor": "محمود", "projects": ["مكين 37"], "status": "أساسي"}, "ركيب": {"supervisor": "محمود", "projects": ["مكين 37"], "status": "أساسي"}, "اكتار": {"supervisor": "محمود", "projects": ["مكين 37"], "status": "أساسي"}, "جوناب علي": {"supervisor": "محمود", "projects": ["مكين 37"], "status": "أساسي"}, "عاريف": {"supervisor": "مازن", "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"], "status": "أساسي"}, "ديلوار": {"supervisor": "مازن", "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"], "status": "أساسي"}, "علي": {"supervisor": "مازن", "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"], "status": "أساسي"}, "رشيد": {"supervisor": "مازن", "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"], "status": "أساسي"}, "جاشيم": {"supervisor": "مازن", "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"], "status": "أساسي"}, "روبيول": {"supervisor": "مازن", "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"], "status": "أساسي"}, "إبراهيم": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "شميم": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "أنور": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "تيفور": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "ناظمون": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "جابيت": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "ديكسان": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "الونجير": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "هلال": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "أشرف": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "روبل": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "فضل": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "راسيل": {"supervisor": "محمد عبده", "projects": ["صفاء 28", "جمال الأندلس"], "status": "أساسي"}, "مهيب": {"supervisor": "محمد عبده", "projects": ["صفاء 28", "جمال الأندلس"], "status": "أساسي"}, "عريف": {"supervisor": "محمد عبده", "projects": ["صفاء 28"], "status": "أساسي"}, "اكرامول": {"supervisor": "محمد عبده", "projects": ["صفاء 28"], "status": "أساسي"}, "السيد علي": {"supervisor": "محمد عبده", "projects": ["صفاء 65", "جمال الأندلس"], "status": "أساسي"}, "ليتون": {"supervisor": "محمد عبده", "projects": ["صفاء 65"], "status": "أساسي"}, "همينتو": {"supervisor": "محمد عبده", "projects": ["صفاء 65"], "status": "أساسي"}, "علم": {"supervisor": "محمد عبده", "projects": ["برج جوديا"], "status": "أساسي"}, "فلومية": {"supervisor": "محمد عبده", "projects": ["برج جوديا"], "status": "أساسي"}, "بتشا": {"supervisor": "محمد عبده", "projects": ["برج جوديا"], "status": "أساسي"}, "مساد": {"supervisor": "محمد عبده", "projects": ["برج جوديا"], "status": "أساسي"}}, "supervisorProfiles": {"فهد": {"workers": ["ميزان", "سوجان", "عليم", "مهيد", "ياسر", "راجو"], "projects": ["فارهين 11", "آفاق العربية", "مغنى 29", "هاجر 32", "فرساي 7", "تعمير 17", "رايات نجد 5", "رؤيا 1", "عالم الابتكار 47", "الشعلان 50", "الشعلان 51"]}, "محمد إبراهيم": {"workers": ["عجائب", "اوسيس", "كوثر", "راهي", "رحمن", "رقيب", "رؤوف", "اوميت"], "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "الماجدية 107", "صفاء 50", "مغنى 14", "الماجدية 88", "العجلان 19"]}, "محمود": {"workers": ["جهيد", "ركيب", "اكتار", "جوناب علي"], "projects": ["مكين 37"]}, "مازن": {"workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"]}, "مازن الخطيب": {"workers": ["إبراهيم", "شميم", "أنور", "تيفور", "ناظمون", "جابيت", "ديكسان", "الونجير", "هلال", "أشرف", "روبل", "فضل"], "projects": ["وجود الياسمين"]}, "محمد عبده": {"workers": ["راسيل", "مهيب", "عريف", "اكرامول", "السيد علي", "ليتون", "همينتو", "علم", "فلومية", "بتشا", "مساد"], "projects": ["صفاء 28", "صفاء 65", "جمال الأندلس", "برج جوديا"]}}, "projectSupervisorRules": {"فارهين 11": "فهد", "آفاق العربية": "فهد", "مغنى 29": "فهد", "هاجر 32": "فهد", "فرساي 7": "فهد", "تعمير 17": "فهد", "رايات نجد 5": "فهد", "رؤيا 1": "فهد", "عالم الابتكار 47": "فهد", "الشعلان 50": "فهد", "الشعلان 51": "فهد", "كاف A": "محمد إبراهيم", "كاف B": "محمد إبراهيم", "كاف C": "محمد إبراهيم", "واجهة قرطبة": "محمد إبراهيم", "الماجدية 107": "محمد إبراهيم", "صفاء 50": "محمد إبراهيم", "مغنى 14": "محمد إبراهيم", "الماجدية 88": "محمد إبراهيم", "العجلان 19": "محمد إبراهيم", "مكين 37": "محمود", "جادة 39": "مازن", "ألين 32": "مازن", "أثل 12": "مازن", "فرساي 4": "مازن", "فرساي 10": "مازن", "فرساي 11": "مازن", "اتحاد العاصمة": "مازن", "وجود الياسمين": "مازن الخطيب", "صفاء 28": "محمد عبده", "صفاء 65": "محمد عبده", "جمال الأندلس": "محمد عبده", "برج جوديا": "محمد عبده"}, "projectMeta": {"فارهين 11": {"type": "daily_visit"}, "آفاق العربية": {"type": "daily_visit"}, "مغنى 29": {"type": "daily_visit"}, "هاجر 32": {"type": "daily_visit"}, "فرساي 7": {"type": "daily_visit"}, "تعمير 17": {"type": "daily_visit"}, "رايات نجد 5": {"type": "daily_visit"}, "رؤيا 1": {"type": "daily_visit"}, "عالم الابتكار 47": {"type": "daily_visit"}, "الشعلان 50": {"type": "daily_visit"}, "الشعلان 51": {"type": "daily_visit"}, "كاف A": {"type": "daily_visit"}, "كاف B": {"type": "daily_visit"}, "كاف C": {"type": "daily_visit"}, "واجهة قرطبة": {"type": "daily_visit"}, "الماجدية 107": {"type": "daily_visit"}, "صفاء 50": {"type": "daily_visit"}, "مغنى 14": {"type": "daily_visit"}, "الماجدية 88": {"type": "daily_visit"}, "العجلان 19": {"type": "daily_visit"}, "مكين 37": {"type": "daily_visit"}, "جادة 39": {"type": "daily_visit"}, "ألين 32": {"type": "daily_visit"}, "أثل 12": {"type": "daily_visit"}, "فرساي 4": {"type": "daily_visit"}, "فرساي 10": {"type": "daily_visit"}, "فرساي 11": {"type": "daily_visit"}, "اتحاد العاصمة": {"type": "daily_visit"}, "وجود الياسمين": {"type": "daily_visit"}, "صفاء 28": {"type": "daily_visit"}, "صفاء 65": {"type": "daily_visit"}, "جمال الأندلس": {"type": "daily_visit"}, "برج جوديا": {"type": "daily_visit"}}, "nameAliases": {"workers": {"أوسيس": "اوسيس", "اوسيبس": "اوسيس", "أوميت": "اوميت", "مهدي": "مهيد", "سجون": "سوجان", "انور": "أنور", "اقطار": "اكتار", "اقطر": "اكتار", "عارف": "عاريف", "راسل": "راسيل", "سيد علي": "السيد علي", "اشرف": "أشرف"}, "supervisors": {"محمد ابراهيم": "محمد إبراهيم"}, "projects": {"عالم الابتكار 46": "عالم الابتكار 47", "صفا 50": "صفاء 50", "صفا 28": "صفاء 28", "صفا 65": "صفاء 65", "اثل 12": "أثل 12", "الين 32": "ألين 32", "جمال الاندلس": "جمال الأندلس", "البرج": "برج جوديا"}}};
-function applyCanonicalTeamData() {
-  if (typeof state === 'undefined' || !state) return;
-  const master = TASNEEF_CANONICAL_TEAM_DATA;
-  const unique = arr => [...new Set((arr || []).map(x => (x || '').toString().trim()).filter(Boolean))];
-  state.projects = unique([...(master.projects || []), ...(state.projects || []).filter(p => !((master.nameAliases||{}).projects || {})[p])]);
-  state.workers = unique([...(master.workers || []), ...(state.workers || []).filter(w => !((master.nameAliases||{}).workers || {})[w])]);
-  state.supervisors = unique([...(master.supervisors || []), ...(state.supervisors || [])]);
-  state.projectSupervisorRules = {...(state.projectSupervisorRules || {}), ...(master.projectSupervisorRules || {})};
-  state.projectMeta = {...(state.projectMeta || {}), ...(master.projectMeta || {})};
-  state.workerProfiles = {...(state.workerProfiles || {})};
-  Object.keys(master.workerProfiles || {}).forEach(name => { state.workerProfiles[name] = JSON.parse(JSON.stringify(master.workerProfiles[name])); });
-  state.supervisorProfiles = {...(state.supervisorProfiles || {})};
-  Object.keys(master.supervisorProfiles || {}).forEach(name => { state.supervisorProfiles[name] = JSON.parse(JSON.stringify(master.supervisorProfiles[name])); });
-  state.nameAliases = state.nameAliases || {workers:{}, supervisors:{}, projects:{}};
-  state.nameAliases.workers = {...(state.nameAliases.workers || {}), ...((master.nameAliases || {}).workers || {})};
-  state.nameAliases.supervisors = {...(state.nameAliases.supervisors || {}), ...((master.nameAliases || {}).supervisors || {})};
-  state.nameAliases.projects = {...(state.nameAliases.projects || {}), ...((master.nameAliases || {}).projects || {})};
-}
-/* ===== TASNEEF CANONICAL TEAM DATA END ===== */
-
 function ensureStateSchema() {
   if (!state.workerSalary || typeof state.workerSalary !== 'object') state.workerSalary = {};
   if (!state.supervisorSalary || typeof state.supervisorSalary !== 'object') state.supervisorSalary = {};
@@ -1746,102 +1724,127 @@ function printDailyEntriesReport() {
   <table><thead><tr><th>التاريخ</th><th>اليوم</th><th>المشروع</th><th>المشرف</th><th>العمال</th><th>الدخول</th><th>الخروج</th><th>المدة</th><th>التقديري</th><th>حالة المدة</th><th>الحالة</th><th>الاعتماد</th><th>الملاحظة</th></tr></thead><tbody>
   ${rows.map(e=>{ const mins = durationMinutes(e.login,e.exit); const timeInfo = (window.getEntryTimeColorInfo ? getEntryTimeColorInfo(e) : {label:'—'}); const expectedText = (window.formatExpectedTime ? formatExpectedTime(state.projectMeta?.[e.project]?.expectedTime || '') : '') || '—'; return `<tr><td>${esc(e.date)}</td><td>${esc(getArabicDayName(e.date))}</td><td>${esc(e.project)}</td><td>${esc(e.supervisor||'-')}</td><td>${esc((e.workers||[]).join('، '))}</td><td>${esc(e.login||'-')}</td><td>${esc(e.exit||'-')}</td><td>${esc(formatHM(mins))}</td><td>${esc(expectedText)}</td><td>${esc(timeInfo.label || '—')}</td><td>${entryStatusInfo(e).complete ? 'مكتمل' : 'ناقص'}</td><td>${esc(e.approvalStatus||'مسجل')}</td><td>${esc(e.note||'')}</td></tr>`; }).join('')}
   </tbody></table><div class="footer">شركة تصنيف لإدارة المرافق</div>
-
-<!-- ===== TASNEEF FINAL ONLINE DATA FIX: USERS + WORKERS LINKING ===== -->
 <script>
 (function(){
-  const MASTER = {"supervisors": ["فهد", "محمد إبراهيم", "محمود", "مازن", "مازن الخطيب", "محمد عبده"], "projectSupervisorRules": {"فارهين 11": "فهد", "آفاق العربية": "فهد", "افاق العربية": "فهد", "مغنى 29": "فهد", "هاجر 32": "فهد", "فرساي 7": "فهد", "تعمير 17": "فهد", "رايات نجد 5": "فهد", "رؤيا 1": "فهد", "عالم الابتكار 47": "فهد", "الشعلان 50": "فهد", "الشعلان 51": "فهد", "كاف A": "محمد إبراهيم", "كاف B": "محمد إبراهيم", "كاف C": "محمد إبراهيم", "واجهة قرطبة": "محمد إبراهيم", "الماجدية 107": "محمد إبراهيم", "صفاء 50": "محمد إبراهيم", "مغنى 14": "محمد إبراهيم", "الماجدية 88": "محمد إبراهيم", "العجلان 19": "محمد إبراهيم", "مكين 37": "محمود", "جادة 39": "مازن", "ألين 32": "مازن", "الين 32": "مازن", "أثل 12": "مازن", "اثل 12": "مازن", "فرساي 4": "مازن", "فرساي 10": "مازن", "فرساي 11": "مازن", "اتحاد العاصمة": "مازن", "وجود الياسمين": "مازن الخطيب", "صفاء 28": "محمد عبده", "صفا 28": "محمد عبده", "صفاء 65": "محمد عبده", "صفا 65": "محمد عبده", "جمال الأندلس": "محمد عبده", "جمال الاندلس": "محمد عبده", "برج جوديا": "محمد عبده"}, "projectWorkers": {"فارهين 11": ["ميزان", "سوجان", "عليم", "مهيد"], "آفاق العربية": ["ميزان", "سوجان", "عليم", "مهيد"], "مغنى 29": ["ميزان", "سوجان", "عليم", "مهيد"], "هاجر 32": ["ميزان", "سوجان", "عليم", "مهيد"], "فرساي 7": ["ميزان", "سوجان", "عليم", "مهيد"], "تعمير 17": ["ميزان", "سوجان", "عليم", "مهيد"], "رايات نجد 5": ["ميزان", "سوجان", "عليم", "مهيد"], "رؤيا 1": ["ميزان", "سوجان", "عليم", "مهيد"], "عالم الابتكار 47": ["ميزان", "سوجان", "عليم", "مهيد"], "الشعلان 50": ["ياسر", "راجو"], "الشعلان 51": ["ياسر", "راجو"], "كاف A": ["عجائب", "اوسيس", "كوثر", "راهي"], "كاف B": ["عجائب", "اوسيس", "كوثر", "راهي"], "كاف C": ["عجائب", "اوسيس", "كوثر", "راهي"], "واجهة قرطبة": ["عجائب", "اوسيس", "كوثر", "راهي"], "الماجدية 107": ["عجائب", "اوسيس", "كوثر", "راهي"], "صفاء 50": ["عجائب", "اوسيس", "كوثر", "راهي"], "مغنى 14": ["عجائب", "اوسيس", "كوثر", "راهي"], "الماجدية 88": ["رحمن", "رقيب"], "العجلان 19": ["رؤوف", "اوميت"], "مكين 37": ["جهيد", "ركيب", "اكتار", "جوناب علي"], "جادة 39": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "ألين 32": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "أثل 12": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "فرساي 4": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "فرساي 10": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "فرساي 11": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "اتحاد العاصمة": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "وجود الياسمين": ["إبراهيم", "شميم", "أنور", "تيفور", "ناظمون", "جابيت", "ديكسان", "الونجير", "هلال", "أشرف", "روبل", "فضل"], "صفاء 28": ["راسيل", "مهيب", "عريف", "اكرامول"], "صفاء 65": ["السيد علي", "ليتون", "همينتو"], "جمال الأندلس": ["السيد علي", "راسيل", "مهيب"], "برج جوديا": ["علم", "فلومية", "بتشا", "مساد"]}, "users": [{"fullName": "فهد", "username": "fahd", "password": "123456", "role": "supervisor", "linkedSupervisor": "فهد", "isActive": true}, {"fullName": "محمد إبراهيم", "username": "mohamed_ibrahim", "password": "123456", "role": "supervisor", "linkedSupervisor": "محمد إبراهيم", "isActive": true}, {"fullName": "محمود", "username": "mahmoud", "password": "123456", "role": "supervisor", "linkedSupervisor": "محمود", "isActive": true}, {"fullName": "مازن", "username": "mazen", "password": "123456", "role": "supervisor", "linkedSupervisor": "مازن", "isActive": true}, {"fullName": "مازن الخطيب", "username": "mazen_alkhateeb", "password": "123456", "role": "supervisor", "linkedSupervisor": "مازن الخطيب", "isActive": true}, {"fullName": "محمد عبده", "username": "mohamed_abdo", "password": "123456", "role": "supervisor", "linkedSupervisor": "محمد عبده", "isActive": true}], "aliases": {"projects": {"افاق العربية": "آفاق العربية", "عالم الابتكار 46": "عالم الابتكار 47", "صفا 28": "صفاء 28", "صفا 65": "صفاء 65", "جمال الاندلس": "جمال الأندلس", "الين 32": "ألين 32", "اثل 12": "أثل 12"}, "workers": {"أوسيس": "اوسيس", "اوسيبس": "اوسيس", "أوميت": "اوميت", "مهدي": "مهيد", "سجون": "سوجان", "راسل": "راسيل", "سيد علي": "السيد علي", "اشرف": "أشرف", "انور": "أنور", "ركيب": "ركيب", "اكو مول": "اكرامول"}, "supervisors": {"محمد ابراهيم": "محمد إبراهيم"}}};
-  const DEFAULT_PERMS = {dashboardTab:'view', entriesTab:'edit', peopleTab:'hidden', projectsTab:'hidden', distributionTab:'hidden', monthlyTab:'view', alertsTab:'view', exportTab:'view', usersTab:'hidden'};
-  function n(v){ return String(v||'').trim(); }
-  function uniq(arr){ const out=[]; (arr||[]).forEach(x=>{ x=n(x); if(x && !out.some(y=>y===x)) out.push(x); }); return out; }
-  function esc2(v){ return String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function canonProject(p){ return (MASTER.aliases.projects[n(p)] || n(p)); }
-  function canonWorker(w){ return (MASTER.aliases.workers[n(w)] || n(w)); }
-  function canonSupervisor(s){ return (MASTER.aliases.supervisors[n(s)] || n(s)); }
-  function rebuildMasterState(){
-    window.state = window.state || {};
-    const projects = Object.keys(MASTER.projectWorkers).map(canonProject);
-    const supervisors = MASTER.supervisors.map(canonSupervisor);
-    const workers = uniq(Object.values(MASTER.projectWorkers).flat().map(canonWorker));
+  const MASTER = {
+    supervisors:['فهد','محمد إبراهيم','محمود','مازن','مازن الخطيب','محمد عبده'],
+    projectWorkers:{
+      'فارهين 11':['ميزان','سوجان','عليم','مهيد'],
+      'آفاق العربية':['ميزان','سوجان','عليم','مهيد'],
+      'افاق العربية':['ميزان','سوجان','عليم','مهيد'],
+      'مغنى 29':['ميزان','سوجان','عليم','مهيد'],
+      'هاجر 32':['ميزان','سوجان','عليم','مهيد'],
+      'فرساي 7':['ميزان','سوجان','عليم','مهيد'],
+      'تعمير 17':['ميزان','سوجان','عليم','مهيد'],
+      'رايات نجد 5':['ميزان','سوجان','عليم','مهيد'],
+      'رؤيا 1':['ميزان','سوجان','عليم','مهيد'],
+      'عالم الابتكار 47':['ميزان','سوجان','عليم','مهيد'],
+      'الشعلان 50':['ياسر','راجو'],
+      'الشعلان 51':['ياسر','راجو'],
+      'كاف A':['عجائب','اوسيس','كوثر','راهي'],
+      'كاف B':['عجائب','اوسيس','كوثر','راهي'],
+      'كاف C':['عجائب','اوسيس','كوثر','راهي'],
+      'واجهة قرطبة':['عجائب','اوسيس','كوثر','راهي'],
+      'الماجدية 107':['عجائب','اوسيس','كوثر','راهي'],
+      'صفاء 50':['عجائب','اوسيس','كوثر','راهي'],
+      'مغنى 14':['عجائب','اوسيس','كوثر','راهي'],
+      'الماجدية 88':['رحمن','رقيب'],
+      'العجلان 19':['رؤوف','اوميت'],
+      'مكين 37':['جهيد','ركيب','اكتار','جوناب علي'],
+      'جادة 39':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'ألين 32':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'الين 32':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'أثل 12':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'اثل 12':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'فرساي 4':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'فرساي 10':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'فرساي 11':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'اتحاد العاصمة':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'وجود الياسمين':['إبراهيم','شميم','أنور','تيفور','ناظمون','جابيت','ديكسان','الونجير','هلال','أشرف','روبل','فضل'],
+      'صفاء 28':['راسيل','مهيب','عريف','اكرامول'],
+      'صفا 28':['راسيل','مهيب','عريف','اكرامول'],
+      'صفاء 65':['السيد علي','ليتون','همينتو'],
+      'صفا 65':['السيد علي','ليتون','همينتو'],
+      'جمال الأندلس':['السيد علي','راسيل','مهيب'],
+      'جمال الاندلس':['السيد علي','راسيل','مهيب'],
+      'برج جوديا':['علم','فلومية','بتشا','مساد']
+    },
+    projectSupervisor:{
+      'فارهين 11':'فهد','آفاق العربية':'فهد','افاق العربية':'فهد','مغنى 29':'فهد','هاجر 32':'فهد','فرساي 7':'فهد','تعمير 17':'فهد','رايات نجد 5':'فهد','رؤيا 1':'فهد','عالم الابتكار 47':'فهد','الشعلان 50':'فهد','الشعلان 51':'فهد',
+      'كاف A':'محمد إبراهيم','كاف B':'محمد إبراهيم','كاف C':'محمد إبراهيم','واجهة قرطبة':'محمد إبراهيم','الماجدية 107':'محمد إبراهيم','صفاء 50':'محمد إبراهيم','مغنى 14':'محمد إبراهيم','الماجدية 88':'محمد إبراهيم','العجلان 19':'محمد إبراهيم',
+      'مكين 37':'محمود',
+      'جادة 39':'مازن','ألين 32':'مازن','الين 32':'مازن','أثل 12':'مازن','اثل 12':'مازن','فرساي 4':'مازن','فرساي 10':'مازن','فرساي 11':'مازن','اتحاد العاصمة':'مازن',
+      'وجود الياسمين':'مازن الخطيب',
+      'صفاء 28':'محمد عبده','صفا 28':'محمد عبده','صفاء 65':'محمد عبده','صفا 65':'محمد عبده','جمال الأندلس':'محمد عبده','جمال الاندلس':'محمد عبده','برج جوديا':'محمد عبده'
+    },
+    users:[
+      ['فهد','fahd','فهد'],['محمد إبراهيم','mohamed_ibrahim','محمد إبراهيم'],['محمود','mahmoud','محمود'],['مازن','mazen','مازن'],['مازن الخطيب','mazen_alkhateeb','مازن الخطيب'],['محمد عبده','mohamed_abdo','محمد عبده']
+    ]
+  };
+  const aliases = {'افاق العربية':'آفاق العربية','عالم الابتكار 46':'عالم الابتكار 47','صفا 28':'صفاء 28','صفا 65':'صفاء 65','جمال الاندلس':'جمال الأندلس','الين 32':'ألين 32','اثل 12':'أثل 12'};
+  function n(v){return String(v||'').trim();}
+  function canonProject(p){return aliases[n(p)]||n(p);}
+  function uniq(arr){const out=[];(arr||[]).forEach(x=>{x=n(x);if(x&&!out.includes(x))out.push(x)});return out;}
+  function ensure(){
+    if(typeof state==='undefined') return;
+    const projects = uniq(Object.keys(MASTER.projectWorkers).map(canonProject));
+    const workers = uniq(Object.values(MASTER.projectWorkers).flat());
     state.projects = uniq([...(state.projects||[]).map(canonProject), ...projects]);
-    state.supervisors = uniq([...(state.supervisors||[]).map(canonSupervisor), ...supervisors]);
-    state.workers = uniq([...(state.workers||[]).map(canonWorker), ...workers]);
+    state.workers = uniq([...(state.workers||[]), ...workers]);
+    state.supervisors = uniq([...(state.supervisors||[]), ...MASTER.supervisors]);
     state.projectSupervisorRules = state.projectSupervisorRules || {};
-    Object.entries(MASTER.projectSupervisorRules).forEach(([p,s]) => { state.projectSupervisorRules[canonProject(p)] = canonSupervisor(s); });
-    state.projectMeta = state.projectMeta || {};
     state.workerProfiles = state.workerProfiles || {};
     state.supervisorProfiles = state.supervisorProfiles || {};
-    state.nameAliases = state.nameAliases || {workers:{}, projects:{}, supervisors:{}};
-    state.nameAliases.workers = {...(state.nameAliases.workers||{}), ...MASTER.aliases.workers};
-    state.nameAliases.projects = {...(state.nameAliases.projects||{}), ...MASTER.aliases.projects};
-    state.nameAliases.supervisors = {...(state.nameAliases.supervisors||{}), ...MASTER.aliases.supervisors};
-    supervisors.forEach(s => { state.supervisorProfiles[s] = state.supervisorProfiles[s] || {workers:[], projects:[]}; });
-    Object.entries(MASTER.projectWorkers).forEach(([rawProject, rawWorkers]) => {
-      const project = canonProject(rawProject);
-      const sup = canonSupervisor(MASTER.projectSupervisorRules[rawProject] || state.projectSupervisorRules[project] || '');
-      state.projectSupervisorRules[project] = sup;
-      state.projectMeta[project] = {...(state.projectMeta[project]||{}), type:(state.projectMeta[project]?.type || 'daily_visit'), expectedTime:(state.projectMeta[project]?.expectedTime || '00:30')};
+    state.projectMeta = state.projectMeta || {};
+    projects.forEach(p=>{state.projectMeta[p] = Object.assign({type:'daily_visit', expectedTime:'00:30'}, state.projectMeta[p]||{});});
+    Object.keys(MASTER.projectSupervisor).forEach(raw=>{state.projectSupervisorRules[canonProject(raw)] = MASTER.projectSupervisor[raw];});
+    Object.keys(MASTER.projectWorkers).forEach(raw=>{
+      const p = canonProject(raw), sup = MASTER.projectSupervisor[raw] || state.projectSupervisorRules[p] || '';
+      if(!sup) return;
       state.supervisorProfiles[sup] = state.supervisorProfiles[sup] || {workers:[], projects:[]};
-      state.supervisorProfiles[sup].projects = uniq([...(state.supervisorProfiles[sup].projects||[]), project]);
-      rawWorkers.map(canonWorker).forEach(w => {
+      state.supervisorProfiles[sup].projects = uniq([...(state.supervisorProfiles[sup].projects||[]), p]);
+      MASTER.projectWorkers[raw].forEach(w=>{
         state.workerProfiles[w] = state.workerProfiles[w] || {projects:[], supervisor:sup, status:'أساسي'};
         state.workerProfiles[w].supervisor = sup;
-        state.workerProfiles[w].status = state.workerProfiles[w].status || 'أساسي';
-        state.workerProfiles[w].projects = uniq([...(state.workerProfiles[w].projects||[]), project]);
+        state.workerProfiles[w].status = 'أساسي';
+        state.workerProfiles[w].projects = uniq([...(state.workerProfiles[w].projects||[]).map(canonProject), p]);
         state.supervisorProfiles[sup].workers = uniq([...(state.supervisorProfiles[sup].workers||[]), w]);
       });
     });
     state.users = Array.isArray(state.users) ? state.users : [];
-    MASTER.users.forEach(u => {
-      const username = n(u.username).toLowerCase();
-      let ex = state.users.find(x => n(x.username).toLowerCase() === username || (x.role === 'supervisor' && canonSupervisor(x.linkedSupervisor||x.fullName) === u.linkedSupervisor));
-      const payload = {...u, id:(ex?.id || ('u-'+username)), permissions:{...(ex?.permissions||{}), ...DEFAULT_PERMS}, linkedSupervisor:canonSupervisor(u.linkedSupervisor), fullName:canonSupervisor(u.fullName), isActive:true};
-      if(ex) Object.assign(ex, payload); else state.users.push(payload);
+    MASTER.users.forEach(([full, username, linked])=>{
+      let u = state.users.find(x=>n(x.username).toLowerCase()===username || (n(x.linkedSupervisor||x.linked_supervisor||x.supervisor_name)===linked && x.role==='supervisor'));
+      const base = {id:'u-'+username, fullName:full, username, password:'123456', role:'supervisor', linkedSupervisor:linked, isActive:true, permissions:{dashboardTab:'view',entriesTab:'edit',peopleTab:'hidden',projectsTab:'hidden',distributionTab:'hidden',monthlyTab:'view',alertsTab:'view',exportTab:'view',usersTab:'hidden'}};
+      if(u) Object.assign(u, base, {id:u.id||base.id}); else state.users.push(base);
     });
   }
-  function refreshSupervisorSelect(selected){
-    const sel = document.getElementById('userLinkedSupervisor');
-    if(!sel) return;
-    const current = n(selected || sel.value);
-    const names = uniq([...(window.state?.supervisors||[]), ...MASTER.supervisors].map(canonSupervisor));
-    sel.innerHTML = '<option value="">-</option>' + names.map(x=>`<option value="${esc2(x)}">${esc2(x)}</option>`).join('');
-    if(current) sel.value = canonSupervisor(current);
+  function fillSelect(selected){
+    const el = document.getElementById('userLinkedSupervisor');
+    if(!el) return;
+    const cur = selected || el.value;
+    el.innerHTML = '<option value="">-</option>' + MASTER.supervisors.map(s=>'<option value="'+s+'">'+s+'</option>').join('');
+    if(cur) el.value = cur;
   }
-  const oldRefresh = window.refreshAllPickers;
-  window.refreshAllPickers = function(){ rebuildMasterState(); if(oldRefresh) oldRefresh.apply(this, arguments); refreshSupervisorSelect(); };
-  window.toggleUserFormByRole = function(){
-    const role = n(document.getElementById('userRole')?.value);
-    const full = canonSupervisor(document.getElementById('userFullName')?.value || '');
-    refreshSupervisorSelect(document.getElementById('userLinkedSupervisor')?.value || full);
-    const sel = document.getElementById('userLinkedSupervisor');
-    const wrap = document.getElementById('linkedSupervisorWrap');
-    if(sel) { sel.disabled = false; if(role==='supervisor' && full && MASTER.supervisors.includes(full)) sel.value = full; }
-    if(wrap) wrap.style.opacity = '1';
+  window.tasneefFixTeamData = function(){
+    ensure(); fillSelect();
+    if(typeof saveState==='function') saveState(true);
+    if(typeof refreshAllPickers==='function') refreshAllPickers();
+    if(typeof renderUsersTable==='function') renderUsersTable();
+    if(typeof renderDistributionAlerts==='function') renderDistributionAlerts();
+    if(typeof renderKPIs==='function') renderKPIs();
+    if(typeof renderEntriesTable==='function') renderEntriesTable();
+    if(typeof showToast==='function') showToast('تم إصلاح ربط المشرفين والعمال');
   };
-  const oldClear = window.clearUserForm;
-  window.clearUserForm = function(){ if(oldClear) oldClear.apply(this, arguments); refreshSupervisorSelect(); window.toggleUserFormByRole(); };
-  window.generateUsersFromSupervisors = function(){
-    rebuildMasterState();
-    if(window.saveState) window.saveState(true);
-    if(window.renderUsersTable) window.renderUsersTable();
-    refreshSupervisorSelect();
-    if(window.showToast) window.showToast('تم إنشاء وربط حسابات المشرفين والعمال بالمشاريع');
-    if(window.syncAdminCloudNow) setTimeout(()=>window.syncAdminCloudNow(),500);
-  };
-  window.forceTasneefOnlineSeed = async function(){
-    rebuildMasterState();
-    if(window.saveState) window.saveState(true);
-    if(window.renderUsersTable) window.renderUsersTable();
-    if(window.renderDistributionAlerts) window.renderDistributionAlerts();
-    if(window.refreshAllPickers) window.refreshAllPickers();
-    if(window.syncAdminCloudNow) await window.syncAdminCloudNow();
-    if(window.showToast) window.showToast('تم تحديث وربط البيانات أونلاين بنجاح');
-  };
-  document.addEventListener('input', e=>{ if(e.target && e.target.id==='userFullName') window.toggleUserFormByRole(); });
-  setTimeout(()=>{ rebuildMasterState(); refreshSupervisorSelect(); if(window.saveState) window.saveState(true); if(window.renderUsersTable) window.renderUsersTable(); if(window.renderDistributionAlerts) window.renderDistributionAlerts(); if(window.refreshAllPickers) window.refreshAllPickers(); if(window.syncAdminCloudNow) window.syncAdminCloudNow(); }, 1600);
+  const oldFill = window.fillLinkedSupervisorOptions;
+  window.fillLinkedSupervisorOptions = function(){ ensure(); fillSelect(); if(oldFill) try{oldFill.apply(this,arguments); fillSelect();}catch(e){} };
+  const oldRefresh = window.refreshLinkedSupervisorOptions;
+  window.refreshLinkedSupervisorOptions = function(selected){ ensure(); fillSelect(selected); if(oldRefresh) try{oldRefresh.apply(this,arguments); fillSelect(selected);}catch(e){} };
+  const oldInit = window.initAll;
+  window.initAll = function(){ if(oldInit) oldInit.apply(this,arguments); setTimeout(window.tasneefFixTeamData,100); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(window.tasneefFixTeamData,500)); else setTimeout(window.tasneefFixTeamData,500);
+  setTimeout(window.tasneefFixTeamData,1800);
 })();
 </script>
-
 </body></html>`;
   const win = window.open('', '_blank');
   if (!win) { showToast('المتصفح منع فتح نافذة الطباعة', 'error'); return; }
@@ -2844,103 +2847,128 @@ function openPrintWindow(html) {
 .team-empty{padding:14px;border:1px dashed var(--line);border-radius:14px;background:#fbfdfc;color:var(--muted);}
 @media (max-width:1100px){.team-editor-grid{grid-template-columns:1fr;}}
 
-</style></head><body>${html}
-<!-- ===== TASNEEF FINAL ONLINE DATA FIX: USERS + WORKERS LINKING ===== -->
 <script>
 (function(){
-  const MASTER = {"supervisors": ["فهد", "محمد إبراهيم", "محمود", "مازن", "مازن الخطيب", "محمد عبده"], "projectSupervisorRules": {"فارهين 11": "فهد", "آفاق العربية": "فهد", "افاق العربية": "فهد", "مغنى 29": "فهد", "هاجر 32": "فهد", "فرساي 7": "فهد", "تعمير 17": "فهد", "رايات نجد 5": "فهد", "رؤيا 1": "فهد", "عالم الابتكار 47": "فهد", "الشعلان 50": "فهد", "الشعلان 51": "فهد", "كاف A": "محمد إبراهيم", "كاف B": "محمد إبراهيم", "كاف C": "محمد إبراهيم", "واجهة قرطبة": "محمد إبراهيم", "الماجدية 107": "محمد إبراهيم", "صفاء 50": "محمد إبراهيم", "مغنى 14": "محمد إبراهيم", "الماجدية 88": "محمد إبراهيم", "العجلان 19": "محمد إبراهيم", "مكين 37": "محمود", "جادة 39": "مازن", "ألين 32": "مازن", "الين 32": "مازن", "أثل 12": "مازن", "اثل 12": "مازن", "فرساي 4": "مازن", "فرساي 10": "مازن", "فرساي 11": "مازن", "اتحاد العاصمة": "مازن", "وجود الياسمين": "مازن الخطيب", "صفاء 28": "محمد عبده", "صفا 28": "محمد عبده", "صفاء 65": "محمد عبده", "صفا 65": "محمد عبده", "جمال الأندلس": "محمد عبده", "جمال الاندلس": "محمد عبده", "برج جوديا": "محمد عبده"}, "projectWorkers": {"فارهين 11": ["ميزان", "سوجان", "عليم", "مهيد"], "آفاق العربية": ["ميزان", "سوجان", "عليم", "مهيد"], "مغنى 29": ["ميزان", "سوجان", "عليم", "مهيد"], "هاجر 32": ["ميزان", "سوجان", "عليم", "مهيد"], "فرساي 7": ["ميزان", "سوجان", "عليم", "مهيد"], "تعمير 17": ["ميزان", "سوجان", "عليم", "مهيد"], "رايات نجد 5": ["ميزان", "سوجان", "عليم", "مهيد"], "رؤيا 1": ["ميزان", "سوجان", "عليم", "مهيد"], "عالم الابتكار 47": ["ميزان", "سوجان", "عليم", "مهيد"], "الشعلان 50": ["ياسر", "راجو"], "الشعلان 51": ["ياسر", "راجو"], "كاف A": ["عجائب", "اوسيس", "كوثر", "راهي"], "كاف B": ["عجائب", "اوسيس", "كوثر", "راهي"], "كاف C": ["عجائب", "اوسيس", "كوثر", "راهي"], "واجهة قرطبة": ["عجائب", "اوسيس", "كوثر", "راهي"], "الماجدية 107": ["عجائب", "اوسيس", "كوثر", "راهي"], "صفاء 50": ["عجائب", "اوسيس", "كوثر", "راهي"], "مغنى 14": ["عجائب", "اوسيس", "كوثر", "راهي"], "الماجدية 88": ["رحمن", "رقيب"], "العجلان 19": ["رؤوف", "اوميت"], "مكين 37": ["جهيد", "ركيب", "اكتار", "جوناب علي"], "جادة 39": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "ألين 32": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "أثل 12": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "فرساي 4": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "فرساي 10": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "فرساي 11": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "اتحاد العاصمة": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "وجود الياسمين": ["إبراهيم", "شميم", "أنور", "تيفور", "ناظمون", "جابيت", "ديكسان", "الونجير", "هلال", "أشرف", "روبل", "فضل"], "صفاء 28": ["راسيل", "مهيب", "عريف", "اكرامول"], "صفاء 65": ["السيد علي", "ليتون", "همينتو"], "جمال الأندلس": ["السيد علي", "راسيل", "مهيب"], "برج جوديا": ["علم", "فلومية", "بتشا", "مساد"]}, "users": [{"fullName": "فهد", "username": "fahd", "password": "123456", "role": "supervisor", "linkedSupervisor": "فهد", "isActive": true}, {"fullName": "محمد إبراهيم", "username": "mohamed_ibrahim", "password": "123456", "role": "supervisor", "linkedSupervisor": "محمد إبراهيم", "isActive": true}, {"fullName": "محمود", "username": "mahmoud", "password": "123456", "role": "supervisor", "linkedSupervisor": "محمود", "isActive": true}, {"fullName": "مازن", "username": "mazen", "password": "123456", "role": "supervisor", "linkedSupervisor": "مازن", "isActive": true}, {"fullName": "مازن الخطيب", "username": "mazen_alkhateeb", "password": "123456", "role": "supervisor", "linkedSupervisor": "مازن الخطيب", "isActive": true}, {"fullName": "محمد عبده", "username": "mohamed_abdo", "password": "123456", "role": "supervisor", "linkedSupervisor": "محمد عبده", "isActive": true}], "aliases": {"projects": {"افاق العربية": "آفاق العربية", "عالم الابتكار 46": "عالم الابتكار 47", "صفا 28": "صفاء 28", "صفا 65": "صفاء 65", "جمال الاندلس": "جمال الأندلس", "الين 32": "ألين 32", "اثل 12": "أثل 12"}, "workers": {"أوسيس": "اوسيس", "اوسيبس": "اوسيس", "أوميت": "اوميت", "مهدي": "مهيد", "سجون": "سوجان", "راسل": "راسيل", "سيد علي": "السيد علي", "اشرف": "أشرف", "انور": "أنور", "ركيب": "ركيب", "اكو مول": "اكرامول"}, "supervisors": {"محمد ابراهيم": "محمد إبراهيم"}}};
-  const DEFAULT_PERMS = {dashboardTab:'view', entriesTab:'edit', peopleTab:'hidden', projectsTab:'hidden', distributionTab:'hidden', monthlyTab:'view', alertsTab:'view', exportTab:'view', usersTab:'hidden'};
-  function n(v){ return String(v||'').trim(); }
-  function uniq(arr){ const out=[]; (arr||[]).forEach(x=>{ x=n(x); if(x && !out.some(y=>y===x)) out.push(x); }); return out; }
-  function esc2(v){ return String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function canonProject(p){ return (MASTER.aliases.projects[n(p)] || n(p)); }
-  function canonWorker(w){ return (MASTER.aliases.workers[n(w)] || n(w)); }
-  function canonSupervisor(s){ return (MASTER.aliases.supervisors[n(s)] || n(s)); }
-  function rebuildMasterState(){
-    window.state = window.state || {};
-    const projects = Object.keys(MASTER.projectWorkers).map(canonProject);
-    const supervisors = MASTER.supervisors.map(canonSupervisor);
-    const workers = uniq(Object.values(MASTER.projectWorkers).flat().map(canonWorker));
+  const MASTER = {
+    supervisors:['فهد','محمد إبراهيم','محمود','مازن','مازن الخطيب','محمد عبده'],
+    projectWorkers:{
+      'فارهين 11':['ميزان','سوجان','عليم','مهيد'],
+      'آفاق العربية':['ميزان','سوجان','عليم','مهيد'],
+      'افاق العربية':['ميزان','سوجان','عليم','مهيد'],
+      'مغنى 29':['ميزان','سوجان','عليم','مهيد'],
+      'هاجر 32':['ميزان','سوجان','عليم','مهيد'],
+      'فرساي 7':['ميزان','سوجان','عليم','مهيد'],
+      'تعمير 17':['ميزان','سوجان','عليم','مهيد'],
+      'رايات نجد 5':['ميزان','سوجان','عليم','مهيد'],
+      'رؤيا 1':['ميزان','سوجان','عليم','مهيد'],
+      'عالم الابتكار 47':['ميزان','سوجان','عليم','مهيد'],
+      'الشعلان 50':['ياسر','راجو'],
+      'الشعلان 51':['ياسر','راجو'],
+      'كاف A':['عجائب','اوسيس','كوثر','راهي'],
+      'كاف B':['عجائب','اوسيس','كوثر','راهي'],
+      'كاف C':['عجائب','اوسيس','كوثر','راهي'],
+      'واجهة قرطبة':['عجائب','اوسيس','كوثر','راهي'],
+      'الماجدية 107':['عجائب','اوسيس','كوثر','راهي'],
+      'صفاء 50':['عجائب','اوسيس','كوثر','راهي'],
+      'مغنى 14':['عجائب','اوسيس','كوثر','راهي'],
+      'الماجدية 88':['رحمن','رقيب'],
+      'العجلان 19':['رؤوف','اوميت'],
+      'مكين 37':['جهيد','ركيب','اكتار','جوناب علي'],
+      'جادة 39':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'ألين 32':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'الين 32':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'أثل 12':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'اثل 12':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'فرساي 4':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'فرساي 10':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'فرساي 11':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'اتحاد العاصمة':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'وجود الياسمين':['إبراهيم','شميم','أنور','تيفور','ناظمون','جابيت','ديكسان','الونجير','هلال','أشرف','روبل','فضل'],
+      'صفاء 28':['راسيل','مهيب','عريف','اكرامول'],
+      'صفا 28':['راسيل','مهيب','عريف','اكرامول'],
+      'صفاء 65':['السيد علي','ليتون','همينتو'],
+      'صفا 65':['السيد علي','ليتون','همينتو'],
+      'جمال الأندلس':['السيد علي','راسيل','مهيب'],
+      'جمال الاندلس':['السيد علي','راسيل','مهيب'],
+      'برج جوديا':['علم','فلومية','بتشا','مساد']
+    },
+    projectSupervisor:{
+      'فارهين 11':'فهد','آفاق العربية':'فهد','افاق العربية':'فهد','مغنى 29':'فهد','هاجر 32':'فهد','فرساي 7':'فهد','تعمير 17':'فهد','رايات نجد 5':'فهد','رؤيا 1':'فهد','عالم الابتكار 47':'فهد','الشعلان 50':'فهد','الشعلان 51':'فهد',
+      'كاف A':'محمد إبراهيم','كاف B':'محمد إبراهيم','كاف C':'محمد إبراهيم','واجهة قرطبة':'محمد إبراهيم','الماجدية 107':'محمد إبراهيم','صفاء 50':'محمد إبراهيم','مغنى 14':'محمد إبراهيم','الماجدية 88':'محمد إبراهيم','العجلان 19':'محمد إبراهيم',
+      'مكين 37':'محمود',
+      'جادة 39':'مازن','ألين 32':'مازن','الين 32':'مازن','أثل 12':'مازن','اثل 12':'مازن','فرساي 4':'مازن','فرساي 10':'مازن','فرساي 11':'مازن','اتحاد العاصمة':'مازن',
+      'وجود الياسمين':'مازن الخطيب',
+      'صفاء 28':'محمد عبده','صفا 28':'محمد عبده','صفاء 65':'محمد عبده','صفا 65':'محمد عبده','جمال الأندلس':'محمد عبده','جمال الاندلس':'محمد عبده','برج جوديا':'محمد عبده'
+    },
+    users:[
+      ['فهد','fahd','فهد'],['محمد إبراهيم','mohamed_ibrahim','محمد إبراهيم'],['محمود','mahmoud','محمود'],['مازن','mazen','مازن'],['مازن الخطيب','mazen_alkhateeb','مازن الخطيب'],['محمد عبده','mohamed_abdo','محمد عبده']
+    ]
+  };
+  const aliases = {'افاق العربية':'آفاق العربية','عالم الابتكار 46':'عالم الابتكار 47','صفا 28':'صفاء 28','صفا 65':'صفاء 65','جمال الاندلس':'جمال الأندلس','الين 32':'ألين 32','اثل 12':'أثل 12'};
+  function n(v){return String(v||'').trim();}
+  function canonProject(p){return aliases[n(p)]||n(p);}
+  function uniq(arr){const out=[];(arr||[]).forEach(x=>{x=n(x);if(x&&!out.includes(x))out.push(x)});return out;}
+  function ensure(){
+    if(typeof state==='undefined') return;
+    const projects = uniq(Object.keys(MASTER.projectWorkers).map(canonProject));
+    const workers = uniq(Object.values(MASTER.projectWorkers).flat());
     state.projects = uniq([...(state.projects||[]).map(canonProject), ...projects]);
-    state.supervisors = uniq([...(state.supervisors||[]).map(canonSupervisor), ...supervisors]);
-    state.workers = uniq([...(state.workers||[]).map(canonWorker), ...workers]);
+    state.workers = uniq([...(state.workers||[]), ...workers]);
+    state.supervisors = uniq([...(state.supervisors||[]), ...MASTER.supervisors]);
     state.projectSupervisorRules = state.projectSupervisorRules || {};
-    Object.entries(MASTER.projectSupervisorRules).forEach(([p,s]) => { state.projectSupervisorRules[canonProject(p)] = canonSupervisor(s); });
-    state.projectMeta = state.projectMeta || {};
     state.workerProfiles = state.workerProfiles || {};
     state.supervisorProfiles = state.supervisorProfiles || {};
-    state.nameAliases = state.nameAliases || {workers:{}, projects:{}, supervisors:{}};
-    state.nameAliases.workers = {...(state.nameAliases.workers||{}), ...MASTER.aliases.workers};
-    state.nameAliases.projects = {...(state.nameAliases.projects||{}), ...MASTER.aliases.projects};
-    state.nameAliases.supervisors = {...(state.nameAliases.supervisors||{}), ...MASTER.aliases.supervisors};
-    supervisors.forEach(s => { state.supervisorProfiles[s] = state.supervisorProfiles[s] || {workers:[], projects:[]}; });
-    Object.entries(MASTER.projectWorkers).forEach(([rawProject, rawWorkers]) => {
-      const project = canonProject(rawProject);
-      const sup = canonSupervisor(MASTER.projectSupervisorRules[rawProject] || state.projectSupervisorRules[project] || '');
-      state.projectSupervisorRules[project] = sup;
-      state.projectMeta[project] = {...(state.projectMeta[project]||{}), type:(state.projectMeta[project]?.type || 'daily_visit'), expectedTime:(state.projectMeta[project]?.expectedTime || '00:30')};
+    state.projectMeta = state.projectMeta || {};
+    projects.forEach(p=>{state.projectMeta[p] = Object.assign({type:'daily_visit', expectedTime:'00:30'}, state.projectMeta[p]||{});});
+    Object.keys(MASTER.projectSupervisor).forEach(raw=>{state.projectSupervisorRules[canonProject(raw)] = MASTER.projectSupervisor[raw];});
+    Object.keys(MASTER.projectWorkers).forEach(raw=>{
+      const p = canonProject(raw), sup = MASTER.projectSupervisor[raw] || state.projectSupervisorRules[p] || '';
+      if(!sup) return;
       state.supervisorProfiles[sup] = state.supervisorProfiles[sup] || {workers:[], projects:[]};
-      state.supervisorProfiles[sup].projects = uniq([...(state.supervisorProfiles[sup].projects||[]), project]);
-      rawWorkers.map(canonWorker).forEach(w => {
+      state.supervisorProfiles[sup].projects = uniq([...(state.supervisorProfiles[sup].projects||[]), p]);
+      MASTER.projectWorkers[raw].forEach(w=>{
         state.workerProfiles[w] = state.workerProfiles[w] || {projects:[], supervisor:sup, status:'أساسي'};
         state.workerProfiles[w].supervisor = sup;
-        state.workerProfiles[w].status = state.workerProfiles[w].status || 'أساسي';
-        state.workerProfiles[w].projects = uniq([...(state.workerProfiles[w].projects||[]), project]);
+        state.workerProfiles[w].status = 'أساسي';
+        state.workerProfiles[w].projects = uniq([...(state.workerProfiles[w].projects||[]).map(canonProject), p]);
         state.supervisorProfiles[sup].workers = uniq([...(state.supervisorProfiles[sup].workers||[]), w]);
       });
     });
     state.users = Array.isArray(state.users) ? state.users : [];
-    MASTER.users.forEach(u => {
-      const username = n(u.username).toLowerCase();
-      let ex = state.users.find(x => n(x.username).toLowerCase() === username || (x.role === 'supervisor' && canonSupervisor(x.linkedSupervisor||x.fullName) === u.linkedSupervisor));
-      const payload = {...u, id:(ex?.id || ('u-'+username)), permissions:{...(ex?.permissions||{}), ...DEFAULT_PERMS}, linkedSupervisor:canonSupervisor(u.linkedSupervisor), fullName:canonSupervisor(u.fullName), isActive:true};
-      if(ex) Object.assign(ex, payload); else state.users.push(payload);
+    MASTER.users.forEach(([full, username, linked])=>{
+      let u = state.users.find(x=>n(x.username).toLowerCase()===username || (n(x.linkedSupervisor||x.linked_supervisor||x.supervisor_name)===linked && x.role==='supervisor'));
+      const base = {id:'u-'+username, fullName:full, username, password:'123456', role:'supervisor', linkedSupervisor:linked, isActive:true, permissions:{dashboardTab:'view',entriesTab:'edit',peopleTab:'hidden',projectsTab:'hidden',distributionTab:'hidden',monthlyTab:'view',alertsTab:'view',exportTab:'view',usersTab:'hidden'}};
+      if(u) Object.assign(u, base, {id:u.id||base.id}); else state.users.push(base);
     });
   }
-  function refreshSupervisorSelect(selected){
-    const sel = document.getElementById('userLinkedSupervisor');
-    if(!sel) return;
-    const current = n(selected || sel.value);
-    const names = uniq([...(window.state?.supervisors||[]), ...MASTER.supervisors].map(canonSupervisor));
-    sel.innerHTML = '<option value="">-</option>' + names.map(x=>`<option value="${esc2(x)}">${esc2(x)}</option>`).join('');
-    if(current) sel.value = canonSupervisor(current);
+  function fillSelect(selected){
+    const el = document.getElementById('userLinkedSupervisor');
+    if(!el) return;
+    const cur = selected || el.value;
+    el.innerHTML = '<option value="">-</option>' + MASTER.supervisors.map(s=>'<option value="'+s+'">'+s+'</option>').join('');
+    if(cur) el.value = cur;
   }
-  const oldRefresh = window.refreshAllPickers;
-  window.refreshAllPickers = function(){ rebuildMasterState(); if(oldRefresh) oldRefresh.apply(this, arguments); refreshSupervisorSelect(); };
-  window.toggleUserFormByRole = function(){
-    const role = n(document.getElementById('userRole')?.value);
-    const full = canonSupervisor(document.getElementById('userFullName')?.value || '');
-    refreshSupervisorSelect(document.getElementById('userLinkedSupervisor')?.value || full);
-    const sel = document.getElementById('userLinkedSupervisor');
-    const wrap = document.getElementById('linkedSupervisorWrap');
-    if(sel) { sel.disabled = false; if(role==='supervisor' && full && MASTER.supervisors.includes(full)) sel.value = full; }
-    if(wrap) wrap.style.opacity = '1';
+  window.tasneefFixTeamData = function(){
+    ensure(); fillSelect();
+    if(typeof saveState==='function') saveState(true);
+    if(typeof refreshAllPickers==='function') refreshAllPickers();
+    if(typeof renderUsersTable==='function') renderUsersTable();
+    if(typeof renderDistributionAlerts==='function') renderDistributionAlerts();
+    if(typeof renderKPIs==='function') renderKPIs();
+    if(typeof renderEntriesTable==='function') renderEntriesTable();
+    if(typeof showToast==='function') showToast('تم إصلاح ربط المشرفين والعمال');
   };
-  const oldClear = window.clearUserForm;
-  window.clearUserForm = function(){ if(oldClear) oldClear.apply(this, arguments); refreshSupervisorSelect(); window.toggleUserFormByRole(); };
-  window.generateUsersFromSupervisors = function(){
-    rebuildMasterState();
-    if(window.saveState) window.saveState(true);
-    if(window.renderUsersTable) window.renderUsersTable();
-    refreshSupervisorSelect();
-    if(window.showToast) window.showToast('تم إنشاء وربط حسابات المشرفين والعمال بالمشاريع');
-    if(window.syncAdminCloudNow) setTimeout(()=>window.syncAdminCloudNow(),500);
-  };
-  window.forceTasneefOnlineSeed = async function(){
-    rebuildMasterState();
-    if(window.saveState) window.saveState(true);
-    if(window.renderUsersTable) window.renderUsersTable();
-    if(window.renderDistributionAlerts) window.renderDistributionAlerts();
-    if(window.refreshAllPickers) window.refreshAllPickers();
-    if(window.syncAdminCloudNow) await window.syncAdminCloudNow();
-    if(window.showToast) window.showToast('تم تحديث وربط البيانات أونلاين بنجاح');
-  };
-  document.addEventListener('input', e=>{ if(e.target && e.target.id==='userFullName') window.toggleUserFormByRole(); });
-  setTimeout(()=>{ rebuildMasterState(); refreshSupervisorSelect(); if(window.saveState) window.saveState(true); if(window.renderUsersTable) window.renderUsersTable(); if(window.renderDistributionAlerts) window.renderDistributionAlerts(); if(window.refreshAllPickers) window.refreshAllPickers(); if(window.syncAdminCloudNow) window.syncAdminCloudNow(); }, 1600);
+  const oldFill = window.fillLinkedSupervisorOptions;
+  window.fillLinkedSupervisorOptions = function(){ ensure(); fillSelect(); if(oldFill) try{oldFill.apply(this,arguments); fillSelect();}catch(e){} };
+  const oldRefresh = window.refreshLinkedSupervisorOptions;
+  window.refreshLinkedSupervisorOptions = function(selected){ ensure(); fillSelect(selected); if(oldRefresh) try{oldRefresh.apply(this,arguments); fillSelect(selected);}catch(e){} };
+  const oldInit = window.initAll;
+  window.initAll = function(){ if(oldInit) oldInit.apply(this,arguments); setTimeout(window.tasneefFixTeamData,100); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(window.tasneefFixTeamData,500)); else setTimeout(window.tasneefFixTeamData,500);
+  setTimeout(window.tasneefFixTeamData,1800);
 })();
 </script>
-
-</body></html>`);
+</style></head><body>${html}</body></html>`);
   win.document.close();
   win.focus();
   setTimeout(() => { win.print(); }, 300);
@@ -4129,7 +4157,6 @@ function resetAppData() {
 }
 
 function initAll() {
-  applyCanonicalTeamData();
   ensureStateSchema();
   applyAliasesToExistingData();
   refreshAllPickers();
@@ -4467,103 +4494,128 @@ initAll();
         </tbody>
       </table>
       <div class="footer">شركة تصنيف لإدارة المرافق</div>
-    
-<!-- ===== TASNEEF FINAL ONLINE DATA FIX: USERS + WORKERS LINKING ===== -->
 <script>
 (function(){
-  const MASTER = {"supervisors": ["فهد", "محمد إبراهيم", "محمود", "مازن", "مازن الخطيب", "محمد عبده"], "projectSupervisorRules": {"فارهين 11": "فهد", "آفاق العربية": "فهد", "افاق العربية": "فهد", "مغنى 29": "فهد", "هاجر 32": "فهد", "فرساي 7": "فهد", "تعمير 17": "فهد", "رايات نجد 5": "فهد", "رؤيا 1": "فهد", "عالم الابتكار 47": "فهد", "الشعلان 50": "فهد", "الشعلان 51": "فهد", "كاف A": "محمد إبراهيم", "كاف B": "محمد إبراهيم", "كاف C": "محمد إبراهيم", "واجهة قرطبة": "محمد إبراهيم", "الماجدية 107": "محمد إبراهيم", "صفاء 50": "محمد إبراهيم", "مغنى 14": "محمد إبراهيم", "الماجدية 88": "محمد إبراهيم", "العجلان 19": "محمد إبراهيم", "مكين 37": "محمود", "جادة 39": "مازن", "ألين 32": "مازن", "الين 32": "مازن", "أثل 12": "مازن", "اثل 12": "مازن", "فرساي 4": "مازن", "فرساي 10": "مازن", "فرساي 11": "مازن", "اتحاد العاصمة": "مازن", "وجود الياسمين": "مازن الخطيب", "صفاء 28": "محمد عبده", "صفا 28": "محمد عبده", "صفاء 65": "محمد عبده", "صفا 65": "محمد عبده", "جمال الأندلس": "محمد عبده", "جمال الاندلس": "محمد عبده", "برج جوديا": "محمد عبده"}, "projectWorkers": {"فارهين 11": ["ميزان", "سوجان", "عليم", "مهيد"], "آفاق العربية": ["ميزان", "سوجان", "عليم", "مهيد"], "مغنى 29": ["ميزان", "سوجان", "عليم", "مهيد"], "هاجر 32": ["ميزان", "سوجان", "عليم", "مهيد"], "فرساي 7": ["ميزان", "سوجان", "عليم", "مهيد"], "تعمير 17": ["ميزان", "سوجان", "عليم", "مهيد"], "رايات نجد 5": ["ميزان", "سوجان", "عليم", "مهيد"], "رؤيا 1": ["ميزان", "سوجان", "عليم", "مهيد"], "عالم الابتكار 47": ["ميزان", "سوجان", "عليم", "مهيد"], "الشعلان 50": ["ياسر", "راجو"], "الشعلان 51": ["ياسر", "راجو"], "كاف A": ["عجائب", "اوسيس", "كوثر", "راهي"], "كاف B": ["عجائب", "اوسيس", "كوثر", "راهي"], "كاف C": ["عجائب", "اوسيس", "كوثر", "راهي"], "واجهة قرطبة": ["عجائب", "اوسيس", "كوثر", "راهي"], "الماجدية 107": ["عجائب", "اوسيس", "كوثر", "راهي"], "صفاء 50": ["عجائب", "اوسيس", "كوثر", "راهي"], "مغنى 14": ["عجائب", "اوسيس", "كوثر", "راهي"], "الماجدية 88": ["رحمن", "رقيب"], "العجلان 19": ["رؤوف", "اوميت"], "مكين 37": ["جهيد", "ركيب", "اكتار", "جوناب علي"], "جادة 39": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "ألين 32": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "أثل 12": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "فرساي 4": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "فرساي 10": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "فرساي 11": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "اتحاد العاصمة": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "وجود الياسمين": ["إبراهيم", "شميم", "أنور", "تيفور", "ناظمون", "جابيت", "ديكسان", "الونجير", "هلال", "أشرف", "روبل", "فضل"], "صفاء 28": ["راسيل", "مهيب", "عريف", "اكرامول"], "صفاء 65": ["السيد علي", "ليتون", "همينتو"], "جمال الأندلس": ["السيد علي", "راسيل", "مهيب"], "برج جوديا": ["علم", "فلومية", "بتشا", "مساد"]}, "users": [{"fullName": "فهد", "username": "fahd", "password": "123456", "role": "supervisor", "linkedSupervisor": "فهد", "isActive": true}, {"fullName": "محمد إبراهيم", "username": "mohamed_ibrahim", "password": "123456", "role": "supervisor", "linkedSupervisor": "محمد إبراهيم", "isActive": true}, {"fullName": "محمود", "username": "mahmoud", "password": "123456", "role": "supervisor", "linkedSupervisor": "محمود", "isActive": true}, {"fullName": "مازن", "username": "mazen", "password": "123456", "role": "supervisor", "linkedSupervisor": "مازن", "isActive": true}, {"fullName": "مازن الخطيب", "username": "mazen_alkhateeb", "password": "123456", "role": "supervisor", "linkedSupervisor": "مازن الخطيب", "isActive": true}, {"fullName": "محمد عبده", "username": "mohamed_abdo", "password": "123456", "role": "supervisor", "linkedSupervisor": "محمد عبده", "isActive": true}], "aliases": {"projects": {"افاق العربية": "آفاق العربية", "عالم الابتكار 46": "عالم الابتكار 47", "صفا 28": "صفاء 28", "صفا 65": "صفاء 65", "جمال الاندلس": "جمال الأندلس", "الين 32": "ألين 32", "اثل 12": "أثل 12"}, "workers": {"أوسيس": "اوسيس", "اوسيبس": "اوسيس", "أوميت": "اوميت", "مهدي": "مهيد", "سجون": "سوجان", "راسل": "راسيل", "سيد علي": "السيد علي", "اشرف": "أشرف", "انور": "أنور", "ركيب": "ركيب", "اكو مول": "اكرامول"}, "supervisors": {"محمد ابراهيم": "محمد إبراهيم"}}};
-  const DEFAULT_PERMS = {dashboardTab:'view', entriesTab:'edit', peopleTab:'hidden', projectsTab:'hidden', distributionTab:'hidden', monthlyTab:'view', alertsTab:'view', exportTab:'view', usersTab:'hidden'};
-  function n(v){ return String(v||'').trim(); }
-  function uniq(arr){ const out=[]; (arr||[]).forEach(x=>{ x=n(x); if(x && !out.some(y=>y===x)) out.push(x); }); return out; }
-  function esc2(v){ return String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function canonProject(p){ return (MASTER.aliases.projects[n(p)] || n(p)); }
-  function canonWorker(w){ return (MASTER.aliases.workers[n(w)] || n(w)); }
-  function canonSupervisor(s){ return (MASTER.aliases.supervisors[n(s)] || n(s)); }
-  function rebuildMasterState(){
-    window.state = window.state || {};
-    const projects = Object.keys(MASTER.projectWorkers).map(canonProject);
-    const supervisors = MASTER.supervisors.map(canonSupervisor);
-    const workers = uniq(Object.values(MASTER.projectWorkers).flat().map(canonWorker));
+  const MASTER = {
+    supervisors:['فهد','محمد إبراهيم','محمود','مازن','مازن الخطيب','محمد عبده'],
+    projectWorkers:{
+      'فارهين 11':['ميزان','سوجان','عليم','مهيد'],
+      'آفاق العربية':['ميزان','سوجان','عليم','مهيد'],
+      'افاق العربية':['ميزان','سوجان','عليم','مهيد'],
+      'مغنى 29':['ميزان','سوجان','عليم','مهيد'],
+      'هاجر 32':['ميزان','سوجان','عليم','مهيد'],
+      'فرساي 7':['ميزان','سوجان','عليم','مهيد'],
+      'تعمير 17':['ميزان','سوجان','عليم','مهيد'],
+      'رايات نجد 5':['ميزان','سوجان','عليم','مهيد'],
+      'رؤيا 1':['ميزان','سوجان','عليم','مهيد'],
+      'عالم الابتكار 47':['ميزان','سوجان','عليم','مهيد'],
+      'الشعلان 50':['ياسر','راجو'],
+      'الشعلان 51':['ياسر','راجو'],
+      'كاف A':['عجائب','اوسيس','كوثر','راهي'],
+      'كاف B':['عجائب','اوسيس','كوثر','راهي'],
+      'كاف C':['عجائب','اوسيس','كوثر','راهي'],
+      'واجهة قرطبة':['عجائب','اوسيس','كوثر','راهي'],
+      'الماجدية 107':['عجائب','اوسيس','كوثر','راهي'],
+      'صفاء 50':['عجائب','اوسيس','كوثر','راهي'],
+      'مغنى 14':['عجائب','اوسيس','كوثر','راهي'],
+      'الماجدية 88':['رحمن','رقيب'],
+      'العجلان 19':['رؤوف','اوميت'],
+      'مكين 37':['جهيد','ركيب','اكتار','جوناب علي'],
+      'جادة 39':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'ألين 32':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'الين 32':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'أثل 12':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'اثل 12':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'فرساي 4':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'فرساي 10':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'فرساي 11':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'اتحاد العاصمة':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'وجود الياسمين':['إبراهيم','شميم','أنور','تيفور','ناظمون','جابيت','ديكسان','الونجير','هلال','أشرف','روبل','فضل'],
+      'صفاء 28':['راسيل','مهيب','عريف','اكرامول'],
+      'صفا 28':['راسيل','مهيب','عريف','اكرامول'],
+      'صفاء 65':['السيد علي','ليتون','همينتو'],
+      'صفا 65':['السيد علي','ليتون','همينتو'],
+      'جمال الأندلس':['السيد علي','راسيل','مهيب'],
+      'جمال الاندلس':['السيد علي','راسيل','مهيب'],
+      'برج جوديا':['علم','فلومية','بتشا','مساد']
+    },
+    projectSupervisor:{
+      'فارهين 11':'فهد','آفاق العربية':'فهد','افاق العربية':'فهد','مغنى 29':'فهد','هاجر 32':'فهد','فرساي 7':'فهد','تعمير 17':'فهد','رايات نجد 5':'فهد','رؤيا 1':'فهد','عالم الابتكار 47':'فهد','الشعلان 50':'فهد','الشعلان 51':'فهد',
+      'كاف A':'محمد إبراهيم','كاف B':'محمد إبراهيم','كاف C':'محمد إبراهيم','واجهة قرطبة':'محمد إبراهيم','الماجدية 107':'محمد إبراهيم','صفاء 50':'محمد إبراهيم','مغنى 14':'محمد إبراهيم','الماجدية 88':'محمد إبراهيم','العجلان 19':'محمد إبراهيم',
+      'مكين 37':'محمود',
+      'جادة 39':'مازن','ألين 32':'مازن','الين 32':'مازن','أثل 12':'مازن','اثل 12':'مازن','فرساي 4':'مازن','فرساي 10':'مازن','فرساي 11':'مازن','اتحاد العاصمة':'مازن',
+      'وجود الياسمين':'مازن الخطيب',
+      'صفاء 28':'محمد عبده','صفا 28':'محمد عبده','صفاء 65':'محمد عبده','صفا 65':'محمد عبده','جمال الأندلس':'محمد عبده','جمال الاندلس':'محمد عبده','برج جوديا':'محمد عبده'
+    },
+    users:[
+      ['فهد','fahd','فهد'],['محمد إبراهيم','mohamed_ibrahim','محمد إبراهيم'],['محمود','mahmoud','محمود'],['مازن','mazen','مازن'],['مازن الخطيب','mazen_alkhateeb','مازن الخطيب'],['محمد عبده','mohamed_abdo','محمد عبده']
+    ]
+  };
+  const aliases = {'افاق العربية':'آفاق العربية','عالم الابتكار 46':'عالم الابتكار 47','صفا 28':'صفاء 28','صفا 65':'صفاء 65','جمال الاندلس':'جمال الأندلس','الين 32':'ألين 32','اثل 12':'أثل 12'};
+  function n(v){return String(v||'').trim();}
+  function canonProject(p){return aliases[n(p)]||n(p);}
+  function uniq(arr){const out=[];(arr||[]).forEach(x=>{x=n(x);if(x&&!out.includes(x))out.push(x)});return out;}
+  function ensure(){
+    if(typeof state==='undefined') return;
+    const projects = uniq(Object.keys(MASTER.projectWorkers).map(canonProject));
+    const workers = uniq(Object.values(MASTER.projectWorkers).flat());
     state.projects = uniq([...(state.projects||[]).map(canonProject), ...projects]);
-    state.supervisors = uniq([...(state.supervisors||[]).map(canonSupervisor), ...supervisors]);
-    state.workers = uniq([...(state.workers||[]).map(canonWorker), ...workers]);
+    state.workers = uniq([...(state.workers||[]), ...workers]);
+    state.supervisors = uniq([...(state.supervisors||[]), ...MASTER.supervisors]);
     state.projectSupervisorRules = state.projectSupervisorRules || {};
-    Object.entries(MASTER.projectSupervisorRules).forEach(([p,s]) => { state.projectSupervisorRules[canonProject(p)] = canonSupervisor(s); });
-    state.projectMeta = state.projectMeta || {};
     state.workerProfiles = state.workerProfiles || {};
     state.supervisorProfiles = state.supervisorProfiles || {};
-    state.nameAliases = state.nameAliases || {workers:{}, projects:{}, supervisors:{}};
-    state.nameAliases.workers = {...(state.nameAliases.workers||{}), ...MASTER.aliases.workers};
-    state.nameAliases.projects = {...(state.nameAliases.projects||{}), ...MASTER.aliases.projects};
-    state.nameAliases.supervisors = {...(state.nameAliases.supervisors||{}), ...MASTER.aliases.supervisors};
-    supervisors.forEach(s => { state.supervisorProfiles[s] = state.supervisorProfiles[s] || {workers:[], projects:[]}; });
-    Object.entries(MASTER.projectWorkers).forEach(([rawProject, rawWorkers]) => {
-      const project = canonProject(rawProject);
-      const sup = canonSupervisor(MASTER.projectSupervisorRules[rawProject] || state.projectSupervisorRules[project] || '');
-      state.projectSupervisorRules[project] = sup;
-      state.projectMeta[project] = {...(state.projectMeta[project]||{}), type:(state.projectMeta[project]?.type || 'daily_visit'), expectedTime:(state.projectMeta[project]?.expectedTime || '00:30')};
+    state.projectMeta = state.projectMeta || {};
+    projects.forEach(p=>{state.projectMeta[p] = Object.assign({type:'daily_visit', expectedTime:'00:30'}, state.projectMeta[p]||{});});
+    Object.keys(MASTER.projectSupervisor).forEach(raw=>{state.projectSupervisorRules[canonProject(raw)] = MASTER.projectSupervisor[raw];});
+    Object.keys(MASTER.projectWorkers).forEach(raw=>{
+      const p = canonProject(raw), sup = MASTER.projectSupervisor[raw] || state.projectSupervisorRules[p] || '';
+      if(!sup) return;
       state.supervisorProfiles[sup] = state.supervisorProfiles[sup] || {workers:[], projects:[]};
-      state.supervisorProfiles[sup].projects = uniq([...(state.supervisorProfiles[sup].projects||[]), project]);
-      rawWorkers.map(canonWorker).forEach(w => {
+      state.supervisorProfiles[sup].projects = uniq([...(state.supervisorProfiles[sup].projects||[]), p]);
+      MASTER.projectWorkers[raw].forEach(w=>{
         state.workerProfiles[w] = state.workerProfiles[w] || {projects:[], supervisor:sup, status:'أساسي'};
         state.workerProfiles[w].supervisor = sup;
-        state.workerProfiles[w].status = state.workerProfiles[w].status || 'أساسي';
-        state.workerProfiles[w].projects = uniq([...(state.workerProfiles[w].projects||[]), project]);
+        state.workerProfiles[w].status = 'أساسي';
+        state.workerProfiles[w].projects = uniq([...(state.workerProfiles[w].projects||[]).map(canonProject), p]);
         state.supervisorProfiles[sup].workers = uniq([...(state.supervisorProfiles[sup].workers||[]), w]);
       });
     });
     state.users = Array.isArray(state.users) ? state.users : [];
-    MASTER.users.forEach(u => {
-      const username = n(u.username).toLowerCase();
-      let ex = state.users.find(x => n(x.username).toLowerCase() === username || (x.role === 'supervisor' && canonSupervisor(x.linkedSupervisor||x.fullName) === u.linkedSupervisor));
-      const payload = {...u, id:(ex?.id || ('u-'+username)), permissions:{...(ex?.permissions||{}), ...DEFAULT_PERMS}, linkedSupervisor:canonSupervisor(u.linkedSupervisor), fullName:canonSupervisor(u.fullName), isActive:true};
-      if(ex) Object.assign(ex, payload); else state.users.push(payload);
+    MASTER.users.forEach(([full, username, linked])=>{
+      let u = state.users.find(x=>n(x.username).toLowerCase()===username || (n(x.linkedSupervisor||x.linked_supervisor||x.supervisor_name)===linked && x.role==='supervisor'));
+      const base = {id:'u-'+username, fullName:full, username, password:'123456', role:'supervisor', linkedSupervisor:linked, isActive:true, permissions:{dashboardTab:'view',entriesTab:'edit',peopleTab:'hidden',projectsTab:'hidden',distributionTab:'hidden',monthlyTab:'view',alertsTab:'view',exportTab:'view',usersTab:'hidden'}};
+      if(u) Object.assign(u, base, {id:u.id||base.id}); else state.users.push(base);
     });
   }
-  function refreshSupervisorSelect(selected){
-    const sel = document.getElementById('userLinkedSupervisor');
-    if(!sel) return;
-    const current = n(selected || sel.value);
-    const names = uniq([...(window.state?.supervisors||[]), ...MASTER.supervisors].map(canonSupervisor));
-    sel.innerHTML = '<option value="">-</option>' + names.map(x=>`<option value="${esc2(x)}">${esc2(x)}</option>`).join('');
-    if(current) sel.value = canonSupervisor(current);
+  function fillSelect(selected){
+    const el = document.getElementById('userLinkedSupervisor');
+    if(!el) return;
+    const cur = selected || el.value;
+    el.innerHTML = '<option value="">-</option>' + MASTER.supervisors.map(s=>'<option value="'+s+'">'+s+'</option>').join('');
+    if(cur) el.value = cur;
   }
-  const oldRefresh = window.refreshAllPickers;
-  window.refreshAllPickers = function(){ rebuildMasterState(); if(oldRefresh) oldRefresh.apply(this, arguments); refreshSupervisorSelect(); };
-  window.toggleUserFormByRole = function(){
-    const role = n(document.getElementById('userRole')?.value);
-    const full = canonSupervisor(document.getElementById('userFullName')?.value || '');
-    refreshSupervisorSelect(document.getElementById('userLinkedSupervisor')?.value || full);
-    const sel = document.getElementById('userLinkedSupervisor');
-    const wrap = document.getElementById('linkedSupervisorWrap');
-    if(sel) { sel.disabled = false; if(role==='supervisor' && full && MASTER.supervisors.includes(full)) sel.value = full; }
-    if(wrap) wrap.style.opacity = '1';
+  window.tasneefFixTeamData = function(){
+    ensure(); fillSelect();
+    if(typeof saveState==='function') saveState(true);
+    if(typeof refreshAllPickers==='function') refreshAllPickers();
+    if(typeof renderUsersTable==='function') renderUsersTable();
+    if(typeof renderDistributionAlerts==='function') renderDistributionAlerts();
+    if(typeof renderKPIs==='function') renderKPIs();
+    if(typeof renderEntriesTable==='function') renderEntriesTable();
+    if(typeof showToast==='function') showToast('تم إصلاح ربط المشرفين والعمال');
   };
-  const oldClear = window.clearUserForm;
-  window.clearUserForm = function(){ if(oldClear) oldClear.apply(this, arguments); refreshSupervisorSelect(); window.toggleUserFormByRole(); };
-  window.generateUsersFromSupervisors = function(){
-    rebuildMasterState();
-    if(window.saveState) window.saveState(true);
-    if(window.renderUsersTable) window.renderUsersTable();
-    refreshSupervisorSelect();
-    if(window.showToast) window.showToast('تم إنشاء وربط حسابات المشرفين والعمال بالمشاريع');
-    if(window.syncAdminCloudNow) setTimeout(()=>window.syncAdminCloudNow(),500);
-  };
-  window.forceTasneefOnlineSeed = async function(){
-    rebuildMasterState();
-    if(window.saveState) window.saveState(true);
-    if(window.renderUsersTable) window.renderUsersTable();
-    if(window.renderDistributionAlerts) window.renderDistributionAlerts();
-    if(window.refreshAllPickers) window.refreshAllPickers();
-    if(window.syncAdminCloudNow) await window.syncAdminCloudNow();
-    if(window.showToast) window.showToast('تم تحديث وربط البيانات أونلاين بنجاح');
-  };
-  document.addEventListener('input', e=>{ if(e.target && e.target.id==='userFullName') window.toggleUserFormByRole(); });
-  setTimeout(()=>{ rebuildMasterState(); refreshSupervisorSelect(); if(window.saveState) window.saveState(true); if(window.renderUsersTable) window.renderUsersTable(); if(window.renderDistributionAlerts) window.renderDistributionAlerts(); if(window.refreshAllPickers) window.refreshAllPickers(); if(window.syncAdminCloudNow) window.syncAdminCloudNow(); }, 1600);
+  const oldFill = window.fillLinkedSupervisorOptions;
+  window.fillLinkedSupervisorOptions = function(){ ensure(); fillSelect(); if(oldFill) try{oldFill.apply(this,arguments); fillSelect();}catch(e){} };
+  const oldRefresh = window.refreshLinkedSupervisorOptions;
+  window.refreshLinkedSupervisorOptions = function(selected){ ensure(); fillSelect(selected); if(oldRefresh) try{oldRefresh.apply(this,arguments); fillSelect(selected);}catch(e){} };
+  const oldInit = window.initAll;
+  window.initAll = function(){ if(oldInit) oldInit.apply(this,arguments); setTimeout(window.tasneefFixTeamData,100); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(window.tasneefFixTeamData,500)); else setTimeout(window.tasneefFixTeamData,500);
+  setTimeout(window.tasneefFixTeamData,1800);
 })();
 </script>
-
-</body></html>`;
+    </body></html>`;
     const iframe = document.getElementById('printFrame') || (() => {
       const f = document.createElement('iframe');
       f.id = 'printFrame';
@@ -5716,8 +5768,6 @@ initAll();
           if (p && !state.supervisorProfiles[sup].projects.includes(p)) state.supervisorProfiles[sup].projects.push(p);
         });
       });
-      applyCanonicalTeamData();
-      if (window.saveState) saveState(true);
       if (window.fillLinkedSupervisorOptions) fillLinkedSupervisorOptions();
       if (window.refreshAllPickers) refreshAllPickers();
       if (window.renderUsersTable) renderUsersTable();
@@ -6735,101 +6785,125 @@ window.addEventListener(
 })();
 </script>
 
-
-<!-- ===== TASNEEF FINAL ONLINE DATA FIX: USERS + WORKERS LINKING ===== -->
 <script>
 (function(){
-  const MASTER = {"supervisors": ["فهد", "محمد إبراهيم", "محمود", "مازن", "مازن الخطيب", "محمد عبده"], "projectSupervisorRules": {"فارهين 11": "فهد", "آفاق العربية": "فهد", "افاق العربية": "فهد", "مغنى 29": "فهد", "هاجر 32": "فهد", "فرساي 7": "فهد", "تعمير 17": "فهد", "رايات نجد 5": "فهد", "رؤيا 1": "فهد", "عالم الابتكار 47": "فهد", "الشعلان 50": "فهد", "الشعلان 51": "فهد", "كاف A": "محمد إبراهيم", "كاف B": "محمد إبراهيم", "كاف C": "محمد إبراهيم", "واجهة قرطبة": "محمد إبراهيم", "الماجدية 107": "محمد إبراهيم", "صفاء 50": "محمد إبراهيم", "مغنى 14": "محمد إبراهيم", "الماجدية 88": "محمد إبراهيم", "العجلان 19": "محمد إبراهيم", "مكين 37": "محمود", "جادة 39": "مازن", "ألين 32": "مازن", "الين 32": "مازن", "أثل 12": "مازن", "اثل 12": "مازن", "فرساي 4": "مازن", "فرساي 10": "مازن", "فرساي 11": "مازن", "اتحاد العاصمة": "مازن", "وجود الياسمين": "مازن الخطيب", "صفاء 28": "محمد عبده", "صفا 28": "محمد عبده", "صفاء 65": "محمد عبده", "صفا 65": "محمد عبده", "جمال الأندلس": "محمد عبده", "جمال الاندلس": "محمد عبده", "برج جوديا": "محمد عبده"}, "projectWorkers": {"فارهين 11": ["ميزان", "سوجان", "عليم", "مهيد"], "آفاق العربية": ["ميزان", "سوجان", "عليم", "مهيد"], "مغنى 29": ["ميزان", "سوجان", "عليم", "مهيد"], "هاجر 32": ["ميزان", "سوجان", "عليم", "مهيد"], "فرساي 7": ["ميزان", "سوجان", "عليم", "مهيد"], "تعمير 17": ["ميزان", "سوجان", "عليم", "مهيد"], "رايات نجد 5": ["ميزان", "سوجان", "عليم", "مهيد"], "رؤيا 1": ["ميزان", "سوجان", "عليم", "مهيد"], "عالم الابتكار 47": ["ميزان", "سوجان", "عليم", "مهيد"], "الشعلان 50": ["ياسر", "راجو"], "الشعلان 51": ["ياسر", "راجو"], "كاف A": ["عجائب", "اوسيس", "كوثر", "راهي"], "كاف B": ["عجائب", "اوسيس", "كوثر", "راهي"], "كاف C": ["عجائب", "اوسيس", "كوثر", "راهي"], "واجهة قرطبة": ["عجائب", "اوسيس", "كوثر", "راهي"], "الماجدية 107": ["عجائب", "اوسيس", "كوثر", "راهي"], "صفاء 50": ["عجائب", "اوسيس", "كوثر", "راهي"], "مغنى 14": ["عجائب", "اوسيس", "كوثر", "راهي"], "الماجدية 88": ["رحمن", "رقيب"], "العجلان 19": ["رؤوف", "اوميت"], "مكين 37": ["جهيد", "ركيب", "اكتار", "جوناب علي"], "جادة 39": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "ألين 32": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "أثل 12": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "فرساي 4": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "فرساي 10": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "فرساي 11": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "اتحاد العاصمة": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "وجود الياسمين": ["إبراهيم", "شميم", "أنور", "تيفور", "ناظمون", "جابيت", "ديكسان", "الونجير", "هلال", "أشرف", "روبل", "فضل"], "صفاء 28": ["راسيل", "مهيب", "عريف", "اكرامول"], "صفاء 65": ["السيد علي", "ليتون", "همينتو"], "جمال الأندلس": ["السيد علي", "راسيل", "مهيب"], "برج جوديا": ["علم", "فلومية", "بتشا", "مساد"]}, "users": [{"fullName": "فهد", "username": "fahd", "password": "123456", "role": "supervisor", "linkedSupervisor": "فهد", "isActive": true}, {"fullName": "محمد إبراهيم", "username": "mohamed_ibrahim", "password": "123456", "role": "supervisor", "linkedSupervisor": "محمد إبراهيم", "isActive": true}, {"fullName": "محمود", "username": "mahmoud", "password": "123456", "role": "supervisor", "linkedSupervisor": "محمود", "isActive": true}, {"fullName": "مازن", "username": "mazen", "password": "123456", "role": "supervisor", "linkedSupervisor": "مازن", "isActive": true}, {"fullName": "مازن الخطيب", "username": "mazen_alkhateeb", "password": "123456", "role": "supervisor", "linkedSupervisor": "مازن الخطيب", "isActive": true}, {"fullName": "محمد عبده", "username": "mohamed_abdo", "password": "123456", "role": "supervisor", "linkedSupervisor": "محمد عبده", "isActive": true}], "aliases": {"projects": {"افاق العربية": "آفاق العربية", "عالم الابتكار 46": "عالم الابتكار 47", "صفا 28": "صفاء 28", "صفا 65": "صفاء 65", "جمال الاندلس": "جمال الأندلس", "الين 32": "ألين 32", "اثل 12": "أثل 12"}, "workers": {"أوسيس": "اوسيس", "اوسيبس": "اوسيس", "أوميت": "اوميت", "مهدي": "مهيد", "سجون": "سوجان", "راسل": "راسيل", "سيد علي": "السيد علي", "اشرف": "أشرف", "انور": "أنور", "ركيب": "ركيب", "اكو مول": "اكرامول"}, "supervisors": {"محمد ابراهيم": "محمد إبراهيم"}}};
-  const DEFAULT_PERMS = {dashboardTab:'view', entriesTab:'edit', peopleTab:'hidden', projectsTab:'hidden', distributionTab:'hidden', monthlyTab:'view', alertsTab:'view', exportTab:'view', usersTab:'hidden'};
-  function n(v){ return String(v||'').trim(); }
-  function uniq(arr){ const out=[]; (arr||[]).forEach(x=>{ x=n(x); if(x && !out.some(y=>y===x)) out.push(x); }); return out; }
-  function esc2(v){ return String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function canonProject(p){ return (MASTER.aliases.projects[n(p)] || n(p)); }
-  function canonWorker(w){ return (MASTER.aliases.workers[n(w)] || n(w)); }
-  function canonSupervisor(s){ return (MASTER.aliases.supervisors[n(s)] || n(s)); }
-  function rebuildMasterState(){
-    window.state = window.state || {};
-    const projects = Object.keys(MASTER.projectWorkers).map(canonProject);
-    const supervisors = MASTER.supervisors.map(canonSupervisor);
-    const workers = uniq(Object.values(MASTER.projectWorkers).flat().map(canonWorker));
+  const MASTER = {
+    supervisors:['فهد','محمد إبراهيم','محمود','مازن','مازن الخطيب','محمد عبده'],
+    projectWorkers:{
+      'فارهين 11':['ميزان','سوجان','عليم','مهيد'],
+      'آفاق العربية':['ميزان','سوجان','عليم','مهيد'],
+      'افاق العربية':['ميزان','سوجان','عليم','مهيد'],
+      'مغنى 29':['ميزان','سوجان','عليم','مهيد'],
+      'هاجر 32':['ميزان','سوجان','عليم','مهيد'],
+      'فرساي 7':['ميزان','سوجان','عليم','مهيد'],
+      'تعمير 17':['ميزان','سوجان','عليم','مهيد'],
+      'رايات نجد 5':['ميزان','سوجان','عليم','مهيد'],
+      'رؤيا 1':['ميزان','سوجان','عليم','مهيد'],
+      'عالم الابتكار 47':['ميزان','سوجان','عليم','مهيد'],
+      'الشعلان 50':['ياسر','راجو'],
+      'الشعلان 51':['ياسر','راجو'],
+      'كاف A':['عجائب','اوسيس','كوثر','راهي'],
+      'كاف B':['عجائب','اوسيس','كوثر','راهي'],
+      'كاف C':['عجائب','اوسيس','كوثر','راهي'],
+      'واجهة قرطبة':['عجائب','اوسيس','كوثر','راهي'],
+      'الماجدية 107':['عجائب','اوسيس','كوثر','راهي'],
+      'صفاء 50':['عجائب','اوسيس','كوثر','راهي'],
+      'مغنى 14':['عجائب','اوسيس','كوثر','راهي'],
+      'الماجدية 88':['رحمن','رقيب'],
+      'العجلان 19':['رؤوف','اوميت'],
+      'مكين 37':['جهيد','ركيب','اكتار','جوناب علي'],
+      'جادة 39':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'ألين 32':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'الين 32':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'أثل 12':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'اثل 12':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'فرساي 4':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'فرساي 10':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'فرساي 11':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'اتحاد العاصمة':['عاريف','ديلوار','علي','رشيد','جاشيم','روبيول'],
+      'وجود الياسمين':['إبراهيم','شميم','أنور','تيفور','ناظمون','جابيت','ديكسان','الونجير','هلال','أشرف','روبل','فضل'],
+      'صفاء 28':['راسيل','مهيب','عريف','اكرامول'],
+      'صفا 28':['راسيل','مهيب','عريف','اكرامول'],
+      'صفاء 65':['السيد علي','ليتون','همينتو'],
+      'صفا 65':['السيد علي','ليتون','همينتو'],
+      'جمال الأندلس':['السيد علي','راسيل','مهيب'],
+      'جمال الاندلس':['السيد علي','راسيل','مهيب'],
+      'برج جوديا':['علم','فلومية','بتشا','مساد']
+    },
+    projectSupervisor:{
+      'فارهين 11':'فهد','آفاق العربية':'فهد','افاق العربية':'فهد','مغنى 29':'فهد','هاجر 32':'فهد','فرساي 7':'فهد','تعمير 17':'فهد','رايات نجد 5':'فهد','رؤيا 1':'فهد','عالم الابتكار 47':'فهد','الشعلان 50':'فهد','الشعلان 51':'فهد',
+      'كاف A':'محمد إبراهيم','كاف B':'محمد إبراهيم','كاف C':'محمد إبراهيم','واجهة قرطبة':'محمد إبراهيم','الماجدية 107':'محمد إبراهيم','صفاء 50':'محمد إبراهيم','مغنى 14':'محمد إبراهيم','الماجدية 88':'محمد إبراهيم','العجلان 19':'محمد إبراهيم',
+      'مكين 37':'محمود',
+      'جادة 39':'مازن','ألين 32':'مازن','الين 32':'مازن','أثل 12':'مازن','اثل 12':'مازن','فرساي 4':'مازن','فرساي 10':'مازن','فرساي 11':'مازن','اتحاد العاصمة':'مازن',
+      'وجود الياسمين':'مازن الخطيب',
+      'صفاء 28':'محمد عبده','صفا 28':'محمد عبده','صفاء 65':'محمد عبده','صفا 65':'محمد عبده','جمال الأندلس':'محمد عبده','جمال الاندلس':'محمد عبده','برج جوديا':'محمد عبده'
+    },
+    users:[
+      ['فهد','fahd','فهد'],['محمد إبراهيم','mohamed_ibrahim','محمد إبراهيم'],['محمود','mahmoud','محمود'],['مازن','mazen','مازن'],['مازن الخطيب','mazen_alkhateeb','مازن الخطيب'],['محمد عبده','mohamed_abdo','محمد عبده']
+    ]
+  };
+  const aliases = {'افاق العربية':'آفاق العربية','عالم الابتكار 46':'عالم الابتكار 47','صفا 28':'صفاء 28','صفا 65':'صفاء 65','جمال الاندلس':'جمال الأندلس','الين 32':'ألين 32','اثل 12':'أثل 12'};
+  function n(v){return String(v||'').trim();}
+  function canonProject(p){return aliases[n(p)]||n(p);}
+  function uniq(arr){const out=[];(arr||[]).forEach(x=>{x=n(x);if(x&&!out.includes(x))out.push(x)});return out;}
+  function ensure(){
+    if(typeof state==='undefined') return;
+    const projects = uniq(Object.keys(MASTER.projectWorkers).map(canonProject));
+    const workers = uniq(Object.values(MASTER.projectWorkers).flat());
     state.projects = uniq([...(state.projects||[]).map(canonProject), ...projects]);
-    state.supervisors = uniq([...(state.supervisors||[]).map(canonSupervisor), ...supervisors]);
-    state.workers = uniq([...(state.workers||[]).map(canonWorker), ...workers]);
+    state.workers = uniq([...(state.workers||[]), ...workers]);
+    state.supervisors = uniq([...(state.supervisors||[]), ...MASTER.supervisors]);
     state.projectSupervisorRules = state.projectSupervisorRules || {};
-    Object.entries(MASTER.projectSupervisorRules).forEach(([p,s]) => { state.projectSupervisorRules[canonProject(p)] = canonSupervisor(s); });
-    state.projectMeta = state.projectMeta || {};
     state.workerProfiles = state.workerProfiles || {};
     state.supervisorProfiles = state.supervisorProfiles || {};
-    state.nameAliases = state.nameAliases || {workers:{}, projects:{}, supervisors:{}};
-    state.nameAliases.workers = {...(state.nameAliases.workers||{}), ...MASTER.aliases.workers};
-    state.nameAliases.projects = {...(state.nameAliases.projects||{}), ...MASTER.aliases.projects};
-    state.nameAliases.supervisors = {...(state.nameAliases.supervisors||{}), ...MASTER.aliases.supervisors};
-    supervisors.forEach(s => { state.supervisorProfiles[s] = state.supervisorProfiles[s] || {workers:[], projects:[]}; });
-    Object.entries(MASTER.projectWorkers).forEach(([rawProject, rawWorkers]) => {
-      const project = canonProject(rawProject);
-      const sup = canonSupervisor(MASTER.projectSupervisorRules[rawProject] || state.projectSupervisorRules[project] || '');
-      state.projectSupervisorRules[project] = sup;
-      state.projectMeta[project] = {...(state.projectMeta[project]||{}), type:(state.projectMeta[project]?.type || 'daily_visit'), expectedTime:(state.projectMeta[project]?.expectedTime || '00:30')};
+    state.projectMeta = state.projectMeta || {};
+    projects.forEach(p=>{state.projectMeta[p] = Object.assign({type:'daily_visit', expectedTime:'00:30'}, state.projectMeta[p]||{});});
+    Object.keys(MASTER.projectSupervisor).forEach(raw=>{state.projectSupervisorRules[canonProject(raw)] = MASTER.projectSupervisor[raw];});
+    Object.keys(MASTER.projectWorkers).forEach(raw=>{
+      const p = canonProject(raw), sup = MASTER.projectSupervisor[raw] || state.projectSupervisorRules[p] || '';
+      if(!sup) return;
       state.supervisorProfiles[sup] = state.supervisorProfiles[sup] || {workers:[], projects:[]};
-      state.supervisorProfiles[sup].projects = uniq([...(state.supervisorProfiles[sup].projects||[]), project]);
-      rawWorkers.map(canonWorker).forEach(w => {
+      state.supervisorProfiles[sup].projects = uniq([...(state.supervisorProfiles[sup].projects||[]), p]);
+      MASTER.projectWorkers[raw].forEach(w=>{
         state.workerProfiles[w] = state.workerProfiles[w] || {projects:[], supervisor:sup, status:'أساسي'};
         state.workerProfiles[w].supervisor = sup;
-        state.workerProfiles[w].status = state.workerProfiles[w].status || 'أساسي';
-        state.workerProfiles[w].projects = uniq([...(state.workerProfiles[w].projects||[]), project]);
+        state.workerProfiles[w].status = 'أساسي';
+        state.workerProfiles[w].projects = uniq([...(state.workerProfiles[w].projects||[]).map(canonProject), p]);
         state.supervisorProfiles[sup].workers = uniq([...(state.supervisorProfiles[sup].workers||[]), w]);
       });
     });
     state.users = Array.isArray(state.users) ? state.users : [];
-    MASTER.users.forEach(u => {
-      const username = n(u.username).toLowerCase();
-      let ex = state.users.find(x => n(x.username).toLowerCase() === username || (x.role === 'supervisor' && canonSupervisor(x.linkedSupervisor||x.fullName) === u.linkedSupervisor));
-      const payload = {...u, id:(ex?.id || ('u-'+username)), permissions:{...(ex?.permissions||{}), ...DEFAULT_PERMS}, linkedSupervisor:canonSupervisor(u.linkedSupervisor), fullName:canonSupervisor(u.fullName), isActive:true};
-      if(ex) Object.assign(ex, payload); else state.users.push(payload);
+    MASTER.users.forEach(([full, username, linked])=>{
+      let u = state.users.find(x=>n(x.username).toLowerCase()===username || (n(x.linkedSupervisor||x.linked_supervisor||x.supervisor_name)===linked && x.role==='supervisor'));
+      const base = {id:'u-'+username, fullName:full, username, password:'123456', role:'supervisor', linkedSupervisor:linked, isActive:true, permissions:{dashboardTab:'view',entriesTab:'edit',peopleTab:'hidden',projectsTab:'hidden',distributionTab:'hidden',monthlyTab:'view',alertsTab:'view',exportTab:'view',usersTab:'hidden'}};
+      if(u) Object.assign(u, base, {id:u.id||base.id}); else state.users.push(base);
     });
   }
-  function refreshSupervisorSelect(selected){
-    const sel = document.getElementById('userLinkedSupervisor');
-    if(!sel) return;
-    const current = n(selected || sel.value);
-    const names = uniq([...(window.state?.supervisors||[]), ...MASTER.supervisors].map(canonSupervisor));
-    sel.innerHTML = '<option value="">-</option>' + names.map(x=>`<option value="${esc2(x)}">${esc2(x)}</option>`).join('');
-    if(current) sel.value = canonSupervisor(current);
+  function fillSelect(selected){
+    const el = document.getElementById('userLinkedSupervisor');
+    if(!el) return;
+    const cur = selected || el.value;
+    el.innerHTML = '<option value="">-</option>' + MASTER.supervisors.map(s=>'<option value="'+s+'">'+s+'</option>').join('');
+    if(cur) el.value = cur;
   }
-  const oldRefresh = window.refreshAllPickers;
-  window.refreshAllPickers = function(){ rebuildMasterState(); if(oldRefresh) oldRefresh.apply(this, arguments); refreshSupervisorSelect(); };
-  window.toggleUserFormByRole = function(){
-    const role = n(document.getElementById('userRole')?.value);
-    const full = canonSupervisor(document.getElementById('userFullName')?.value || '');
-    refreshSupervisorSelect(document.getElementById('userLinkedSupervisor')?.value || full);
-    const sel = document.getElementById('userLinkedSupervisor');
-    const wrap = document.getElementById('linkedSupervisorWrap');
-    if(sel) { sel.disabled = false; if(role==='supervisor' && full && MASTER.supervisors.includes(full)) sel.value = full; }
-    if(wrap) wrap.style.opacity = '1';
+  window.tasneefFixTeamData = function(){
+    ensure(); fillSelect();
+    if(typeof saveState==='function') saveState(true);
+    if(typeof refreshAllPickers==='function') refreshAllPickers();
+    if(typeof renderUsersTable==='function') renderUsersTable();
+    if(typeof renderDistributionAlerts==='function') renderDistributionAlerts();
+    if(typeof renderKPIs==='function') renderKPIs();
+    if(typeof renderEntriesTable==='function') renderEntriesTable();
+    if(typeof showToast==='function') showToast('تم إصلاح ربط المشرفين والعمال');
   };
-  const oldClear = window.clearUserForm;
-  window.clearUserForm = function(){ if(oldClear) oldClear.apply(this, arguments); refreshSupervisorSelect(); window.toggleUserFormByRole(); };
-  window.generateUsersFromSupervisors = function(){
-    rebuildMasterState();
-    if(window.saveState) window.saveState(true);
-    if(window.renderUsersTable) window.renderUsersTable();
-    refreshSupervisorSelect();
-    if(window.showToast) window.showToast('تم إنشاء وربط حسابات المشرفين والعمال بالمشاريع');
-    if(window.syncAdminCloudNow) setTimeout(()=>window.syncAdminCloudNow(),500);
-  };
-  window.forceTasneefOnlineSeed = async function(){
-    rebuildMasterState();
-    if(window.saveState) window.saveState(true);
-    if(window.renderUsersTable) window.renderUsersTable();
-    if(window.renderDistributionAlerts) window.renderDistributionAlerts();
-    if(window.refreshAllPickers) window.refreshAllPickers();
-    if(window.syncAdminCloudNow) await window.syncAdminCloudNow();
-    if(window.showToast) window.showToast('تم تحديث وربط البيانات أونلاين بنجاح');
-  };
-  document.addEventListener('input', e=>{ if(e.target && e.target.id==='userFullName') window.toggleUserFormByRole(); });
-  setTimeout(()=>{ rebuildMasterState(); refreshSupervisorSelect(); if(window.saveState) window.saveState(true); if(window.renderUsersTable) window.renderUsersTable(); if(window.renderDistributionAlerts) window.renderDistributionAlerts(); if(window.refreshAllPickers) window.refreshAllPickers(); if(window.syncAdminCloudNow) window.syncAdminCloudNow(); }, 1600);
+  const oldFill = window.fillLinkedSupervisorOptions;
+  window.fillLinkedSupervisorOptions = function(){ ensure(); fillSelect(); if(oldFill) try{oldFill.apply(this,arguments); fillSelect();}catch(e){} };
+  const oldRefresh = window.refreshLinkedSupervisorOptions;
+  window.refreshLinkedSupervisorOptions = function(selected){ ensure(); fillSelect(selected); if(oldRefresh) try{oldRefresh.apply(this,arguments); fillSelect(selected);}catch(e){} };
+  const oldInit = window.initAll;
+  window.initAll = function(){ if(oldInit) oldInit.apply(this,arguments); setTimeout(window.tasneefFixTeamData,100); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>setTimeout(window.tasneefFixTeamData,500)); else setTimeout(window.tasneefFixTeamData,500);
+  setTimeout(window.tasneefFixTeamData,1800);
 })();
 </script>
-
 </body>
-</html>
