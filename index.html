@@ -1724,211 +1724,6 @@ function printDailyEntriesReport() {
   <table><thead><tr><th>التاريخ</th><th>اليوم</th><th>المشروع</th><th>المشرف</th><th>العمال</th><th>الدخول</th><th>الخروج</th><th>المدة</th><th>التقديري</th><th>حالة المدة</th><th>الحالة</th><th>الاعتماد</th><th>الملاحظة</th></tr></thead><tbody>
   ${rows.map(e=>{ const mins = durationMinutes(e.login,e.exit); const timeInfo = (window.getEntryTimeColorInfo ? getEntryTimeColorInfo(e) : {label:'—'}); const expectedText = (window.formatExpectedTime ? formatExpectedTime(state.projectMeta?.[e.project]?.expectedTime || '') : '') || '—'; return `<tr><td>${esc(e.date)}</td><td>${esc(getArabicDayName(e.date))}</td><td>${esc(e.project)}</td><td>${esc(e.supervisor||'-')}</td><td>${esc((e.workers||[]).join('، '))}</td><td>${esc(e.login||'-')}</td><td>${esc(e.exit||'-')}</td><td>${esc(formatHM(mins))}</td><td>${esc(expectedText)}</td><td>${esc(timeInfo.label || '—')}</td><td>${entryStatusInfo(e).complete ? 'مكتمل' : 'ناقص'}</td><td>${esc(e.approvalStatus||'مسجل')}</td><td>${esc(e.note||'')}</td></tr>`; }).join('')}
   </tbody></table><div class="footer">شركة تصنيف لإدارة المرافق</div>
-<script>
-/* ===== TASNEEF ULTIMATE SAFE FIX: DASHBOARD + LINKED SUPERVISOR ===== */
-(function(){
-  if(window.__TASNEEF_ULTIMATE_SAFE_FIX__) return;
-  window.__TASNEEF_ULTIMATE_SAFE_FIX__ = true;
-
-  function q(id){ return document.getElementById(id); }
-  function clean(v){ return String(v == null ? '' : v).trim(); }
-  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function setText(id,val){ const el=q(id); if(el) el.textContent=String(val); }
-  function minutes(start,end){
-    if(!start || !end) return 0;
-    const a=String(start).split(':').map(Number), b=String(end).split(':').map(Number);
-    if(a.length<2 || b.length<2 || a.some(Number.isNaN) || b.some(Number.isNaN)) return 0;
-    let m=(b[0]*60+b[1])-(a[0]*60+a[1]);
-    if(m<0) m+=1440;
-    return m;
-  }
-  function formatHM(m){ m=Math.max(0, Number(m)||0); return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
-  function normProject(v){
-    return clean(v).replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ').replace(/^ال/,'');
-  }
-  function expectedMinutesFor(project){
-    const meta = window.state && state.projectMeta && state.projectMeta[project];
-    const val = clean(meta && (meta.expectedTime || meta.expectedDuration || meta.duration));
-    if(/^\d{1,2}:\d{2}$/.test(val)){ const [h,m]=val.split(':').map(Number); return h*60+m; }
-    const n = Number(val);
-    return Number.isFinite(n) && n>0 ? n : 60;
-  }
-  function getCloud(){
-    try{
-      if(window.appCloud) return window.appCloud;
-      const cfg = window.APP_CONFIG || {};
-      const url = cfg.supabaseUrl || cfg.SUPABASE_URL || 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
-      const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
-      if(window.supabase && url && key){ window.appCloud = window.supabase.createClient(url,key); return window.appCloud; }
-    }catch(e){}
-    return null;
-  }
-  async function loadDashboardData(){
-    const cloud=getCloud();
-    if(cloud){
-      try{
-        const [pr, wr, ur, rr] = await Promise.all([
-          cloud.from('projects').select('*').eq('is_active', true),
-          cloud.from('workers').select('*').eq('is_active', true),
-          cloud.from('users').select('*').eq('is_active', true),
-          cloud.from('daily_records').select('*').order('record_date',{ascending:false}).order('id',{ascending:false}).limit(3000)
-        ]);
-        if(!pr.error && !wr.error && !ur.error && !rr.error){
-          return {
-            projects:(pr.data||[]).map(x=>clean(x.project_name)).filter(Boolean),
-            workers:(wr.data||[]).map(x=>clean(x.worker_name)).filter(Boolean),
-            supervisors:(ur.data||[]).filter(x=>clean(x.role)==='supervisor').map(x=>clean(x.linked_supervisor||x.supervisor_name||x.full_name)).filter(Boolean),
-            records:(rr.data||[]).map(r=>({
-              id:r.id, project:clean(r.project_name), date:clean(r.record_date), login:clean(r.login_time), exit:clean(r.logout_time), supervisor:clean(r.supervisor_name)
-            }))
-          };
-        }
-      }catch(e){ console.warn('dashboard cloud read failed', e); }
-    }
-    const st=window.state||{};
-    return {
-      projects:[...(st.projects||[])], workers:[...(st.workers||[])], supervisors:[...(st.supervisors||[])], records:[...(st.entries||[])]
-    };
-  }
-  function ensureDashboardShellSafe(){
-    const tabs=document.querySelector('.tabs');
-    if(tabs && !document.querySelector('[data-tab="dashboardTab"]')){
-      const btn=document.createElement('button');
-      btn.className='tab'; btn.dataset.tab='dashboardTab'; btn.textContent='الداشبورد';
-      btn.onclick=function(){ if(window.showTab) showTab('dashboardTab', this); setTimeout(window.renderDashboard,80); };
-      tabs.insertBefore(btn, tabs.firstChild);
-    }
-    const entries=q('entriesTab');
-    if(entries && !q('dashboardTab')){
-      entries.insertAdjacentHTML('beforebegin', `
-      <div id="dashboardTab" class="tab-page hidden">
-        <div class="dashboard-grid">
-          <div class="dashboard-main">
-            <div class="dashboard-kpis">
-              <div class="kpi"><div class="muted">آخر يوم مسجل</div><div class="v" id="dashLatestDate">—</div></div>
-              <div class="kpi"><div class="muted">سجلات اليوم</div><div class="v" id="dashEntriesToday">0</div></div>
-              <div class="kpi"><div class="muted">مشاريع اليوم</div><div class="v" id="dashProjectsToday">0</div></div>
-              <div class="kpi"><div class="muted">مشاريع غير مسجلة</div><div class="v" id="dashMissingProjects">0</div></div>
-            </div>
-            <div class="dashboard-kpis">
-              <div class="kpi"><div class="muted">ضمن الوقت</div><div class="v" id="dashGreenCount">0</div></div>
-              <div class="kpi"><div class="muted">أقل من المطلوب</div><div class="v" id="dashYellowCount">0</div></div>
-              <div class="kpi"><div class="muted">أكثر من المطلوب</div><div class="v" id="dashRedCount">0</div></div>
-              <div class="kpi"><div class="muted">سجلات ناقصة</div><div class="v" id="dashIncompleteCount">0</div></div>
-            </div>
-            <div class="dashboard-panels">
-              <div class="panel card-pad"><h3 class="section-title">ملخص المشاريع في آخر يوم</h3><div class="table-wrap" style="max-height:340px"><table><thead><tr><th>المشروع</th><th>المشرف</th><th>السجلات</th><th>الساعات</th><th>الحالة</th></tr></thead><tbody id="dashProjectsBody"></tbody></table></div></div>
-              <div class="panel card-pad"><h3 class="section-title">المشرفون الأكثر نشاطًا</h3><div class="table-wrap" style="max-height:340px"><table><thead><tr><th>المشرف</th><th>السجلات</th><th>المشاريع</th><th>الساعات</th></tr></thead><tbody id="dashSupervisorsBody"></tbody></table></div></div>
-            </div>
-          </div>
-          <div class="dashboard-side">
-            <div class="panel card-pad"><h3 class="section-title">تنبيه سريع</h3><div id="dashQuickAlert" class="dashboard-note">لا توجد بيانات بعد.</div></div>
-            <div class="panel card-pad"><h3 class="section-title">مشاريع تحتاج متابعة</h3><div id="dashFollowupList" class="dashboard-list"></div></div>
-            <div class="panel card-pad"><h3 class="section-title">مشاريع غير مسجلة</h3><div id="dashMissingList" class="dashboard-list"></div></div>
-          </div>
-        </div>
-      </div>`);
-    }
-    if(!q('tasneefUltimateDashboardCss')){
-      const st=document.createElement('style'); st.id='tasneefUltimateDashboardCss';
-      st.textContent='.dashboard-grid{display:grid;grid-template-columns:1.6fr .9fr;gap:16px;max-width:1380px;margin:0 auto;padding:0 16px}.dashboard-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.dashboard-panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}.dashboard-note,.dashboard-item{padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:#f7fbf9;line-height:1.8}.dashboard-list{display:grid;gap:8px}.dashboard-item.warn{background:#fff8e3}.dashboard-item.danger{background:#fdeeee}.dashboard-item.ok{background:#eef8f2}@media(max-width:1100px){.dashboard-grid,.dashboard-kpis,.dashboard-panels{grid-template-columns:1fr}}';
-      document.head.appendChild(st);
-    }
-  }
-  async function renderDashboardSafe(){
-    ensureDashboardShellSafe();
-    const data=await loadDashboardData();
-    const projects=[...new Set((data.projects||[]).map(clean).filter(Boolean))];
-    const workers=[...new Set((data.workers||[]).map(clean).filter(Boolean))];
-    const supervisors=[...new Set((data.supervisors||[]).map(clean).filter(Boolean))];
-    const records=(data.records||[]).filter(r=>clean(r.date));
-    setText('kpiProjects',projects.length); setText('kpiEntries',records.length); setText('kpiSups',supervisors.length); setText('kpiWorkers',workers.length);
-    const dates=[...new Set(records.map(r=>clean(r.date)).filter(Boolean))].sort();
-    const latest=dates.length?dates[dates.length-1]:'';
-    const latestRows=latest?records.filter(r=>clean(r.date)===latest):[];
-    const latestProjectSet=new Set(latestRows.map(r=>normProject(r.project)).filter(Boolean));
-    const missing=projects.filter(p=>!latestProjectSet.has(normProject(p)));
-    let within=0, under=0, over=0, incomplete=0; const byProject={}, bySup={};
-    latestRows.forEach(r=>{
-      const mins=minutes(r.login,r.exit), exp=expectedMinutesFor(r.project);
-      if(!r.project || !r.supervisor || !r.login || !r.exit) incomplete++;
-      if(!mins) incomplete++; else if(mins > exp + 5) over++; else if(mins < exp - 5) under++; else within++;
-      const p=clean(r.project)||'—'; byProject[p]=byProject[p]||{project:p,supervisor:clean(r.supervisor),count:0,minutes:0}; byProject[p].count++; byProject[p].minutes+=mins;
-      const s=clean(r.supervisor)||'—'; bySup[s]=bySup[s]||{supervisor:s,count:0,projects:new Set(),minutes:0}; bySup[s].count++; bySup[s].projects.add(normProject(p)); bySup[s].minutes+=mins;
-    });
-    setText('dashLatestDate',latest||'—'); setText('dashEntriesToday',latestRows.length); setText('dashProjectsToday',latestProjectSet.size); setText('dashMissingProjects',missing.length);
-    setText('dashGreenCount',within); setText('dashYellowCount',under); setText('dashRedCount',over); setText('dashIncompleteCount',incomplete);
-    const pb=q('dashProjectsBody'); if(pb) pb.innerHTML=Object.values(byProject).map(r=>`<tr><td>${esc(r.project)}</td><td>${esc(r.supervisor||'—')}</td><td>${r.count}</td><td>${formatHM(r.minutes)}</td><td><span class="status-pill status-ok">مسجل</span></td></tr>`).join('') || '<tr><td colspan="5" class="muted">لا توجد سجلات لعرضها.</td></tr>';
-    const sb=q('dashSupervisorsBody'); if(sb) sb.innerHTML=Object.values(bySup).map(r=>`<tr><td>${esc(r.supervisor)}</td><td>${r.count}</td><td>${r.projects.size}</td><td>${formatHM(r.minutes)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">لا توجد بيانات.</td></tr>';
-    const qa=q('dashQuickAlert'); if(qa) qa.textContent=latest?`آخر يوم مسجل ${latest} وفيه ${latestRows.length} سجل.`:'لا توجد سجلات بعد.';
-    const fl=q('dashFollowupList'); if(fl) fl.innerHTML=incomplete?`<div class="dashboard-item warn">يوجد ${incomplete} سجل ناقص يحتاج مراجعة.</div>`:'<div class="dashboard-item ok">لا توجد ملاحظات تشغيلية حالية.</div>';
-    const ml=q('dashMissingList'); if(ml) ml.innerHTML=missing.length?missing.slice(0,12).map(p=>`<div class="dashboard-item warn">${esc(p)}</div>`).join(''):'<div class="dashboard-item ok">كل المشاريع مسجلة في آخر يوم.</div>';
-  }
-
-  function supervisorNames(){
-    const names=[]; const add=v=>{v=clean(v); if(v && !names.some(x=>x===v)) names.push(v);};
-    ['فهد','محمد إبراهيم','محمود','مازن','مازن الخطيب','محمد عبده'].forEach(add);
-    const st=window.state||{};
-    (st.supervisors||[]).forEach(add); Object.keys(st.supervisorProfiles||{}).forEach(add); Object.values(st.projectSupervisorRules||{}).forEach(add);
-    (st.users||[]).forEach(u=>{ if(clean(u.role)==='supervisor'){ add(u.linkedSupervisor); add(u.fullName); add(u.supervisor_name); }});
-    return names;
-  }
-  function fillLinkedSafe(selected){
-    const el=q('userLinkedSupervisor'); if(!el) return;
-    const cur=clean(selected || el.value);
-    const names=supervisorNames();
-    el.innerHTML='<option value="">-</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
-    if(cur){
-      if(!names.includes(cur)) el.insertAdjacentHTML('beforeend', `<option value="${esc(cur)}">${esc(cur)}</option>`);
-      el.value=cur;
-    }
-    el.disabled=false;
-  }
-  window.fillLinkedSupervisorOptions = fillLinkedSafe;
-  window.refreshLinkedSupervisorOptions = fillLinkedSafe;
-
-  const oldToggle=window.toggleUserFormByRole;
-  window.toggleUserFormByRole=function(){
-    if(typeof oldToggle==='function'){ try{ oldToggle.apply(this,arguments); }catch(e){} }
-    const role=clean(q('userRole')&&q('userRole').value);
-    const sel=q('userLinkedSupervisor');
-    const wrap=q('linkedSupervisorWrap');
-    if(wrap) wrap.style.opacity='1';
-    if(sel){ sel.disabled=false; fillLinkedSafe(sel.value || (role==='supervisor' ? clean(q('userFullName')&&q('userFullName').value) : '')); }
-  };
-  const oldSave=window.saveUserAccount;
-  window.saveUserAccount=function(){
-    const role=clean(q('userRole')&&q('userRole').value);
-    const sel=q('userLinkedSupervisor');
-    const full=q('userFullName');
-    if(role==='supervisor' && sel && clean(sel.value) && full){ full.value=clean(sel.value); }
-    if(typeof oldSave==='function') return oldSave.apply(this, arguments);
-  };
-  const oldEdit=window.editUserAccount;
-  window.editUserAccount=function(id){
-    const r=typeof oldEdit==='function' ? oldEdit.apply(this, arguments) : undefined;
-    setTimeout(()=>{ const sel=q('userLinkedSupervisor'); fillLinkedSafe(sel && sel.value); if(sel) sel.disabled=false; },60);
-    return r;
-  };
-  const oldClear=window.clearUserForm;
-  window.clearUserForm=function(){
-    const r=typeof oldClear==='function' ? oldClear.apply(this, arguments) : undefined;
-    setTimeout(()=>fillLinkedSafe(''),30);
-    return r;
-  };
-
-  window.renderDashboard = renderDashboardSafe;
-  window.updateKPIs = function(){ renderDashboardSafe(); };
-  const oldShow=window.showTab;
-  if(typeof oldShow==='function'){
-    window.showTab=function(tabId,btn){ const r=oldShow.apply(this,arguments); if(tabId==='dashboardTab') setTimeout(renderDashboardSafe,50); if(tabId==='usersTab') setTimeout(()=>fillLinkedSafe(q('userLinkedSupervisor')&&q('userLinkedSupervisor').value),50); return r; };
-  }
-  document.addEventListener('DOMContentLoaded',()=>{ ensureDashboardShellSafe(); fillLinkedSafe(); setTimeout(renderDashboardSafe,800); setTimeout(renderDashboardSafe,2200); });
-  window.addEventListener('load',()=>{ ensureDashboardShellSafe(); fillLinkedSafe(); renderDashboardSafe(); setTimeout(renderDashboardSafe,1800); setInterval(renderDashboardSafe,30000); });
-})();
-/* ===== END TASNEEF ULTIMATE SAFE FIX ===== */
-</script>
-
 </body></html>`;
   const win = window.open('', '_blank');
   if (!win) { showToast('المتصفح منع فتح نافذة الطباعة', 'error'); return; }
@@ -7105,4 +6900,192 @@ window.addEventListener(
 /* ===== END TASNEEF FINAL CLOUD DASHBOARD + ATTENDANCE FIX ===== */
 </script>
 
+
+
+<script>
+/* ===== TASNEEF CLEAN FINAL FIX: DASHBOARD + USER LINKED SUPERVISOR ===== */
+(function(){
+  if (window.__TASNEEF_CLEAN_FINAL_FIX__) return;
+  window.__TASNEEF_CLEAN_FINAL_FIX__ = true;
+
+  function el(id){ return document.getElementById(id); }
+  function clean(v){ return String(v == null ? '' : v).trim(); }
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+  function setText(id, value){ var x = el(id); if (x) x.textContent = String(value); }
+  function normName(v){ return clean(v).replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ').replace(/^ال/,''); }
+  function minutesBetween(a,b){
+    if(!a || !b) return 0;
+    var A=String(a).split(':').map(Number), B=String(b).split(':').map(Number);
+    if(A.length<2 || B.length<2 || A.some(isNaN) || B.some(isNaN)) return 0;
+    var m=(B[0]*60+B[1])-(A[0]*60+A[1]);
+    if(m<0) m+=1440;
+    return m;
+  }
+  function hm(m){ m=Math.max(0, Number(m)||0); return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+  function todayIso(){ return new Date().toISOString().slice(0,10); }
+
+  function cloudClient(){
+    try{
+      if(window.appCloud) return window.appCloud;
+      if(window.supabaseClient) return window.supabaseClient;
+      if(window.supabase && window.APP_CONFIG){
+        var url = window.APP_CONFIG.supabaseUrl || window.APP_CONFIG.SUPABASE_URL;
+        var key = window.APP_CONFIG.supabaseAnonKey || window.APP_CONFIG.SUPABASE_ANON_KEY;
+        if(url && key){ window.appCloud = window.supabase.createClient(url,key); return window.appCloud; }
+      }
+      if(window.supabase){
+        window.appCloud = window.supabase.createClient('https://zmjdqiswytxlbfgnfjfv.supabase.co','sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb');
+        return window.appCloud;
+      }
+    }catch(e){ console.warn('Supabase client not ready', e); }
+    return null;
+  }
+
+  async function readCloudSafe(){
+    var st = window.state || {};
+    var fallback = {
+      projects: (st.projects||[]).map(function(x){ return {project_name:x}; }),
+      workers: (st.workers||[]).map(function(x){ return {worker_name:x}; }),
+      users: (st.users||[]),
+      records: (st.entries||[]).map(function(r){ return {project_name:r.project, record_date:r.date, login_time:r.login, logout_time:r.exit, supervisor_name:r.supervisor}; })
+    };
+    var c = cloudClient();
+    if(!c) return fallback;
+    try{
+      var res = await Promise.all([
+        c.from('projects').select('*'),
+        c.from('workers').select('*'),
+        c.from('users').select('*'),
+        c.from('daily_records').select('*').order('record_date',{ascending:false}).limit(5000)
+      ]);
+      return {
+        projects: (res[0].data || fallback.projects).filter(function(x){ return x.is_active !== false; }),
+        workers: (res[1].data || fallback.workers).filter(function(x){ return x.is_active !== false; }),
+        users: (res[2].data || fallback.users).filter(function(x){ return x.is_active !== false; }),
+        records: (res[3].data || fallback.records)
+      };
+    }catch(e){ console.warn('cloud read failed', e); return fallback; }
+  }
+
+  function expectedFor(project){
+    try{
+      var st = window.state || {};
+      var meta = st.projectMeta && st.projectMeta[project];
+      var v = clean(meta && (meta.expectedTime || meta.expectedDuration || meta.duration));
+      if(/^\d{1,2}:\d{2}$/.test(v)){ var p=v.split(':').map(Number); return p[0]*60+p[1]; }
+      var n = Number(v); if(Number.isFinite(n) && n>0) return n;
+    }catch(e){}
+    return 60;
+  }
+
+  function ensureDashboardTab(){
+    var tabs = document.querySelector('.tabs');
+    if(tabs && !document.querySelector('[data-tab="dashboardTab"]')){
+      var b=document.createElement('button');
+      b.className='tab'; b.dataset.tab='dashboardTab'; b.textContent='الداشبورد';
+      b.onclick=function(){ if(window.showTab) window.showTab('dashboardTab', this); setTimeout(renderDashboardClean,80); };
+      tabs.insertBefore(b, tabs.firstChild);
+    }
+    if(!el('dashboardTab')){
+      var firstPage=document.querySelector('.tab-page');
+      if(firstPage){
+        firstPage.insertAdjacentHTML('beforebegin', '<div id="dashboardTab" class="tab-page hidden"><div class="dashboard-grid"><div class="dashboard-main"><div class="dashboard-kpis"><div class="kpi"><div class="muted">آخر يوم مسجل</div><div class="v" id="dashLatestDate">—</div></div><div class="kpi"><div class="muted">سجلات اليوم</div><div class="v" id="dashEntriesToday">0</div></div><div class="kpi"><div class="muted">مشاريع اليوم</div><div class="v" id="dashProjectsToday">0</div></div><div class="kpi"><div class="muted">مشاريع غير مسجلة</div><div class="v" id="dashMissingProjects">0</div></div></div><div class="dashboard-kpis"><div class="kpi"><div class="muted">ضمن الوقت</div><div class="v" id="dashGreenCount">0</div></div><div class="kpi"><div class="muted">أقل من المطلوب</div><div class="v" id="dashYellowCount">0</div></div><div class="kpi"><div class="muted">أكثر من المطلوب</div><div class="v" id="dashRedCount">0</div></div><div class="kpi"><div class="muted">سجلات ناقصة</div><div class="v" id="dashIncompleteCount">0</div></div></div><div class="dashboard-panels"><div class="panel card-pad"><h3 class="section-title">ملخص المشاريع في آخر يوم</h3><div class="table-wrap" style="max-height:340px"><table><thead><tr><th>المشروع</th><th>المشرف</th><th>السجلات</th><th>الساعات</th><th>الحالة</th></tr></thead><tbody id="dashProjectsBody"></tbody></table></div></div><div class="panel card-pad"><h3 class="section-title">المشرفون الأكثر نشاطًا</h3><div class="table-wrap" style="max-height:340px"><table><thead><tr><th>المشرف</th><th>السجلات</th><th>المشاريع</th><th>الساعات</th></tr></thead><tbody id="dashSupervisorsBody"></tbody></table></div></div></div></div><div class="dashboard-side"><div class="panel card-pad"><h3 class="section-title">تنبيه سريع</h3><div id="dashQuickAlert" class="dashboard-note">لا توجد بيانات بعد.</div></div><div class="panel card-pad"><h3 class="section-title">مشاريع تحتاج متابعة</h3><div id="dashFollowupList" class="dashboard-list"></div></div><div class="panel card-pad"><h3 class="section-title">مشاريع غير مسجلة</h3><div id="dashMissingList" class="dashboard-list"></div></div></div></div></div>');
+      }
+    }
+    if(!el('tasneefCleanDashCss')){
+      var s=document.createElement('style'); s.id='tasneefCleanDashCss';
+      s.textContent='.dashboard-grid{display:grid;grid-template-columns:1.6fr .9fr;gap:16px;max-width:1380px;margin:0 auto;padding:0 16px}.dashboard-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.dashboard-panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}.dashboard-note,.dashboard-item{padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:#f7fbf9;line-height:1.8}.dashboard-list{display:grid;gap:8px}.dashboard-item.warn{background:#fff8e3}.dashboard-item.ok{background:#eef8f2}.dashboard-item.danger{background:#fdeeee}@media(max-width:1100px){.dashboard-grid,.dashboard-kpis,.dashboard-panels{grid-template-columns:1fr}}';
+      document.head.appendChild(s);
+    }
+  }
+
+  async function renderDashboardClean(){
+    ensureDashboardTab();
+    var d = await readCloudSafe();
+    var projects = Array.from(new Set((d.projects||[]).map(function(x){ return clean(x.project_name || x.name || x.project); }).filter(Boolean)));
+    var workers = Array.from(new Set((d.workers||[]).map(function(x){ return clean(x.worker_name || x.name || x.worker); }).filter(Boolean)));
+    var supervisors = Array.from(new Set((d.users||[]).filter(function(u){ return clean(u.role)==='supervisor'; }).map(function(u){ return clean(u.linked_supervisor || u.supervisor_name || u.full_name || u.name); }).filter(Boolean)));
+    var records = (d.records||[]).map(function(r){ return {project:clean(r.project_name || r.project), date:clean(r.record_date || r.date), login:clean(r.login_time || r.login), exit:clean(r.logout_time || r.exit), supervisor:clean(r.supervisor_name || r.supervisor)}; }).filter(function(r){ return r.date; });
+    setText('kpiProjects', projects.length); setText('kpiEntries', records.length); setText('kpiSups', supervisors.length); setText('kpiWorkers', workers.length);
+
+    var dates = Array.from(new Set(records.map(function(r){ return r.date; }))).sort();
+    var latest = dates.length ? dates[dates.length-1] : '';
+    var dayRows = latest ? records.filter(function(r){ return r.date===latest; }) : [];
+    var todayRows = records.filter(function(r){ return r.date===todayIso(); });
+    var dayProjects = new Set(dayRows.map(function(r){ return normName(r.project); }).filter(Boolean));
+    var missing = projects.filter(function(p){ return !dayProjects.has(normName(p)); });
+    var ok=0, under=0, over=0, incomplete=0, byP={}, byS={};
+    dayRows.forEach(function(r){
+      var mins=minutesBetween(r.login,r.exit), exp=expectedFor(r.project);
+      if(!r.project || !r.supervisor || !r.login || !r.exit || !mins) incomplete++;
+      if(mins){ if(mins > exp+5) over++; else if(mins < exp-5) under++; else ok++; }
+      var p=r.project||'—'; if(!byP[p]) byP[p]={project:p, supervisor:r.supervisor||'—', count:0, minutes:0}; byP[p].count++; byP[p].minutes+=mins;
+      var su=r.supervisor||'—'; if(!byS[su]) byS[su]={supervisor:su, count:0, projects:new Set(), minutes:0}; byS[su].count++; byS[su].projects.add(normName(p)); byS[su].minutes+=mins;
+    });
+    setText('entryTodayCount', todayRows.length);
+    setText('entryTodayProjects', new Set(todayRows.map(function(r){ return normName(r.project); })).size);
+    setText('entryTodayHours', (todayRows.reduce(function(a,r){ return a+minutesBetween(r.login,r.exit); },0)/60).toFixed(2));
+    setText('dashLatestDate', latest || '—'); setText('dashEntriesToday', dayRows.length); setText('dashProjectsToday', dayProjects.size); setText('dashMissingProjects', missing.length);
+    setText('dashGreenCount', ok); setText('dashYellowCount', under); setText('dashRedCount', over); setText('dashIncompleteCount', incomplete);
+    var pb=el('dashProjectsBody'); if(pb) pb.innerHTML=Object.values(byP).map(function(r){ return '<tr><td>'+esc(r.project)+'</td><td>'+esc(r.supervisor)+'</td><td>'+r.count+'</td><td>'+hm(r.minutes)+'</td><td><span class="status-pill status-ok">مسجل</span></td></tr>'; }).join('') || '<tr><td colspan="5" class="muted">لا توجد سجلات لعرضها.</td></tr>';
+    var sb=el('dashSupervisorsBody'); if(sb) sb.innerHTML=Object.values(byS).map(function(r){ return '<tr><td>'+esc(r.supervisor)+'</td><td>'+r.count+'</td><td>'+r.projects.size+'</td><td>'+hm(r.minutes)+'</td></tr>'; }).join('') || '<tr><td colspan="4" class="muted">لا توجد بيانات.</td></tr>';
+    var qa=el('dashQuickAlert'); if(qa) qa.textContent=latest ? ('آخر يوم مسجل '+latest+' وفيه '+dayRows.length+' سجل.') : 'لا توجد سجلات بعد.';
+    var fl=el('dashFollowupList'); if(fl) fl.innerHTML=incomplete ? '<div class="dashboard-item warn">يوجد '+incomplete+' سجل ناقص يحتاج مراجعة.</div>' : '<div class="dashboard-item ok">لا توجد ملاحظات تشغيلية حالية.</div>';
+    var ml=el('dashMissingList'); if(ml) ml.innerHTML=missing.length ? missing.slice(0,14).map(function(p){ return '<div class="dashboard-item warn">'+esc(p)+'</div>'; }).join('') : '<div class="dashboard-item ok">كل المشاريع مسجلة في آخر يوم.</div>';
+  }
+
+  function getSupervisorNames(){
+    var out=[]; function add(v){ v=clean(v); if(v && out.indexOf(v)===-1) out.push(v); }
+    ['فهد','محمد إبراهيم','محمود','مازن','مازن الخطيب','محمد عبده'].forEach(add);
+    var st=window.state||{};
+    (st.supervisors||[]).forEach(add);
+    Object.keys(st.supervisorProfiles||{}).forEach(add);
+    Object.values(st.projectSupervisorRules||{}).forEach(add);
+    (st.users||[]).forEach(function(u){ if(clean(u.role)==='supervisor'){ add(u.linkedSupervisor); add(u.fullName); add(u.supervisor_name); } });
+    return out;
+  }
+  function refillLinkedSupervisor(selected){
+    var select=el('userLinkedSupervisor'); if(!select) return;
+    var chosen=clean(selected || select.value);
+    var names=getSupervisorNames();
+    select.innerHTML='<option value="">-</option>'+names.map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
+    if(chosen){ if(names.indexOf(chosen)===-1) select.insertAdjacentHTML('beforeend','<option value="'+esc(chosen)+'">'+esc(chosen)+'</option>'); select.value=chosen; }
+    select.disabled=false;
+    var wrap=el('linkedSupervisorWrap'); if(wrap){ wrap.style.display='block'; wrap.style.opacity='1'; }
+  }
+  window.refreshLinkedSupervisorOptions = refillLinkedSupervisor;
+  window.fillLinkedSupervisorOptions = refillLinkedSupervisor;
+
+  var oldToggle=window.toggleUserFormByRole;
+  window.toggleUserFormByRole=function(){
+    var before=el('userLinkedSupervisor') ? el('userLinkedSupervisor').value : '';
+    try{ if(typeof oldToggle==='function') oldToggle.apply(this, arguments); }catch(e){ console.warn(e); }
+    var role=el('userRole') ? clean(el('userRole').value) : '';
+    var full=el('userFullName') ? clean(el('userFullName').value) : '';
+    refillLinkedSupervisor(before || (role==='supervisor' ? full : ''));
+  };
+  var oldEdit=window.editUserAccount;
+  window.editUserAccount=function(id){
+    var ret; try{ if(typeof oldEdit==='function') ret=oldEdit.apply(this, arguments); }catch(e){ console.warn(e); }
+    setTimeout(function(){ refillLinkedSupervisor(el('userLinkedSupervisor') ? el('userLinkedSupervisor').value : ''); },80);
+    return ret;
+  };
+  var oldSave=window.saveUserAccount;
+  window.saveUserAccount=function(){
+    var role=el('userRole') ? clean(el('userRole').value) : '';
+    var linked=el('userLinkedSupervisor') ? clean(el('userLinkedSupervisor').value) : '';
+    var full=el('userFullName');
+    if(role==='supervisor' && linked && full && !clean(full.value)) full.value=linked;
+    if(role==='supervisor' && linked && full) full.value=linked;
+    if(typeof oldSave==='function') return oldSave.apply(this, arguments);
+  };
+  document.addEventListener('change', function(e){ if(e.target && (e.target.id==='userRole' || e.target.id==='userLinkedSupervisor')) setTimeout(function(){ refillLinkedSupervisor(el('userLinkedSupervisor') ? el('userLinkedSupervisor').value : ''); },20); }, true);
+  window.renderDashboard = renderDashboardClean;
+  window.addEventListener('load', function(){ refillLinkedSupervisor(); renderDashboardClean(); setTimeout(renderDashboardClean,1200); setTimeout(renderDashboardClean,2500); setInterval(renderDashboardClean,30000); });
+  document.addEventListener('DOMContentLoaded', function(){ refillLinkedSupervisor(); setTimeout(renderDashboardClean,600); });
+})();
+/* ===== END TASNEEF CLEAN FINAL FIX ===== */
+</script>
 </body>
+
+</html>
