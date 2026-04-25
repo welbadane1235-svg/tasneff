@@ -4551,15 +4551,17 @@ initAll();
   };
 
 <script>
-(async function(){
+(function(){
 
-async function renderDashboard(){
+async function fixDashboardKPIs(){
   try{
+    if(!window.db) return;
+
     const [usersRes, projectsRes, workersRes, recordsRes] = await Promise.all([
-      db.from('users').select('*'),
-      db.from('projects').select('*'),
-      db.from('workers').select('*'),
-      db.from('daily_records').select('*')
+      db.from('users').select('id,role'),
+      db.from('projects').select('id'),
+      db.from('workers').select('id'),
+      db.from('daily_records').select('id,record_date')
     ]);
 
     const users = usersRes.data || [];
@@ -4567,46 +4569,38 @@ async function renderDashboard(){
     const workers = workersRes.data || [];
     const records = recordsRes.data || [];
 
-    const setText = (id, val) => {
+    const today = new Date().toISOString().slice(0,10);
+
+    const set = (id,val)=>{
       const el = document.getElementById(id);
       if(el) el.textContent = val;
     };
 
-    setText('kpiProjects', projects.length);
-    setText('kpiEntries', records.length);
-    setText('kpiSups', users.filter(u => u.role === 'supervisor').length);
-    setText('kpiWorkers', workers.length);
+    set('kpiProjects', projects.length);
+    set('kpiEntries', records.length);
+    set('kpiSups', users.filter(u => u.role === 'supervisor').length);
+    set('kpiWorkers', workers.length);
+
+    const todayCount = records.filter(r => r.record_date === today).length;
+    const todayEl = document.getElementById('entryTodayCount');
+    if(todayEl) todayEl.textContent = todayCount;
 
   }catch(e){
-    console.error('dashboard error', e);
+    console.error('fixDashboardKPIs error:', e);
   }
 }
 
-window.renderDashboard = renderDashboard;
-
-const oldInitAll = window.initAll;
-window.initAll = function(){
-  if(oldInitAll) oldInitAll();
-  window.renderDashboard();
-};
-
-const oldUpdateKPIs = window.updateKPIs;
-window.updateKPIs = function(){
-  if(oldUpdateKPIs) oldUpdateKPIs();
-  window.renderDashboard();
-};
+window.fixDashboardKPIs = fixDashboardKPIs;
 
 document.addEventListener('DOMContentLoaded', function(){
-  window.renderDashboard();
+  setTimeout(fixDashboardKPIs, 800);
 });
 
-setTimeout(window.renderDashboard, 1200);
+setTimeout(fixDashboardKPIs, 1500);
+setInterval(fixDashboardKPIs, 10000);
 
 })();
 </script>
-
-
-<script>
 (function(){
   function ensureAttendanceState(){
     if (!window.state) return;
