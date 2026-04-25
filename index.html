@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -180,26 +181,6 @@ button, .light{border-radius:18px;}
 .footer{max-width:1380px;margin:24px auto 0;padding:0 16px 18px;color:#6b7370;}
 @media (max-width:1100px){.hero-brand{min-height:360px;padding:22px 18px 28px;border-radius:0 0 24px 24px}.hero-brand-top{gap:10px}.hero-logo-box{width:82px;height:82px;border-radius:20px}.hero-logo{width:58px;height:58px}.hero-company-text h2{font-size:22px}.hero-subbrand{font-size:14px}.hero-brand-center{margin-top:28px}.intro-tools{margin:-26px 12px 0}.tabs{gap:10px;overflow:auto;padding:12px 14px}.tab.active::after{bottom:-12px}}
 
-
-.auth-toolbar{position:fixed;top:14px;left:18px;z-index:9998;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.auth-chip{background:#ffffff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;box-shadow:0 8px 20px rgba(10,64,51,.08);font-size:13px;font-weight:700;color:var(--brand)}
-.auth-chip small{display:block;font-size:11px;font-weight:400;color:var(--muted)}
-.auth-toolbar button{padding:8px 12px;border-radius:999px}
-.login-overlay{position:fixed;inset:0;background:rgba(8,25,20,.45);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;z-index:10000;padding:18px}
-.login-overlay.show{display:flex}
-.login-card{width:min(480px,100%);background:#fff;border-radius:24px;border:1px solid var(--line);box-shadow:0 18px 40px rgba(0,0,0,.18);padding:22px}
-.login-card h2{margin:0 0 8px;color:var(--brand)}
-.login-card p{margin:0 0 16px;color:var(--muted);line-height:1.8}
-.permission-grid{display:grid;grid-template-columns:180px repeat(3,1fr);gap:8px;align-items:center}
-.permission-grid .head{font-weight:700;color:var(--brand);background:#f7fbf9;padding:10px;border-radius:12px;border:1px solid var(--line);text-align:center}
-.permission-grid .label{background:#fbfdfc;padding:10px;border-radius:12px;border:1px solid var(--line);font-size:13px}
-.permission-grid select{padding:9px 10px}
-.users-actions{display:flex;gap:8px;flex-wrap:wrap}
-.readonly-mask{padding:10px 12px;background:#fff8e8;border:1px solid #f0d48d;border-radius:12px;color:#7a5b00;font-size:13px;margin-bottom:10px}
-.user-role-badge{display:inline-block;padding:5px 10px;border-radius:999px;background:#eef6f3;color:var(--brand);font-size:12px;font-weight:700}
-.user-status-off{background:#fde8e8;color:#8a2020}
-@media (max-width:900px){.permission-grid{grid-template-columns:1fr}.auth-toolbar{left:10px;right:10px;top:10px}}
-
 </style>
 </head>
 <body>
@@ -238,6 +219,7 @@ button, .light{border-radius:18px;}
         <button class="light" onclick="importSpreadsheet()">استيراد</button>
         <button class="light" onclick="cleanupEmptyEntries()">تنظيف السجلات</button>
         <button class="light" onclick="saveState()">حفظ الآن</button>
+        <button class="light" onclick="window.tasneefCloudSyncNow && window.tasneefCloudSyncNow()">مزامنة سحابية</button>
       </div>
       <div id="importFileLabel" class="footer-note" style="margin-top:8px;"></div>
   </div>
@@ -701,44 +683,27 @@ button, .light{border-radius:18px;}
           <label>يوم إقفال الفترة</label>
           <input type="number" id="monthlyCutoffDay" min="1" max="31" step="1" onchange="savePayrollConfigAndRender()">
         </div>
-        <div>
-          <label>انتقال السكن → أول مشروع (دقيقة)</label>
-          <input type="number" id="monthlyFirstTripMinutes" min="0" max="240" step="1" onchange="savePayrollConfigAndRender()">
-        </div>
-      </div>
-      <div class="form-grid-3" style="margin-top:12px;">
-        <div>
-          <label>الانتقال بين المشاريع (دقيقة)</label>
-          <input type="number" id="monthlyBetweenProjectsMinutes" min="0" max="120" step="1" onchange="savePayrollConfigAndRender()">
-        </div>
-        <div>
-          <label>الرجوع من آخر مشروع للسكن (دقيقة)</label>
-          <input type="number" id="monthlyReturnTripMinutes" min="0" max="240" step="1" onchange="savePayrollConfigAndRender()">
-        </div>
         <div class="notice" style="display:flex;align-items:center;">
-          الحسبة تعتمد على الوقت الفعلي <strong style="margin-inline:6px;">+ وقت الانتقال المعتمد</strong>
-          مع إمكانية تعديل أوقات التنقل من هنا.
+          الحسبة الحالية تعتمد على <strong style="margin-inline:6px;">8.5 ساعات</strong> يوميًا بشكل افتراضي
+          حتى يوم <strong style="margin-inline:6px;">28</strong> من الشهر.
         </div>
       </div>
       <div class="form-grid-3" style="margin-top:12px;">
         <div class="notice" style="display:flex;align-items:center;">
-          يتم الحساب تلقائيًا من <strong style="margin-inline:6px;">وقت الدخول والخروج</strong> ثم يضاف
-          <strong style="margin-inline:6px;">وقت السكن وأوقات التنقل بين المشاريع</strong>.
+          يتم الحساب تلقائيًا من <strong style="margin-inline:6px;">وقت الدخول والخروج</strong> في السجلات اليومية.
         </div>
         <div class="actions" style="align-items:end;">
           <button class="light" onclick="syncMonthlyMonthFromExport()">استخدام شهر التصدير</button>
           <button class="light" onclick="clearMonthlyFilters()">مسح الفلاتر</button>
         </div>
         <div class="notice" style="display:flex;align-items:center;">
-          النسبة المئوية = <strong style="margin-inline:6px;">الدقائق المدفوعة ÷ الدقائق المستهدفة حتى يوم الإقفال</strong>
+          النسبة المئوية = <strong style="margin-inline:6px;">الدقائق الفعلية ÷ الدقائق المستهدفة حتى يوم 28</strong>
         </div>
       </div>
       <div class="kpis" style="margin-top:16px;">
         <div class="kpi"><div class="muted">إجمالي الساعات الفعلية</div><div class="v" id="monthlyTotalHours">0</div></div>
-        <div class="kpi"><div class="muted">إجمالي ساعات الانتقال</div><div class="v" id="monthlyTransitHours">0</div></div>
-        <div class="kpi"><div class="muted">إجمالي الساعات المدفوعة</div><div class="v" id="monthlyPaidHours">0</div></div>
-        <div class="kpi"><div class="muted">الساعات المستهدفة للفرد</div><div class="v" id="monthlyTargetHours">0</div></div>
         <div class="kpi"><div class="muted">إجمالي الدقائق الفعلية</div><div class="v" id="monthlyTotalMinutes">0</div></div>
+        <div class="kpi"><div class="muted">الساعات المستهدفة للفرد</div><div class="v" id="monthlyTargetHours">0</div></div>
         <div class="kpi"><div class="muted">المبلغ المستحق الإجمالي</div><div class="v" id="monthlyTotalDue">0</div></div>
       </div>
       <div id="monthlySupervisorSummary" class="panel" style="margin-top:16px; display:none;">
@@ -764,7 +729,6 @@ button, .light{border-radius:18px;}
                     </tr>
                   </thead>
                   <tbody id="summaryProjectsBody"></tbody>
-                  <tfoot id="summaryProjectsFoot"></tfoot>
                 </table>
               </div>
             </div>
@@ -816,10 +780,8 @@ button, .light{border-radius:18px;}
               <th>الاسم</th>
               <th>المشروع</th>
               <th>أيام العمل</th>
-              <th>الدقائق الفعلية</th>
-              <th>الساعات الفعلية</th>
-              <th>دقائق التنقل</th>
-              <th>الساعات المدفوعة</th>
+              <th>الدقائق</th>
+              <th>الساعات</th>
               <th>صيغة الوقت</th>
               <th>النسبة %</th>
               <th>الراتب الأساسي</th>
@@ -828,7 +790,6 @@ button, .light{border-radius:18px;}
             </tr>
           </thead>
           <tbody id="monthlyTimesBody"></tbody>
-          <tfoot id="monthlyTimesFoot"></tfoot>
         </table>
       </div>
       <div class="footer-note">يتم احتساب ساعات كل مشرف أو عامل من نفس مدة السجل اليومي المرتبط به. تم ضبط الحسبة بحيث لا يتجاوز مجموع المستحق حتى يوم 28 الراتب الأساسي للموظف، وإذا زادت الساعات يتم توزيع الراتب على المشاريع بدون تجاوز السقف. إذا لم يتم إدخال وقت دخول وخروج فلن تدخل المدة في الحساب.</div>
@@ -977,9 +938,11 @@ button, .light{border-radius:18px;}
 </div>
 
 <div id="appToast" class="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <script>
-const INITIAL_DATA = {"projects": ["وجود الياسمين", "فرساي 4", "فرساي 11", "فرساي 10", "أثل 12", "ألين 32", "جادة 39", "اتحاد العاصمة", "كاف A", "كاف B", "كاف C", "واجهة قرطبة", "صفاء 50", "الماجدية 107", "الماجدية 88", "العجلان 19", "مغنى 14", "صفاء 28", "جمال الأندلس", "برج جوديا", "صفاء 65", "آفاق العربية", "فرساي 7", "مغنى 29", "تعمير 17", "الشعلان 50", "الشعلان 51", "رؤيا 1", "هاجر 32", "رايات نجد 5", "عالم الابتكار 47", "فارهين 11", "مكين 37"], "workers": ["ميزان", "سوجان", "عليم", "مهيد", "ياسر", "راجو", "عجائب", "أوسيس", "كوثر", "راهي", "رحمن", "رقيب", "رؤوف", "أوميت", "جهيد", "ركيب", "أكتار", "جوناب علي", "عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول", "إبراهيم", "شميم", "أنور", "تيفور", "ناظمون", "جابيت", "ديكسان", "الونجير", "هلال", "أشرف", "روبل", "فضل", "راسيل", "مهيب", "عريف", "اكرامول", "السيد علي", "ليتون", "همينتو", "سيد علي", "راسل", "علم", "فلومية", "بتشا", "مساد"], "supervisors": ["فهد", "محمد إبراهيم", "محمود", "مازن", "مازن الخطيب", "محمد عبده"], "entries": [{"_id": "e1", "project": "فرساي 10", "date": "2026-04-01", "login": "10:52", "exit": "11:11", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e2", "project": "فرساي 10", "date": "2026-04-02", "login": "10:09", "exit": "10:39", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e3", "project": "فرساي 10", "date": "2026-04-03", "login": "15:28", "exit": "15:38", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e4", "project": "فرساي 10", "date": "2026-04-04", "login": "10:05", "exit": "11:16", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e5", "project": "فرساي 10", "date": "2026-04-05", "login": "11:28", "exit": "12:16", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e6", "project": "فرساي 10", "date": "2026-04-06", "login": "16:15", "exit": "16:53", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e7", "project": "فرساي 10", "date": "2026-04-07", "login": "13:55", "exit": "14:51", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e8", "project": "فرساي 10", "date": "2026-04-08", "login": "14:29", "exit": "14:57", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e9", "project": "فرساي 10", "date": "2026-04-09", "login": "16:48", "exit": "17:30", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e10", "project": "فرساي 10", "date": "2026-04-10", "login": "18:14", "exit": "18:18", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e11", "project": "فرساي 10", "date": "2026-04-11", "login": "15:52", "exit": "16:18", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e12", "project": "فرساي 10", "date": "2026-04-12", "login": "02:31", "exit": "02:38", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e13", "project": "فرساي 10", "date": "2026-04-13", "login": "18:14", "exit": "19:34", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e14", "project": "فرساي 10", "date": "2026-04-14", "login": "17:47", "exit": "18:15", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e15", "project": "فرساي 10", "date": "2026-04-15", "login": "18:20", "exit": "18:32", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e16", "project": "فرساي 10", "date": "2026-04-16", "login": "16:33", "exit": "17:10", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e17", "project": "فرساي 10", "date": "2026-04-17", "login": "18:31", "exit": "19:00", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e18", "project": "فرساي 4", "date": "2026-04-01", "login": "11:45", "exit": "11:53", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e19", "project": "فرساي 4", "date": "2026-04-02", "login": "13:20", "exit": "13:47", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e20", "project": "فرساي 4", "date": "2026-04-03", "login": "16:42", "exit": "16:48", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e21", "project": "فرساي 4", "date": "2026-04-04", "login": "14:17", "exit": "14:46", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e22", "project": "فرساي 4", "date": "2026-04-05", "login": "15:52", "exit": "16:10", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e23", "project": "فرساي 4", "date": "2026-04-06", "login": "18:17", "exit": "18:47", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e24", "project": "فرساي 4", "date": "2026-04-07", "login": "16:30", "exit": "17:00", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e25", "project": "فرساي 4", "date": "2026-04-08", "login": "16:22", "exit": "16:47", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e26", "project": "فرساي 4", "date": "2026-04-09", "login": "15:09", "exit": "15:46", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e27", "project": "فرساي 4", "date": "2026-04-10", "login": "17:56", "exit": "18:14", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e28", "project": "فرساي 4", "date": "2026-04-11", "login": "14:42", "exit": "15:15", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e29", "project": "فرساي 4", "date": "2026-04-12", "login": "01:33", "exit": "01:47", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e30", "project": "فرساي 4", "date": "2026-04-13", "login": "17:00", "exit": "17:19", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e31", "project": "فرساي 4", "date": "2026-04-14", "login": "16:57", "exit": "17:14", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e32", "project": "فرساي 4", "date": "2026-04-15", "login": "17:16", "exit": "17:40", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e33", "project": "فرساي 4", "date": "2026-04-16", "login": "14:47", "exit": "15:24", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e34", "project": "فرساي 4", "date": "2026-04-17", "login": "17:14", "exit": "17:35", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e35", "project": "فرساي 11", "date": "2026-04-01", "login": "12:00", "exit": "12:27", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e36", "project": "فرساي 11", "date": "2026-04-02", "login": "13:56", "exit": "14:31", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e37", "project": "فرساي 11", "date": "2026-04-03", "login": "16:54", "exit": "17:07", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e38", "project": "فرساي 11", "date": "2026-04-04", "login": "13:20", "exit": "13:54", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e39", "project": "فرساي 11", "date": "2026-04-05", "login": "14:21", "exit": "14:52", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e40", "project": "فرساي 11", "date": "2026-04-06", "login": "17:32", "exit": "18:04", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e41", "project": "فرساي 11", "date": "2026-04-07", "login": "14:56", "exit": "15:24", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e42", "project": "فرساي 11", "date": "2026-04-08", "login": "15:30", "exit": "16:15", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e43", "project": "فرساي 11", "date": "2026-04-09", "login": "15:57", "exit": "16:32", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e44", "project": "فرساي 11", "date": "2026-04-10", "login": "17:15", "exit": "17:43", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e45", "project": "فرساي 11", "date": "2026-04-11", "login": "14:02", "exit": "14:32", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e46", "project": "فرساي 11", "date": "2026-04-12", "login": "17:20", "exit": "17:45", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e47", "project": "فرساي 11", "date": "2026-04-13", "login": "16:08", "exit": "16:38", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e48", "project": "فرساي 11", "date": "2026-04-14", "login": "17:41", "exit": "18:10", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e49", "project": "فرساي 11", "date": "2026-04-15", "login": "15:44", "exit": "16:13", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e50", "project": "فرساي 11", "date": "2026-04-16", "login": "17:43", "exit": "18:09", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e51", "project": "ألين 32", "date": "2026-04-01", "login": "12:54", "exit": "14:11", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e52", "project": "ألين 32", "date": "2026-04-02", "login": "10:56", "exit": "13:02", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e53", "project": "ألين 32", "date": "2026-04-03", "login": "16:06", "exit": "16:24", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e54", "project": "ألين 32", "date": "2026-04-04", "login": "11:41", "exit": "12:49", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e55", "project": "ألين 32", "date": "2026-04-05", "login": "12:37", "exit": "14:05", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e56", "project": "ألين 32", "date": "2026-04-06", "login": "13:59", "exit": "15:30", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e57", "project": "ألين 32", "date": "2026-04-07", "login": "12:28", "exit": "13:36", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e58", "project": "ألين 32", "date": "2026-04-08", "login": "12:46", "exit": "14:04", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e59", "project": "ألين 32", "date": "2026-04-09", "login": "12:38", "exit": "13:42", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e60", "project": "ألين 32", "date": "2026-04-10", "login": "16:42", "exit": "17:01", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e61", "project": "ألين 32", "date": "2026-04-11", "login": "12:20", "exit": "13:29", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e62", "project": "ألين 32", "date": "2026-04-12", "login": "14:21", "exit": "15:43", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e63", "project": "ألين 32", "date": "2026-04-13", "login": "13:59", "exit": "15:46", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e64", "project": "ألين 32", "date": "2026-04-14", "login": "14:32", "exit": "16:12", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e65", "project": "ألين 32", "date": "2026-04-15", "login": "13:16", "exit": "14:29", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e66", "project": "ألين 32", "date": "2026-04-16", "login": "15:01", "exit": "16:19", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e67", "project": "أثل 12", "date": "2026-04-01", "login": "08:58", "exit": "10:19", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e68", "project": "أثل 12", "date": "2026-04-02", "login": "08:15", "exit": "09:48", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e69", "project": "أثل 12", "date": "2026-04-03", "login": "14:38", "exit": "15:05", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e70", "project": "أثل 12", "date": "2026-04-04", "login": "08:19", "exit": "09:42", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e71", "project": "أثل 12", "date": "2026-04-05", "login": "08:27", "exit": "11:05", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e72", "project": "أثل 12", "date": "2026-04-06", "login": "08:32", "exit": "11:19", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e73", "project": "أثل 12", "date": "2026-04-07", "login": "08:19", "exit": "10:01", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e74", "project": "أثل 12", "date": "2026-04-08", "login": "08:20", "exit": "09:43", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e75", "project": "أثل 12", "date": "2026-04-09", "login": "08:32", "exit": "09:52", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e76", "project": "أثل 12", "date": "2026-04-10", "login": "14:33", "exit": "15:11", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e77", "project": "أثل 12", "date": "2026-04-11", "login": "08:25", "exit": "10:15", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e78", "project": "أثل 12", "date": "2026-04-12", "login": "10:11", "exit": "12:02", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e79", "project": "أثل 12", "date": "2026-04-13", "login": "08:42", "exit": "10:57", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e80", "project": "أثل 12", "date": "2026-04-14", "login": "08:53", "exit": "11:51", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e81", "project": "أثل 12", "date": "2026-04-15", "login": "08:36", "exit": "10:48", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e82", "project": "أثل 12", "date": "2026-04-16", "login": "09:40", "exit": "12:12", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e83", "project": "جادة 39", "date": "2026-04-02", "login": "14:44", "exit": "15:28", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e84", "project": "جادة 39", "date": "2026-04-05", "login": "14:59", "exit": "15:37", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e85", "project": "جادة 39", "date": "2026-04-07", "login": "15:40", "exit": "16:25", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e86", "project": "جادة 39", "date": "2026-04-09", "login": "14:26", "exit": "14:59", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e87", "project": "جادة 39", "date": "2026-04-11", "login": "10:48", "exit": "11:00", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e88", "project": "جادة 39", "date": "2026-04-13", "login": "16:42", "exit": "17:11", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e89", "project": "جادة 39", "date": "2026-04-15", "login": "16:43", "exit": "17:10", "supervisor": "مازن", "workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}], "workerSalary": {"ميزان": 1500, "سوجان": 1500, "عليم": 1500, "مهيد": 1500, "ياسر": 1500, "راجو": 1500, "عجائب": 1500, "أوسيس": 1500, "كوثر": 1500, "راهي": 1500, "رحمن": 1500, "رقيب": 1500, "رؤوف": 1500, "أوميت": 1500, "جهيد": 1500, "ركيب": 1500, "أكتار": 1500, "جوناب علي": 1500, "عاريف": 1500, "ديلوار": 1500, "علي": 1500, "رشيد": 1500, "جاشيم": 1500, "روبيول": 1500, "إبراهيم": 1500, "شميم": 1500, "أنور": 1500, "تيفور": 1500, "ناظمون": 1500, "جابيت": 1500, "ديكسان": 1500, "الونجير": 1500, "هلال": 1500, "أشرف": 1500, "روبل": 1500, "فضل": 1500, "راسيل": 1500, "مهيب": 1500, "عريف": 1500, "اكرامول": 1500, "السيد علي": 1500, "ليتون": 1500, "همينتو": 1500, "سيد علي": 1500, "راسل": 1500, "علم": 1500, "فلومية": 1500, "بتشا": 1500, "مساد": 1500}, "supervisorSalary": {"فهد": 2300, "محمد إبراهيم": 2300, "محمود": 2300, "مازن": 2300, "مازن الخطيب": 2300, "محمد عبده": 2300}, "payrollConfig": {"dailyHours": 8.5, "cutoffDay": 28}, "workerProfiles": {"ميزان": {"supervisor": "فهد", "projects": ["فارهين 11", "آفاق العربية", "مغنى 29", "هاجر 32", "فرساي 7", "تعمير 17", "رايات نجد 5", "رؤيا 1", "عالم الابتكار 47"], "status": "أساسي"}, "سوجان": {"supervisor": "فهد", "projects": ["فارهين 11", "آفاق العربية", "مغنى 29", "هاجر 32", "فرساي 7", "تعمير 17", "رايات نجد 5", "رؤيا 1", "عالم الابتكار 47"], "status": "أساسي"}, "عليم": {"supervisor": "فهد", "projects": ["فارهين 11", "آفاق العربية", "مغنى 29", "هاجر 32", "فرساي 7", "تعمير 17", "رايات نجد 5", "رؤيا 1", "عالم الابتكار 47"], "status": "أساسي"}, "مهيد": {"supervisor": "فهد", "projects": ["فارهين 11", "آفاق العربية", "مغنى 29", "هاجر 32", "فرساي 7", "تعمير 17", "رايات نجد 5", "رؤيا 1", "عالم الابتكار 47"], "status": "أساسي"}, "ياسر": {"supervisor": "فهد", "projects": ["الشعلان 50", "الشعلان 51"], "status": "أساسي"}, "راجو": {"supervisor": "فهد", "projects": ["الشعلان 50", "الشعلان 51"], "status": "أساسي"}, "عجائب": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "الماجدية 107", "صفاء 50", "مغنى 14"], "status": "أساسي"}, "أوسيس": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "الماجدية 107", "صفاء 50", "مغنى 14"], "status": "أساسي"}, "كوثر": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "الماجدية 107", "صفاء 50", "مغنى 14"], "status": "أساسي"}, "راهي": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "الماجدية 107", "صفاء 50", "مغنى 14"], "status": "أساسي"}, "رحمن": {"supervisor": "محمد إبراهيم", "projects": ["الماجدية 88"], "status": "أساسي"}, "رقيب": {"supervisor": "محمد إبراهيم", "projects": ["الماجدية 88"], "status": "أساسي"}, "رؤوف": {"supervisor": "محمد إبراهيم", "projects": ["العجلان 19"], "status": "أساسي"}, "أوميت": {"supervisor": "محمد إبراهيم", "projects": ["العجلان 19"], "status": "أساسي"}, "جهيد": {"supervisor": "محمود", "projects": ["مكين 37"], "status": "أساسي"}, "ركيب": {"supervisor": "محمود", "projects": ["مكين 37"], "status": "أساسي"}, "أكتار": {"supervisor": "محمود", "projects": ["مكين 37"], "status": "أساسي"}, "جوناب علي": {"supervisor": "محمود", "projects": ["مكين 37"], "status": "أساسي"}, "عاريف": {"supervisor": "مازن", "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"], "status": "أساسي"}, "ديلوار": {"supervisor": "مازن", "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"], "status": "أساسي"}, "علي": {"supervisor": "مازن", "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"], "status": "أساسي"}, "رشيد": {"supervisor": "مازن", "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"], "status": "أساسي"}, "جاشيم": {"supervisor": "مازن", "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"], "status": "أساسي"}, "روبيول": {"supervisor": "مازن", "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"], "status": "أساسي"}, "إبراهيم": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "شميم": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "أنور": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "تيفور": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "ناظمون": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "جابيت": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "ديكسان": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "الونجير": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "هلال": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "أشرف": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "روبل": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "فضل": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"], "status": "أساسي"}, "راسيل": {"supervisor": "محمد عبده", "projects": ["صفاء 28"], "status": "أساسي"}, "مهيب": {"supervisor": "محمد عبده", "projects": ["صفاء 28", "جمال الأندلس"], "status": "أساسي"}, "عريف": {"supervisor": "محمد عبده", "projects": ["صفاء 28"], "status": "أساسي"}, "اكرامول": {"supervisor": "محمد عبده", "projects": ["صفاء 28"], "status": "أساسي"}, "السيد علي": {"supervisor": "محمد عبده", "projects": ["صفاء 65"], "status": "أساسي"}, "ليتون": {"supervisor": "محمد عبده", "projects": ["صفاء 65"], "status": "أساسي"}, "همينتو": {"supervisor": "محمد عبده", "projects": ["صفاء 65"], "status": "أساسي"}, "سيد علي": {"supervisor": "محمد عبده", "projects": ["جمال الأندلس"], "status": "أساسي"}, "راسل": {"supervisor": "محمد عبده", "projects": ["جمال الأندلس"], "status": "أساسي"}, "علم": {"supervisor": "محمد عبده", "projects": ["برج جوديا"], "status": "أساسي"}, "فلومية": {"supervisor": "محمد عبده", "projects": ["برج جوديا"], "status": "أساسي"}, "بتشا": {"supervisor": "محمد عبده", "projects": ["برج جوديا"], "status": "أساسي"}, "مساد": {"supervisor": "محمد عبده", "projects": ["برج جوديا"], "status": "أساسي"}}, "supervisorProfiles": {"فهد": {"workers": ["ميزان", "سوجان", "عليم", "مهيد", "ياسر", "راجو"], "projects": ["فارهين 11", "آفاق العربية", "مغنى 29", "هاجر 32", "فرساي 7", "تعمير 17", "رايات نجد 5", "رؤيا 1", "عالم الابتكار 47", "الشعلان 50", "الشعلان 51"]}, "محمد إبراهيم": {"workers": ["عجائب", "أوسيس", "كوثر", "راهي", "رحمن", "رقيب", "رؤوف", "أوميت"], "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "الماجدية 107", "صفاء 50", "مغنى 14", "الماجدية 88", "العجلان 19"]}, "محمود": {"workers": ["جهيد", "ركيب", "أكتار", "جوناب علي"], "projects": ["مكين 37"]}, "مازن": {"workers": ["عاريف", "ديلوار", "علي", "رشيد", "جاشيم", "روبيول"], "projects": ["جادة 39", "ألين 32", "أثل 12", "فرساي 4", "فرساي 10", "فرساي 11", "اتحاد العاصمة"]}, "مازن الخطيب": {"workers": ["إبراهيم", "شميم", "أنور", "تيفور", "ناظمون", "جابيت", "ديكسان", "الونجير", "هلال", "أشرف", "روبل", "فضل"], "projects": ["وجود الياسمين"]}, "محمد عبده": {"workers": ["راسيل", "مهيب", "عريف", "اكرامول", "السيد علي", "ليتون", "همينتو", "سيد علي", "راسل", "علم", "فلومية", "بتشا", "مساد"], "projects": ["صفاء 28", "صفاء 65", "جمال الأندلس", "برج جوديا"]}}, "projectSupervisorRules": {"فارهين 11": "فهد", "آفاق العربية": "فهد", "مغنى 29": "فهد", "هاجر 32": "فهد", "فرساي 7": "فهد", "تعمير 17": "فهد", "رايات نجد 5": "فهد", "رؤيا 1": "فهد", "عالم الابتكار 47": "فهد", "الشعلان 50": "فهد", "الشعلان 51": "فهد", "كاف A": "محمد إبراهيم", "كاف B": "محمد إبراهيم", "كاف C": "محمد إبراهيم", "واجهة قرطبة": "محمد إبراهيم", "الماجدية 107": "محمد إبراهيم", "صفاء 50": "محمد إبراهيم", "مغنى 14": "محمد إبراهيم", "الماجدية 88": "محمد إبراهيم", "العجلان 19": "محمد إبراهيم", "مكين 37": "محمود", "جادة 39": "مازن", "ألين 32": "مازن", "أثل 12": "مازن", "فرساي 4": "مازن", "فرساي 10": "مازن", "فرساي 11": "مازن", "اتحاد العاصمة": "مازن", "وجود الياسمين": "مازن الخطيب", "صفاء 28": "محمد عبده", "صفاء 65": "محمد عبده", "جمال الأندلس": "محمد عبده", "برج جوديا": "محمد عبده"}, "projectMeta": {"وجود الياسمين": {"type": "daily_visit"}, "فرساي 4": {"type": "daily_visit"}, "فرساي 11": {"type": "daily_visit"}, "فرساي 10": {"type": "daily_visit"}, "أثل 12": {"type": "daily_visit"}, "ألين 32": {"type": "daily_visit"}, "جادة 39": {"type": "daily_visit"}, "اتحاد العاصمة": {"type": "daily_visit"}, "كاف A": {"type": "daily_visit"}, "كاف B": {"type": "daily_visit"}, "كاف C": {"type": "daily_visit"}, "واجهة قرطبة": {"type": "daily_visit"}, "صفاء 50": {"type": "daily_visit"}, "الماجدية 107": {"type": "daily_visit"}, "الماجدية 88": {"type": "daily_visit"}, "العجلان 19": {"type": "daily_visit"}, "مغنى 14": {"type": "daily_visit"}, "صفاء 28": {"type": "daily_visit"}, "جمال الأندلس": {"type": "daily_visit"}, "برج جوديا": {"type": "daily_visit"}, "صفاء 65": {"type": "daily_visit"}, "آفاق العربية": {"type": "daily_visit"}, "فرساي 7": {"type": "daily_visit"}, "مغنى 29": {"type": "daily_visit"}, "تعمير 17": {"type": "daily_visit"}, "الشعلان 50": {"type": "daily_visit"}, "الشعلان 51": {"type": "daily_visit"}, "رؤيا 1": {"type": "daily_visit"}, "هاجر 32": {"type": "daily_visit"}, "رايات نجد 5": {"type": "daily_visit"}, "عالم الابتكار 47": {"type": "daily_visit"}, "فارهين 11": {"type": "daily_visit"}, "مكين 37": {"type": "daily_visit"}}, "nameAliases": {"workers": {"اوسيس": "أوسيس", "اوسيبس": "أوسيس", "اوميت": "أوميت", "راجو أحمد": "راجو", "راجو احمد": "راجو", "سجون": "سوجان", "مهدي": "مهيد", "انور": "أنور", "اقطر": "أكتار", "عارف": "عاريف", "راسل": "راسيل", "سيد علي": "السيد علي", "صفا 50": "صفاء 50"}, "supervisors": {"محمد ابراهيم": "محمد إبراهيم"}, "projects": {"اثل 12": "أثل 12", "الين 32": "ألين 32", "صفا 50": "صفاء 50", "صفا 28": "صفاء 28", "جمال الاندلس": "جمال الأندلس", "البرج": "برج جوديا", "عالم الابتكار 46": "عالم الابتكار 47"}}};
-const STORAGE_KEY = "fm_distribution_reset_apr2026_v3";
+const INITIAL_DATA = {"projects": ["وجود الياسمين", "فرساي 4", "فرساي 11", "فرساي 10", "اثل 12", "الين 32", "جادة 39", "اتحاد العاصمة", "كاف A", "كاف B", "كاف C", "واجهة قرطبة", "صفا 50", "الماجدية 107", "العجلان 19", "مغنى 14", "صفا 28", "جمال الاندلس", "البرج", "صفاء 65", "آفاق العربية", "فرساي 7", "مغنى 29", "تعمير 17", "الشعلان 50", "الشعلان 51", "رؤيا 1", "هاجر 32", "رايات نجد 5", "عالم الابتكار 47", "فارهين 11"], "workers": ["علي", "ناظمون", "ديلوار", "انور", "عارف", "شميم", "اقطر", "رشيد", "جاشيم", "إبراهيم", "فضل", "نيفور", "عبد العزيز", "ثابت", "جابت", "ديكسان", "هلال", "كونر", "اوسيبس", "اوميت", "راهي", "رؤوف", "عجاج", "غياب", "محمد عبده", "اكو مول", "مهيب", "ليتون", "راسل", "سيد علي", "هونتو", "علم", "فوليما", "باتشا", "رقيب", "ياسر", "راجو أحمد", "ميزان", "سجون", "عليم", "مهدي"], "supervisors": ["مازن", "مازن الخطيب", "محمد إبراهيم", "وليد", "فهد"], "entries": [{"_id": "e1", "project": "فرساي 10", "date": "2026-04-01", "login": "10:52", "exit": "11:11", "supervisor": "مازن", "workers": ["علي", "ناظمون", "ديلوار", "انور"], "cleaningType": "", "note": ""}, {"_id": "e2", "project": "فرساي 10", "date": "2026-04-02", "login": "10:09", "exit": "10:39", "supervisor": "مازن", "workers": ["عارف", "انور", "ناظمون", "ديلوار", "شميم", "اقطر", "علي"], "cleaningType": "", "note": ""}, {"_id": "e3", "project": "فرساي 10", "date": "2026-04-03", "login": "15:28", "exit": "15:38", "supervisor": "مازن", "workers": ["علي", "ناظمون", "ديلوار", "عارف"], "cleaningType": "", "note": ""}, {"_id": "e4", "project": "فرساي 10", "date": "2026-04-04", "login": "10:05", "exit": "11:16", "supervisor": "مازن", "workers": ["عارف", "علي", "انور", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e5", "project": "فرساي 10", "date": "2026-04-05", "login": "11:28", "exit": "12:16", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e6", "project": "فرساي 10", "date": "2026-04-06", "login": "16:15", "exit": "16:53", "supervisor": "مازن", "workers": ["علي", "عارف", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e7", "project": "فرساي 10", "date": "2026-04-07", "login": "13:55", "exit": "14:51", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e8", "project": "فرساي 10", "date": "2026-04-08", "login": "14:29", "exit": "14:57", "supervisor": "مازن", "workers": ["انور", "عارف", "ديلوار", "ناظمون", "علي"], "cleaningType": "", "note": ""}, {"_id": "e9", "project": "فرساي 10", "date": "2026-04-09", "login": "16:48", "exit": "17:30", "supervisor": "مازن", "workers": ["انور", "علي", "ديلوار", "ناظمون", "عارف"], "cleaningType": "", "note": ""}, {"_id": "e10", "project": "فرساي 10", "date": "2026-04-10", "login": "18:14", "exit": "18:18", "supervisor": "مازن", "workers": ["ديلوار", "علي", "عارف", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e11", "project": "فرساي 10", "date": "2026-04-11", "login": "15:52", "exit": "16:18", "supervisor": "مازن", "workers": ["انور", "عارف", "ديلوار", "ناظمون", "علي"], "cleaningType": "", "note": ""}, {"_id": "e12", "project": "فرساي 10", "date": "2026-04-12", "login": "02:31", "exit": "02:38", "supervisor": "مازن", "workers": ["انور", "عارف", "ديلوار", "ناظمون", "علي"], "cleaningType": "", "note": ""}, {"_id": "e13", "project": "فرساي 10", "date": "2026-04-13", "login": "18:14", "exit": "19:34", "supervisor": "مازن", "workers": ["علي", "عارف", "ديلوار", "ناظمون", "رشيد"], "cleaningType": "", "note": ""}, {"_id": "e14", "project": "فرساي 10", "date": "2026-04-14", "login": "17:47", "exit": "18:15", "supervisor": "مازن", "workers": ["انور", "عارف", "ديلوار", "ناظمون", "علي", "رشيد"], "cleaningType": "", "note": ""}, {"_id": "e15", "project": "فرساي 10", "date": "2026-04-15", "login": "18:20", "exit": "18:32", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e16", "project": "فرساي 10", "date": "2026-04-16", "login": "16:33", "exit": "17:10", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e17", "project": "فرساي 10", "date": "2026-04-17", "login": "18:31", "exit": "19:00", "supervisor": "مازن", "workers": ["عارف", "ديلوار", "علي", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e18", "project": "فرساي 4", "date": "2026-04-01", "login": "11:45", "exit": "11:53", "supervisor": "مازن", "workers": ["ناظمون", "عارف", "ديلوار", "انور"], "cleaningType": "", "note": ""}, {"_id": "e19", "project": "فرساي 4", "date": "2026-04-02", "login": "13:20", "exit": "13:47", "supervisor": "مازن", "workers": ["عارف", "انور", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e20", "project": "فرساي 4", "date": "2026-04-03", "login": "16:42", "exit": "16:48", "supervisor": "مازن", "workers": ["عارف", "ديلوار", "ناظمون", "علي"], "cleaningType": "", "note": ""}, {"_id": "e21", "project": "فرساي 4", "date": "2026-04-04", "login": "14:17", "exit": "14:46", "supervisor": "مازن", "workers": ["علي", "انور", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e22", "project": "فرساي 4", "date": "2026-04-05", "login": "15:52", "exit": "16:10", "supervisor": "مازن", "workers": ["انور", "علي", "ديلوار", "ناظمون", "عارف"], "cleaningType": "", "note": ""}, {"_id": "e23", "project": "فرساي 4", "date": "2026-04-06", "login": "18:17", "exit": "18:47", "supervisor": "مازن", "workers": ["علي", "ديلوار", "عارف", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e24", "project": "فرساي 4", "date": "2026-04-07", "login": "16:30", "exit": "17:00", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e25", "project": "فرساي 4", "date": "2026-04-08", "login": "16:22", "exit": "16:47", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e26", "project": "فرساي 4", "date": "2026-04-09", "login": "15:09", "exit": "15:46", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e27", "project": "فرساي 4", "date": "2026-04-10", "login": "17:56", "exit": "18:14", "supervisor": "مازن", "workers": ["علي", "عارف", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e28", "project": "فرساي 4", "date": "2026-04-11", "login": "14:42", "exit": "15:15", "supervisor": "مازن", "workers": ["انور", "عارف", "ديلوار", "ناظمون", "علي"], "cleaningType": "", "note": ""}, {"_id": "e29", "project": "فرساي 4", "date": "2026-04-12", "login": "01:33", "exit": "01:47", "supervisor": "مازن", "workers": ["انور", "عارف", "ديلوار", "ناظمون", "علي"], "cleaningType": "", "note": ""}, {"_id": "e30", "project": "فرساي 4", "date": "2026-04-13", "login": "17:00", "exit": "17:19", "supervisor": "مازن", "workers": ["علي", "عارف", "ديلوار", "ناظمون", "رشيد"], "cleaningType": "", "note": ""}, {"_id": "e31", "project": "فرساي 4", "date": "2026-04-14", "login": "16:57", "exit": "17:14", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ديلوار", "ناظمون", "رشيد"], "cleaningType": "", "note": ""}, {"_id": "e32", "project": "فرساي 4", "date": "2026-04-15", "login": "17:16", "exit": "17:40", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e33", "project": "فرساي 4", "date": "2026-04-16", "login": "14:47", "exit": "15:24", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e34", "project": "فرساي 4", "date": "2026-04-17", "login": "17:14", "exit": "17:35", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e35", "project": "فرساي 11", "date": "2026-04-01", "login": "12:00", "exit": "12:27", "supervisor": "مازن", "workers": ["ناظمون", "عارف", "ديلوار", "انور"], "cleaningType": "", "note": ""}, {"_id": "e36", "project": "فرساي 11", "date": "2026-04-02", "login": "13:56", "exit": "14:31", "supervisor": "مازن", "workers": ["ديلوار", "ناظمون", "عارف", "انور"], "cleaningType": "", "note": ""}, {"_id": "e37", "project": "فرساي 11", "date": "2026-04-03", "login": "16:54", "exit": "17:07", "supervisor": "مازن", "workers": ["عارف", "علي", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e38", "project": "فرساي 11", "date": "2026-04-04", "login": "13:20", "exit": "13:54", "supervisor": "مازن", "workers": ["ديلوار", "علي", "انور", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e39", "project": "فرساي 11", "date": "2026-04-05", "login": "14:21", "exit": "14:52", "supervisor": "مازن", "workers": ["عارف", "علي", "انور", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e40", "project": "فرساي 11", "date": "2026-04-06", "login": "17:32", "exit": "18:04", "supervisor": "مازن", "workers": ["علي", "عارف", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e41", "project": "فرساي 11", "date": "2026-04-07", "login": "14:56", "exit": "15:24", "supervisor": "مازن", "workers": ["انور", "علي", "عارف", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e42", "project": "فرساي 11", "date": "2026-04-08", "login": "15:30", "exit": "16:15", "supervisor": "مازن", "workers": ["انور", "علي", "عارف", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e43", "project": "فرساي 11", "date": "2026-04-09", "login": "15:57", "exit": "16:32", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e44", "project": "فرساي 11", "date": "2026-04-10", "login": "17:15", "exit": "17:43", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e45", "project": "فرساي 11", "date": "2026-04-11", "login": "14:02", "exit": "14:32", "supervisor": "مازن", "workers": ["انور", "عارف", "ديلوار", "ناظمون", "علي"], "cleaningType": "", "note": ""}, {"_id": "e46", "project": "فرساي 11", "date": "2026-04-12", "login": "17:20", "exit": "17:45", "supervisor": "مازن", "workers": ["علي", "عارف", "ديلوار", "ناظمون", "رشيد"], "cleaningType": "", "note": ""}, {"_id": "e47", "project": "فرساي 11", "date": "2026-04-13", "login": "16:08", "exit": "16:38", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ديلوار", "ناظمون", "رشيد"], "cleaningType": "", "note": ""}, {"_id": "e48", "project": "فرساي 11", "date": "2026-04-14", "login": "17:41", "exit": "18:10", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e49", "project": "فرساي 11", "date": "2026-04-15", "login": "15:44", "exit": "16:13", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e50", "project": "فرساي 11", "date": "2026-04-16", "login": "17:43", "exit": "18:09", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e51", "project": "الين 32", "date": "2026-04-01", "login": "12:54", "exit": "14:11", "supervisor": "مازن", "workers": ["ناظمون", "عارف", "ديلوار", "انور"], "cleaningType": "", "note": ""}, {"_id": "e52", "project": "الين 32", "date": "2026-04-02", "login": "10:56", "exit": "13:02", "supervisor": "مازن", "workers": ["عارف", "انور", "ناظمون", "ديلوار", "علي"], "cleaningType": "", "note": ""}, {"_id": "e53", "project": "الين 32", "date": "2026-04-03", "login": "16:06", "exit": "16:24", "supervisor": "مازن", "workers": ["عارف", "ناظمون", "ديلوار", "علي"], "cleaningType": "", "note": ""}, {"_id": "e54", "project": "الين 32", "date": "2026-04-04", "login": "11:41", "exit": "12:49", "supervisor": "مازن", "workers": ["انور", "ديلوار", "ناظمون", "علي"], "cleaningType": "", "note": ""}, {"_id": "e55", "project": "الين 32", "date": "2026-04-05", "login": "12:37", "exit": "14:05", "supervisor": "مازن", "workers": ["انور", "علي", "ناظمون", "ديلوار", "عارف"], "cleaningType": "", "note": ""}, {"_id": "e56", "project": "الين 32", "date": "2026-04-06", "login": "13:59", "exit": "15:30", "supervisor": "مازن", "workers": ["علي", "ديلوار", "عارف", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e57", "project": "الين 32", "date": "2026-04-07", "login": "12:28", "exit": "13:36", "supervisor": "مازن", "workers": ["انور", "علي", "عارف", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e58", "project": "الين 32", "date": "2026-04-08", "login": "12:46", "exit": "14:04", "supervisor": "مازن", "workers": ["انور", "علي", "عارف", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e59", "project": "الين 32", "date": "2026-04-09", "login": "12:38", "exit": "13:42", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e60", "project": "الين 32", "date": "2026-04-10", "login": "16:42", "exit": "17:01", "supervisor": "مازن", "workers": ["علي", "ديلوار", "عارف", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e61", "project": "الين 32", "date": "2026-04-11", "login": "12:20", "exit": "13:29", "supervisor": "مازن", "workers": ["انور", "عارف", "ديلوار", "ناظمون", "علي"], "cleaningType": "", "note": ""}, {"_id": "e62", "project": "الين 32", "date": "2026-04-12", "login": "14:21", "exit": "15:43", "supervisor": "مازن", "workers": ["علي", "عارف", "ديلوار", "ناظمون", "رشيد"], "cleaningType": "", "note": ""}, {"_id": "e63", "project": "الين 32", "date": "2026-04-13", "login": "13:59", "exit": "15:46", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ديلوار", "ناظمون", "رشيد"], "cleaningType": "", "note": ""}, {"_id": "e64", "project": "الين 32", "date": "2026-04-14", "login": "14:32", "exit": "16:12", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e65", "project": "الين 32", "date": "2026-04-15", "login": "13:16", "exit": "14:29", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e66", "project": "الين 32", "date": "2026-04-16", "login": "15:01", "exit": "16:19", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e67", "project": "اثل 12", "date": "2026-04-01", "login": "08:58", "exit": "10:19", "supervisor": "مازن", "workers": ["ناظمون", "عارف", "ديلوار", "انور"], "cleaningType": "", "note": ""}, {"_id": "e68", "project": "اثل 12", "date": "2026-04-02", "login": "08:15", "exit": "09:48", "supervisor": "مازن", "workers": ["عارف", "انور", "ناظمون", "ديلوار", "علي"], "cleaningType": "", "note": ""}, {"_id": "e69", "project": "اثل 12", "date": "2026-04-03", "login": "14:38", "exit": "15:05", "supervisor": "مازن", "workers": ["عارف", "ناظمون", "ديلوار", "علي"], "cleaningType": "", "note": ""}, {"_id": "e70", "project": "اثل 12", "date": "2026-04-04", "login": "08:19", "exit": "09:42", "supervisor": "مازن", "workers": ["انور", "ديلوار", "ناظمون", "علي"], "cleaningType": "", "note": ""}, {"_id": "e71", "project": "اثل 12", "date": "2026-04-05", "login": "08:27", "exit": "11:05", "supervisor": "مازن", "workers": ["انور", "علي", "ناظمون", "ديلوار", "عارف"], "cleaningType": "", "note": ""}, {"_id": "e72", "project": "اثل 12", "date": "2026-04-06", "login": "08:32", "exit": "11:19", "supervisor": "مازن", "workers": ["علي", "ديلوار", "عارف", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e73", "project": "اثل 12", "date": "2026-04-07", "login": "08:19", "exit": "10:01", "supervisor": "مازن", "workers": ["انور", "علي", "عارف", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e74", "project": "اثل 12", "date": "2026-04-08", "login": "08:20", "exit": "09:43", "supervisor": "مازن", "workers": ["انور", "علي", "عارف", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e75", "project": "اثل 12", "date": "2026-04-09", "login": "08:32", "exit": "09:52", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e76", "project": "اثل 12", "date": "2026-04-10", "login": "14:33", "exit": "15:11", "supervisor": "مازن", "workers": ["علي", "ديلوار", "عارف", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e77", "project": "اثل 12", "date": "2026-04-11", "login": "08:25", "exit": "10:15", "supervisor": "مازن", "workers": ["انور", "عارف", "ديلوار", "ناظمون", "علي"], "cleaningType": "", "note": ""}, {"_id": "e78", "project": "اثل 12", "date": "2026-04-12", "login": "10:11", "exit": "12:02", "supervisor": "مازن", "workers": ["علي", "عارف", "ديلوار", "ناظمون", "رشيد"], "cleaningType": "", "note": ""}, {"_id": "e79", "project": "اثل 12", "date": "2026-04-13", "login": "08:42", "exit": "10:57", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ديلوار", "ناظمون", "رشيد"], "cleaningType": "", "note": ""}, {"_id": "e80", "project": "اثل 12", "date": "2026-04-14", "login": "08:53", "exit": "11:51", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e81", "project": "اثل 12", "date": "2026-04-15", "login": "08:36", "exit": "10:48", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e82", "project": "اثل 12", "date": "2026-04-16", "login": "09:40", "exit": "12:12", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}, {"_id": "e83", "project": "جادة 39", "date": "2026-04-02", "login": "14:44", "exit": "15:28", "supervisor": "مازن", "workers": ["عارف", "انور", "ناظمون", "ديلوار", "علي"], "cleaningType": "", "note": ""}, {"_id": "e84", "project": "جادة 39", "date": "2026-04-05", "login": "14:59", "exit": "15:37", "supervisor": "مازن", "workers": ["انور", "علي", "ناظمون", "ديلوار", "عارف"], "cleaningType": "", "note": ""}, {"_id": "e85", "project": "جادة 39", "date": "2026-04-07", "login": "15:40", "exit": "16:25", "supervisor": "مازن", "workers": ["انور", "علي", "عارف", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e86", "project": "جادة 39", "date": "2026-04-09", "login": "14:26", "exit": "14:59", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ناظمون", "ديلوار"], "cleaningType": "", "note": ""}, {"_id": "e87", "project": "جادة 39", "date": "2026-04-11", "login": "10:48", "exit": "11:00", "supervisor": "مازن", "workers": ["عارف", "علي", "ناظمون", "ديلوار", "رشيد"], "cleaningType": "", "note": ""}, {"_id": "e88", "project": "جادة 39", "date": "2026-04-13", "login": "16:42", "exit": "17:11", "supervisor": "مازن", "workers": ["انور", "عارف", "علي", "ديلوار", "ناظمون"], "cleaningType": "", "note": ""}, {"_id": "e89", "project": "جادة 39", "date": "2026-04-15", "login": "16:43", "exit": "17:10", "supervisor": "مازن", "workers": ["عارف", "علي", "ديلوار", "رشيد", "جاشيم"], "cleaningType": "", "note": ""}], "workerSalary": {"علي": 1500, "ناظمون": 1500, "ديلوار": 1500, "انور": 1500, "عارف": 1500, "شميم": 1500, "اقطر": 1500, "رشيد": 1500, "جاشيم": 1500, "إبراهيم": 1500, "فضل": 1500, "نيفور": 1500, "عبد العزيز": 1500, "ثابت": 1500, "جابت": 1500, "ديكسان": 1500, "هلال": 1500, "كونر": 1500, "اوسيبس": 1500, "اوميت": 1500, "راهي": 1500, "رؤوف": 1500, "عجاج": 1500, "غياب": 1500, "محمد عبده": 1500, "اكو مول": 1500, "مهيب": 1500, "ليتون": 1500, "راسل": 1500, "سيد علي": 1500, "هونتو": 1500, "علم": 1500, "فوليما": 1500, "باتشا": 1500, "رقيب": 1500, "ياسر": 1500, "راجو أحمد": 1500, "ميزان": 1500, "سجون": 1500, "عليم": 1500, "مهدي": 1500}, "supervisorSalary": {"مازن": 2300, "مازن الخطيب": 2300, "محمد إبراهيم": 2300, "وليد": 2300, "فهد": 2300}, "payrollConfig": {"dailyHours": 8.5, "cutoffDay": 28}, "workerProfiles": {"علي": {"supervisor": "مازن", "projects": ["اتحاد العاصمة", "فرساي 10", "فرساي 4", "فرساي 11", "الين 32", "اثل 12", "جادة 39"]}, "ناظمون": {"supervisor": "مازن", "projects": ["وجود الياسمين", "اتحاد العاصمة", "فرساي 10", "فرساي 4", "فرساي 11", "الين 32", "اثل 12", "جادة 39"]}, "ديلوار": {"supervisor": "مازن", "projects": ["اتحاد العاصمة", "فرساي 10", "فرساي 4", "فرساي 11", "الين 32", "اثل 12", "جادة 39"]}, "انور": {"supervisor": "مازن", "projects": ["وجود الياسمين", "اتحاد العاصمة", "فرساي 10", "فرساي 4", "فرساي 11", "الين 32", "اثل 12", "جادة 39"]}, "عارف": {"supervisor": "وليد", "projects": ["اتحاد العاصمة", "صفا 28", "فرساي 10", "فرساي 4", "فرساي 11", "الين 32", "اثل 12", "جادة 39"]}, "شميم": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين", "فرساي 10"]}, "اقطر": {"supervisor": "مازن", "projects": ["فرساي 10"]}, "رشيد": {"supervisor": "مازن", "projects": ["اتحاد العاصمة", "فرساي 10", "فرساي 4", "فرساي 11", "الين 32", "اثل 12", "جادة 39"]}, "جاشيم": {"supervisor": "مازن", "projects": ["اتحاد العاصمة", "فرساي 10", "فرساي 4", "فرساي 11", "الين 32", "اثل 12", "جادة 39"]}, "إبراهيم": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"]}, "فضل": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"]}, "نيفور": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"]}, "عبد العزيز": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"]}, "ثابت": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"]}, "جابت": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"]}, "ديكسان": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"]}, "هلال": {"supervisor": "مازن الخطيب", "projects": ["وجود الياسمين"]}, "كونر": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "صفا 50", "الماجدية 107", "مغنى 14"]}, "اوسيبس": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "صفا 50", "الماجدية 107", "مغنى 14"]}, "اوميت": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "صفا 50", "الماجدية 107", "العجلان 19", "مغنى 14"]}, "راهي": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "صفا 50", "الماجدية 107", "مغنى 14"]}, "رؤوف": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "صفا 50", "الماجدية 107", "العجلان 19", "مغنى 14"]}, "عجاج": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "صفا 50", "الماجدية 107", "مغنى 14"]}, "غياب": {"supervisor": "محمد إبراهيم", "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "صفا 50", "الماجدية 107", "مغنى 14"]}, "محمد عبده": {"supervisor": "", "projects": []}, "اكو مول": {"supervisor": "وليد", "projects": ["صفا 28"]}, "مهيب": {"supervisor": "وليد", "projects": ["صفا 28"]}, "ليتون": {"supervisor": "وليد", "projects": ["صفاء 65"]}, "راسل": {"supervisor": "وليد", "projects": ["صفا 28", "جمال الاندلس"]}, "سيد علي": {"supervisor": "وليد", "projects": ["جمال الاندلس", "صفاء 65"]}, "هونتو": {"supervisor": "وليد", "projects": ["صفاء 65"]}, "علم": {"supervisor": "وليد", "projects": ["البرج"]}, "فوليما": {"supervisor": "وليد", "projects": ["البرج"]}, "باتشا": {"supervisor": "وليد", "projects": ["البرج"]}, "رقيب": {"supervisor": "وليد", "projects": ["البرج"]}, "ياسر": {"supervisor": "فهد", "projects": ["آفاق العربية", "فرساي 7", "مغنى 29", "تعمير 17", "الشعلان 50", "الشعلان 51", "رؤيا 1", "هاجر 32", "رايات نجد 5", "عالم الابتكار 47", "فارهين 11"]}, "راجو أحمد": {"supervisor": "فهد", "projects": ["آفاق العربية", "فرساي 7", "مغنى 29", "تعمير 17", "الشعلان 50", "الشعلان 51", "رؤيا 1", "هاجر 32", "رايات نجد 5", "عالم الابتكار 47", "فارهين 11"]}, "ميزان": {"supervisor": "فهد", "projects": ["آفاق العربية", "فرساي 7", "مغنى 29", "تعمير 17", "رؤيا 1", "هاجر 32", "رايات نجد 5", "عالم الابتكار 47", "فارهين 11"]}, "سجون": {"supervisor": "فهد", "projects": ["آفاق العربية", "فرساي 7", "مغنى 29", "تعمير 17", "رؤيا 1", "هاجر 32", "رايات نجد 5", "عالم الابتكار 47", "فارهين 11"]}, "عليم": {"supervisor": "فهد", "projects": ["آفاق العربية", "فرساي 7", "مغنى 29", "تعمير 17", "رؤيا 1", "هاجر 32", "رايات نجد 5", "عالم الابتكار 47", "فارهين 11"]}, "مهدي": {"supervisor": "فهد", "projects": ["آفاق العربية", "فرساي 7", "مغنى 29", "تعمير 17", "رؤيا 1", "هاجر 32", "رايات نجد 5", "عالم الابتكار 47", "فارهين 11"]}}, "supervisorProfiles": {"مازن": {"workers": ["ديلوار", "عارف", "جاشيم", "رشيد"], "projects": ["فرساي 4", "فرساي 11", "فرساي 10", "اثل 12", "الين 32", "جادة 39", "اتحاد العاصمة"]}, "مازن الخطيب": {"workers": ["إبراهيم", "انور", "ثابت", "جابت", "ديكسان", "شميم", "عبد العزيز", "فضل", "ناظمون", "نيفور", "هلال"], "projects": ["وجود الياسمين"]}, "محمد إبراهيم": {"workers": ["اوسيبس", "اوميت", "رؤوف", "راهي", "عجاج", "غياب", "كونر"], "projects": ["كاف A", "كاف B", "كاف C", "واجهة قرطبة", "صفا 50", "الماجدية 107", "العجلان 19", "مغنى 14"]}, "وليد": {"workers": ["اكو مول", "باتشا", "راسل", "رقيب", "سيد علي", "عارف", "علم", "فوليما", "ليتون", "مهيب", "هونتو"], "projects": ["صفا 28", "جمال الاندلس", "البرج", "صفاء 65"]}, "فهد": {"workers": ["راجو أحمد", "سجون", "عليم", "مهدي", "ميزان", "ياسر"], "projects": ["آفاق العربية", "فرساي 7", "مغنى 29", "تعمير 17", "الشعلان 50", "الشعلان 51", "رؤيا 1", "هاجر 32", "رايات نجد 5", "عالم الابتكار 47", "فارهين 11"]}}, "projectSupervisorRules": {"وجود الياسمين": "مازن الخطيب", "فرساي 4": "مازن", "فرساي 11": "مازن", "فرساي 10": "مازن", "اثل 12": "مازن", "الين 32": "مازن", "جادة 39": "مازن", "اتحاد العاصمة": "مازن", "كاف A": "محمد إبراهيم", "كاف B": "محمد إبراهيم", "كاف C": "محمد إبراهيم", "واجهة قرطبة": "محمد إبراهيم", "صفا 50": "محمد إبراهيم", "الماجدية 107": "محمد إبراهيم", "العجلان 19": "محمد إبراهيم", "مغنى 14": "محمد إبراهيم", "صفا 28": "وليد", "جمال الاندلس": "وليد", "البرج": "وليد", "صفاء 65": "وليد", "آفاق العربية": "فهد", "فرساي 7": "فهد", "مغنى 29": "فهد", "تعمير 17": "فهد", "الشعلان 50": "فهد", "الشعلان 51": "فهد", "رؤيا 1": "فهد", "هاجر 32": "فهد", "رايات نجد 5": "فهد", "عالم الابتكار 47": "فهد", "فارهين 11": "فهد"}, "projectMeta": {"وجود الياسمين": {"type": "daily_visit"}, "فرساي 4": {"type": "daily_visit"}, "فرساي 11": {"type": "daily_visit"}, "فرساي 10": {"type": "daily_visit"}, "اثل 12": {"type": "daily_visit"}, "الين 32": {"type": "daily_visit"}, "جادة 39": {"type": "daily_visit"}, "اتحاد العاصمة": {"type": "daily_visit"}, "كاف A": {"type": "daily_visit"}, "كاف B": {"type": "daily_visit"}, "كاف C": {"type": "daily_visit"}, "واجهة قرطبة": {"type": "daily_visit"}, "صفا 50": {"type": "daily_visit"}, "الماجدية 107": {"type": "daily_visit"}, "العجلان 19": {"type": "daily_visit"}, "مغنى 14": {"type": "daily_visit"}, "صفا 28": {"type": "daily_visit"}, "جمال الاندلس": {"type": "daily_visit"}, "البرج": {"type": "daily_visit"}, "صفاء 65": {"type": "daily_visit"}, "آفاق العربية": {"type": "daily_visit"}, "فرساي 7": {"type": "daily_visit"}, "مغنى 29": {"type": "daily_visit"}, "تعمير 17": {"type": "daily_visit"}, "الشعلان 50": {"type": "daily_visit"}, "الشعلان 51": {"type": "daily_visit"}, "رؤيا 1": {"type": "daily_visit"}, "هاجر 32": {"type": "daily_visit"}, "رايات نجد 5": {"type": "daily_visit"}, "عالم الابتكار 47": {"type": "daily_visit"}, "فارهين 11": {"type": "daily_visit"}}, "nameAliases": {"workers": {"جاشمون": "جاشيم", "جانشيم": "جاشيم", "فلومية": "فوليما", "فولمية": "فوليما", "اكرامول": "اكو مول", "همينتوا": "هونتو", "همينتو": "هونتو", "راسيل": "راسل", "سيدعلي": "سيد علي", "أنور": "انور", "إبراهيم": "إبراهيم"}, "supervisors": {"محمد ابراهيم": "محمد إبراهيم"}}};
+const STORAGE_KEY = "fm_loaded_from_xlsx_apr2026_v2";
 let state = loadState();
 let editingEntryId = null;
 
@@ -989,9 +952,6 @@ function ensureStateSchema() {
   if (!state.payrollConfig || typeof state.payrollConfig !== 'object') state.payrollConfig = {};
   if (!state.payrollConfig.dailyHours) state.payrollConfig.dailyHours = 8.5;
   if (!state.payrollConfig.cutoffDay) state.payrollConfig.cutoffDay = 28;
-  if (state.payrollConfig.firstTripMinutes === undefined) state.payrollConfig.firstTripMinutes = 20;
-  if (state.payrollConfig.betweenProjectsMinutes === undefined) state.payrollConfig.betweenProjectsMinutes = 10;
-  if (state.payrollConfig.returnTripMinutes === undefined) state.payrollConfig.returnTripMinutes = 0;
   if (!state.workerProfiles || typeof state.workerProfiles !== 'object') state.workerProfiles = {};
   if (!state.supervisorProfiles || typeof state.supervisorProfiles !== 'object') state.supervisorProfiles = {};
   if (!state.projectSupervisorRules || typeof state.projectSupervisorRules !== 'object') state.projectSupervisorRules = {};
@@ -1005,11 +965,7 @@ function ensureStateSchema() {
   });
   (state.projects || []).forEach(p => {
     if (state.projectSupervisorRules[p] === undefined) state.projectSupervisorRules[p] = '';
-    if (!state.projectMeta[p] || typeof state.projectMeta[p] !== 'object') state.projectMeta[p] = { type: 'daily_visit' };
-    if (!state.projectMeta[p].type) state.projectMeta[p].type = 'daily_visit';
-    if (!state.projectMeta[p].expectedTime && typeof inferExpectedTime === 'function') {
-      state.projectMeta[p].expectedTime = inferExpectedTime(p);
-    }
+    if (!state.projectMeta[p]) state.projectMeta[p] = { type: 'daily_visit' };
   });
 }
 
@@ -1024,16 +980,7 @@ function loadState() {
       if (!parsed.payrollConfig || typeof parsed.payrollConfig !== 'object') parsed.payrollConfig = {};
       if (!parsed.payrollConfig.dailyHours) parsed.payrollConfig.dailyHours = 8.5;
       if (!parsed.payrollConfig.cutoffDay) parsed.payrollConfig.cutoffDay = 28;
-      if (parsed.payrollConfig.firstTripMinutes === undefined) parsed.payrollConfig.firstTripMinutes = 20;
-      if (parsed.payrollConfig.betweenProjectsMinutes === undefined) parsed.payrollConfig.betweenProjectsMinutes = 10;
-      if (parsed.payrollConfig.returnTripMinutes === undefined) parsed.payrollConfig.returnTripMinutes = 0;
       if (!parsed.projectMeta || typeof parsed.projectMeta !== 'object') parsed.projectMeta = {};
-      (parsed.projects || []).forEach(project => {
-        if (!parsed.projectMeta[project] || typeof parsed.projectMeta[project] !== 'object') {
-          parsed.projectMeta[project] = { type: 'daily_visit' };
-        }
-        if (!parsed.projectMeta[project].type) parsed.projectMeta[project].type = 'daily_visit';
-      });
       if (!parsed.entryApprovalLog || typeof parsed.entryApprovalLog !== 'object') parsed.entryApprovalLog = {};
       (parsed.entries || []).forEach(e => {
         if (!e.approvalStatus) e.approvalStatus = 'مسجل';
@@ -1047,14 +994,8 @@ function loadState() {
   base.entries = (base.entries || []).map((e, i) => ({...e, _id: "e" + (i+1)}));
   base.workerSalary = base.workerSalary || {};
   base.supervisorSalary = base.supervisorSalary || {};
-  base.payrollConfig = base.payrollConfig || { dailyHours: 8.5, cutoffDay: 28, firstTripMinutes: 20, betweenProjectsMinutes: 10, returnTripMinutes: 0 };
+  base.payrollConfig = base.payrollConfig || { dailyHours: 8.5, cutoffDay: 28 };
   base.projectMeta = base.projectMeta || {};
-  (base.projects || []).forEach(project => {
-    if (!base.projectMeta[project] || typeof base.projectMeta[project] !== 'object') {
-      base.projectMeta[project] = { type: 'daily_visit' };
-    }
-    if (!base.projectMeta[project].type) base.projectMeta[project].type = 'daily_visit';
-  });
   base.entryApprovalLog = base.entryApprovalLog || {};
   (base.entries || []).forEach(e => {
     if (!e.approvalStatus) e.approvalStatus = 'مسجل';
@@ -1080,35 +1021,8 @@ function resetToInitial() {
   localStorage.removeItem(STORAGE_KEY);
   state = loadState();
   editingEntryId = null;
-  
-function renderDistributionErrors() {
-  ensureProfilesSync();
-  const projectWithoutSup = state.projects.filter(project => !norm((state.projectSupervisorRules || {})[project] || ''));
-  const workerWithoutSup = state.workers.filter(worker => norm((state.workerProfiles[worker]?.supervisor) || '') === '');
-  const supervisorWithoutProjects = state.supervisors.filter(sup => {
-    const projects = uniqueList([...(state.supervisorProfiles[sup]?.projects || []), ...state.projects.filter(project => norm((state.projectSupervisorRules || {})[project] || '') === norm(sup))]);
-    return projects.length === 0;
-  });
-  const workerCounts = {};
-  state.supervisors.forEach(sup => (state.supervisorProfiles[sup]?.workers || []).forEach(worker => workerCounts[worker] = (workerCounts[worker] || 0) + 1));
-  const duplicateWorkers = Object.keys(workerCounts).filter(name => workerCounts[name] > 1);
-  const setText = (id, val) => { const el=document.getElementById(id); if (el) el.textContent = String(val); };
-  setText('distNoProjectSup', projectWithoutSup.length);
-  setText('distNoWorkerSup', workerWithoutSup.length);
-  setText('distNoSupProjects', supervisorWithoutProjects.length);
-  setText('distDuplicateWorkers', duplicateWorkers.length);
-  const box = document.getElementById('distributionErrorsBox');
-  if (!box) return;
-  const section = (title, arr, empty='لا توجد عناصر') => `<div class="manager-box" style="margin-bottom:12px;"><h4>${title}</h4>${arr.length ? '<div class="inline">'+arr.map(v=>`<span class="tag">${esc(v)}</span>`).join('')+'</div>' : `<div class="muted">${empty}</div>`}</div>`;
-  box.innerHTML = [
-    section('مشاريع بدون مشرف', projectWithoutSup, 'جميع المشاريع مرتبطة بمشرف ✅'),
-    section('عمال بدون مشرف', workerWithoutSup, 'لا يوجد عمال بدون مشرف ✅'),
-    section('مشرفون بدون مشاريع', supervisorWithoutProjects, 'كل المشرفين لديهم مشاريع ✅'),
-    section('عمال مكررون عند أكثر من مشرف', duplicateWorkers, 'لا يوجد تكرار في العمال الأساسيين ✅')
-  ].join('');
-}
-
-initAll();
+  if (typeof initAll === "function") initAll();
+  if (typeof showToast === "function") showToast("تمت إعادة البيانات الافتراضية");
 }
 function norm(v) { return (v || "").toString().trim(); }
 function esc(v) {
@@ -1198,7 +1112,6 @@ function saveSalary(role, name, salary) {
   renderMonthlyTimes();
   renderSalaryTables();
 }
-
 function payrollTargetMinutes(monthStr) {
   const cfg = state.payrollConfig || {};
   const dailyHours = Number(cfg.dailyHours || 8.5);
@@ -1206,48 +1119,14 @@ function payrollTargetMinutes(monthStr) {
   const targetHours = Math.max(0, dailyHours) * Math.max(1, cutoffDay);
   return Math.round(targetHours * 60);
 }
-function hydratePayrollConfigInputs() {
-  ensureStateSchema();
-  const cfg = state.payrollConfig || {};
-  const pairs = [
-    ['monthlyDailyHours', cfg.dailyHours ?? 8.5],
-    ['monthlyCutoffDay', cfg.cutoffDay ?? 28],
-    ['monthlyFirstTripMinutes', cfg.firstTripMinutes ?? 20],
-    ['monthlyBetweenProjectsMinutes', cfg.betweenProjectsMinutes ?? 10],
-    ['monthlyReturnTripMinutes', cfg.returnTripMinutes ?? 0]
-  ];
-  pairs.forEach(([id, val]) => {
-    const el = document.getElementById(id);
-    if (el && (el.value === '' || el.value === undefined || el.dataset.forceHydrate === '1')) {
-      el.value = val;
-      delete el.dataset.forceHydrate;
-    }
-  });
-}
 function savePayrollConfigAndRender() {
   ensureStateSchema();
-  const getNum = (id, fallback) => {
-    const el = document.getElementById(id);
-    const raw = Number(el && el.value !== '' ? el.value : fallback);
-    return Number.isFinite(raw) ? raw : fallback;
-  };
-  state.payrollConfig.dailyHours = Math.max(0, getNum('monthlyDailyHours', 8.5)) || 8.5;
-  state.payrollConfig.cutoffDay = Math.max(1, getNum('monthlyCutoffDay', 28)) || 28;
-  state.payrollConfig.firstTripMinutes = Math.max(0, getNum('monthlyFirstTripMinutes', 20));
-  state.payrollConfig.betweenProjectsMinutes = Math.max(0, getNum('monthlyBetweenProjectsMinutes', 10));
-  state.payrollConfig.returnTripMinutes = Math.max(0, getNum('monthlyReturnTripMinutes', 0));
+  const dailyHours = Number(document.getElementById('monthlyDailyHours').value || 8.5);
+  const cutoffDay = Number(document.getElementById('monthlyCutoffDay').value || 28);
+  state.payrollConfig.dailyHours = dailyHours > 0 ? dailyHours : 8.5;
+  state.payrollConfig.cutoffDay = cutoffDay > 0 ? cutoffDay : 28;
   saveState(true);
   renderMonthlyTimes();
-}
-function getTransitConfig() {
-  ensureStateSchema();
-  const cfg = state.payrollConfig || {};
-  return {
-    firstTripMinutes: Math.max(0, Number(cfg.firstTripMinutes ?? 20) || 0),
-    betweenProjectsMinutes: Math.max(0, Number(cfg.betweenProjectsMinutes ?? 10) || 0),
-    returnTripMinutes: Math.max(0, Number(cfg.returnTripMinutes ?? 0) || 0),
-    cutoffDay: Math.max(1, Number(cfg.cutoffDay ?? 28) || 28)
-  };
 }
 function fillSelect(selectId, items, includeAll=true) {
   const el = document.getElementById(selectId);
@@ -1556,14 +1435,6 @@ function persistEntry(entry) {
   if (entry.supervisor && !state.supervisors.includes(entry.supervisor)) state.supervisors.push(entry.supervisor);
   entry.workers.forEach(w => { if (!state.workers.includes(w)) state.workers.push(w); });
   if (!state.projects.includes(entry.project)) state.projects.push(entry.project);
-  if (!state.projectMeta || typeof state.projectMeta !== 'object') state.projectMeta = {};
-  if (!state.projectMeta[entry.project] || typeof state.projectMeta[entry.project] !== 'object') {
-    state.projectMeta[entry.project] = { type: 'daily_visit' };
-  }
-  if (!state.projectMeta[entry.project].type) state.projectMeta[entry.project].type = 'daily_visit';
-  if (!state.projectMeta[entry.project].expectedTime) {
-    state.projectMeta[entry.project].expectedTime = inferExpectedTime(entry.project);
-  }
   const idx = state.entries.findIndex(x => x._id === entry._id);
   if (idx >= 0) state.entries[idx] = entry; else state.entries.unshift(entry);
   refreshAllPickers();
@@ -1729,7 +1600,7 @@ function printDailyEntriesReport() {
   win.document.open(); win.document.write(html); win.document.close();
   setTimeout(()=>{ win.focus(); win.print(); }, 250);
 }
-async function addWorker() {
+function addWorker() {
   const name = norm(document.getElementById('newWorkerName').value);
   const salary = Number(document.getElementById('newWorkerSalary').value || 0);
   if (!name) return;
@@ -1738,13 +1609,9 @@ async function addWorker() {
   if (!state.workerProfiles[name]) state.workerProfiles[name] = { supervisor:'', projects:[] };
   document.getElementById('newWorkerName').value = '';
   document.getElementById('newWorkerSalary').value = '';
-  try {
-    await replaceTable('workers', buildWorkersPayload());
-    await syncMasterDataToState(true);
-  } catch (err) { console.error(err); }
   refreshAllPickers(); renderMonthlyTimes(); updateKPIs(); saveState(true);
 }
-async function addSupervisor() {
+function addSupervisor() {
   const name = norm(document.getElementById('newSupervisorName').value);
   const salary = Number(document.getElementById('newSupervisorSalary').value || 0);
   if (!name) return;
@@ -1753,13 +1620,9 @@ async function addSupervisor() {
   if (!state.supervisorProfiles[name]) state.supervisorProfiles[name] = { workers:[], projects:[] };
   document.getElementById('newSupervisorName').value = '';
   document.getElementById('newSupervisorSalary').value = '';
-  try {
-    await replaceTable('projects', buildProjectsPayload());
-    await syncMasterDataToState(true);
-  } catch (err) { console.error(err); }
   refreshAllPickers(); renderMonthlyTimes(); updateKPIs(); saveState(true);
 }
-async function addProject() {
+function addProject() {
   const name = norm(document.getElementById('newProjectName').value);
   if (!name) {
     alert('اكتب اسم المشروع أولًا');
@@ -1769,18 +1632,8 @@ async function addProject() {
     alert('هذا المشروع موجود بالفعل');
     return;
   }
-  if (!state.projectMeta || typeof state.projectMeta !== 'object') state.projectMeta = {};
-  state.projectMeta[name] = {
-    ...(state.projectMeta[name] || {}),
-    type: (state.projectMeta[name] && state.projectMeta[name].type) || 'daily_visit',
-    expectedTime: formatExpectedTime((state.projectMeta[name] && state.projectMeta[name].expectedTime) || inferExpectedTime(name)) || inferExpectedTime(name)
-  };
   state.projects.push(name);
   document.getElementById('newProjectName').value = '';
-  try {
-    await replaceTable('projects', buildProjectsPayload());
-    await syncMasterDataToState(true);
-  } catch (err) { console.error(err); }
   refreshAllPickers();
   renderEntriesTable();
   renderMonthlyTimes();
@@ -2883,14 +2736,13 @@ function attendanceRows(monthStr) {
   });
   return {days, people, presentIndex};
 }
-
 function monthlyTimesRows(monthStr) {
   const rows = monthlyTimeRows(monthStr, {});
   const targetMinutes = payrollTargetMinutes(monthStr) || 1;
   return rows.map(r => {
     const baseSalary = getBaseSalary(r.role, r.name);
     const hourlyRate = targetMinutes ? baseSalary / (targetMinutes / 60) : 0;
-    const dueSalary = targetMinutes ? (r.paidMinutesCapped / targetMinutes) * baseSalary : 0;
+    const dueSalary = targetMinutes ? (r.minutes / targetMinutes) * baseSalary : 0;
     return {
       role:r.role,
       name:r.name,
@@ -2899,11 +2751,9 @@ function monthlyTimesRows(monthStr) {
       project:r.project,
       days:r.days,
       minutes:r.minutes,
-      transitMinutes:r.transitMinutes,
-      paidMinutes:r.paidMinutes,
       hours:r.hours,
       hm:r.hm,
-      percentage: ((r.paidMinutesCapped / targetMinutes) * 100).toFixed(1) + '%',
+      percentage: ((r.minutes / targetMinutes) * 100).toFixed(1) + '%',
       baseSalary: baseSalary.toFixed(2),
       hourlyRate: hourlyRate.toFixed(2),
       dueSalary: dueSalary.toFixed(2)
@@ -2911,81 +2761,42 @@ function monthlyTimesRows(monthStr) {
   });
 }
 
-function buildPersonDailyStats(monthStr, filters = {}) {
-  const cfg = getTransitConfig();
-  const daily = {};
-  (state.entries || []).filter(e => {
-    if (!(e.date || '').startsWith(monthStr)) return false;
-    const day = Number((e.date || '').slice(8,10));
-    if (Number.isNaN(day) || day > cfg.cutoffDay) return false;
-    if (filters.supervisor && norm(e.supervisor) !== norm(filters.supervisor)) return false;
-    return true;
-  }).forEach(e => {
-    const actualMins = durationMinutes(e.login, e.exit);
-    if (!actualMins) return;
-    const participants = [];
-    if (e.supervisor) participants.push({role:'مشرف', name:e.supervisor});
-    (e.workers||[]).forEach(w => { if (w) participants.push({role:'عامل', name:w}); });
-    participants.forEach(person => {
-      const personKey = [person.role, person.name].join('||');
-      const dayKey = personKey + '||' + e.date;
-      if (!daily[dayKey]) daily[dayKey] = {
-        role: person.role,
-        name: person.name,
-        date: e.date,
-        entries: [],
-        actualMinutes: 0
-      };
-      daily[dayKey].entries.push({
-        project: e.project,
-        login: e.login,
-        exit: e.exit,
-        minutes: actualMins
-      });
-      daily[dayKey].actualMinutes += actualMins;
-    });
-  });
-
-  Object.values(daily).forEach(d => {
-    d.entries.sort((a,b) => String(a.login || '').localeCompare(String(b.login || '')) || String(a.project || '').localeCompare(String(b.project || '')));
-    const movements = d.entries.length;
-    d.transitMinutes = movements ? cfg.firstTripMinutes + Math.max(0, movements - 1) * cfg.betweenProjectsMinutes + cfg.returnTripMinutes : 0;
-    d.paidMinutes = d.actualMinutes + d.transitMinutes;
-  });
-
-  return daily;
-}
-
 function monthlyTimeRows(monthStr, filters = {}) {
   const groups = {};
   const personTotals = {};
-  const dailyStats = buildPersonDailyStats(monthStr, { supervisor: filters.supervisor });
+  const cutoffDay = Number((state.payrollConfig && state.payrollConfig.cutoffDay) || 28);
+  const targetMinutes = payrollTargetMinutes(monthStr) || 1;
 
-  Object.values(dailyStats).forEach(d => {
-    const personKey = [d.role, d.name].join('||');
-    if (!personTotals[personKey]) personTotals[personKey] = { actualMinutes: 0, transitMinutes: 0, paidMinutes: 0 };
-    personTotals[personKey].actualMinutes += d.actualMinutes;
-    personTotals[personKey].transitMinutes += d.transitMinutes;
-    personTotals[personKey].paidMinutes += d.paidMinutes;
+  state.entries.filter(e => {
+    if (!(e.date || '').startsWith(monthStr)) return false;
+    const day = Number((e.date || '').slice(8,10));
+    if (Number.isNaN(day) || day > cutoffDay) return false;
+    if (filters.supervisor && norm(e.supervisor) !== norm(filters.supervisor)) return false;
+    return true;
+  }).forEach(e => {
+    const mins = durationMinutes(e.login, e.exit);
+    if (!mins) return;
+    const participants = [];
+    if (e.supervisor) participants.push({role:'مشرف', name:e.supervisor});
+    (e.workers||[]).forEach(w => { if (w) participants.push({role:'عامل', name:w}); });
 
-    d.entries.forEach(entry => {
-      const projectKey = [d.role, d.name, entry.project].join('||');
+    participants.forEach(person => {
+      const projectKey = [person.role, person.name, e.project].join('||');
+      const personKey = [person.role, person.name].join('||');
+
       if (!groups[projectKey]) groups[projectKey] = {
-        role: d.role,
-        name: d.name,
-        project: entry.project,
+        role: person.role,
+        name: person.name,
+        project: e.project,
         minutes: 0,
-        days: new Set(),
-        transitMinutes: 0
+        days: new Set()
       };
-      groups[projectKey].minutes += entry.minutes;
-      groups[projectKey].days.add(d.date);
-      const share = d.actualMinutes > 0 ? (entry.minutes / d.actualMinutes) : 0;
-      groups[projectKey].transitMinutes += d.transitMinutes * share;
+      groups[projectKey].minutes += mins;
+      groups[projectKey].days.add(e.date);
+
+      personTotals[personKey] = (personTotals[personKey] || 0) + mins;
     });
   });
-
-  const targetMinutes = payrollTargetMinutes(monthStr) || 1;
 
   return Object.values(groups)
     .filter(r => !filters.worker || (r.role === 'عامل' && r.name === filters.worker))
@@ -2993,35 +2804,31 @@ function monthlyTimeRows(monthStr, filters = {}) {
     .map(r => {
       const baseSalary = getBaseSalary(r.role, r.name);
       const hourlyRate = targetMinutes ? baseSalary / (targetMinutes / 60) : 0;
+
       const personKey = [r.role, r.name].join('||');
-      const totals = personTotals[personKey] || { actualMinutes: 0, transitMinutes: 0, paidMinutes: 0 };
-      const paidMinutes = r.minutes + r.transitMinutes;
-      const paidTotalMinutes = totals.paidMinutes || 0;
-      const paidCappedTotalMinutes = Math.min(paidTotalMinutes, targetMinutes);
-      const rowShare = paidTotalMinutes > 0 ? (paidMinutes / paidTotalMinutes) : 0;
-      const paidMinutesCapped = paidCappedTotalMinutes * rowShare;
-      const dueSalary = targetMinutes ? (paidMinutesCapped / targetMinutes) * baseSalary : 0;
-      const percentage = targetMinutes ? ((paidMinutesCapped / targetMinutes) * 100) : 0;
+      const actualTotalMinutes = personTotals[personKey] || 0;
+      const cappedTotalMinutes = Math.min(actualTotalMinutes, targetMinutes);
+
+      const rowShare = actualTotalMinutes > 0 ? (r.minutes / actualTotalMinutes) : 0;
+      const rowCappedMinutes = cappedTotalMinutes * rowShare;
+
+      const dueSalary = targetMinutes ? (rowCappedMinutes / targetMinutes) * baseSalary : 0;
+      const percentage = targetMinutes ? ((rowCappedMinutes / targetMinutes) * 100) : 0;
 
       return {
         role:r.role,
         name:r.name,
         project:r.project,
         days:r.days.size,
-        minutes:Math.round(r.minutes),
-        transitMinutes:Math.round(r.transitMinutes),
-        paidMinutes:Math.round(paidMinutes),
+        minutes:r.minutes,
         hours:(r.minutes/60).toFixed(2),
-        paidHours:(paidMinutes/60).toFixed(2),
-        hm:formatHM(Math.round(paidMinutes)),
+        hm:formatHM(r.minutes),
         percentage: percentage.toFixed(1),
         baseSalary: baseSalary.toFixed(2),
         hourlyRate: hourlyRate.toFixed(2),
         dueSalary: dueSalary.toFixed(2),
-        personActualTotalMinutes: Math.round(totals.actualMinutes),
-        personTransitTotalMinutes: Math.round(totals.transitMinutes),
-        personPaidTotalMinutes: Math.round(totals.paidMinutes),
-        paidMinutesCapped
+        personActualTotalMinutes: actualTotalMinutes,
+        personCappedTotalMinutes: cappedTotalMinutes
       };
     }).sort((a,b)=>
       a.role.localeCompare(b.role,'ar') ||
@@ -3088,11 +2895,10 @@ function renderSupervisorSummary(monthStr, supervisorName) {
   const projCountEl = document.getElementById('summarySupervisorProjects');
   const workerCountEl = document.getElementById('summarySupervisorWorkers');
   const body = document.getElementById('summaryProjectsBody');
-  const foot = document.getElementById('summaryProjectsFoot');
   const primaryBody = document.getElementById('summaryPrimaryWorkersBody');
   const secondaryBody = document.getElementById('summarySecondaryWorkersBody');
 
-  if (!box || !nameEl || !hoursEl || !projCountEl || !workerCountEl || !body || !foot || !primaryBody || !secondaryBody) return;
+  if (!box || !nameEl || !hoursEl || !projCountEl || !workerCountEl || !body || !primaryBody || !secondaryBody) return;
 
   if (!supervisorName) {
     box.style.display = 'none';
@@ -3101,7 +2907,6 @@ function renderSupervisorSummary(monthStr, supervisorName) {
     projCountEl.textContent = '0';
     workerCountEl.textContent = '0';
     body.innerHTML = '';
-    foot.innerHTML = '';
     primaryBody.innerHTML = '';
     secondaryBody.innerHTML = '';
     return;
@@ -3121,15 +2926,6 @@ function renderSupervisorSummary(monthStr, supervisorName) {
       <td>${r.hours}</td>
       <td>${r.percentage}%</td>
     </tr>`).join('') : '<tr><td colspan="4" class="muted">لا توجد مشاريع لهذا المشرف في هذا الشهر.</td></tr>';
-
-  const totalProjectPercentage = summary.projects.reduce((sum, r) => sum + Number(r.percentageRaw || 0), 0);
-  foot.innerHTML = summary.projects.length ? `
-    <tr style="background:#f7fbf9;font-weight:700;">
-      <td>الإجمالي</td>
-      <td>${summary.totalMinutes}</td>
-      <td>${summary.totalHours}</td>
-      <td>${totalProjectPercentage.toFixed(1)}%</td>
-    </tr>` : '';
 
   const maxDays = summary.workers.length ? Math.max(...summary.workers.map(w => Number(w.days || 0))) : 0;
   const threshold = maxDays ? Math.max(1, Math.ceil(maxDays * 0.6)) : 0;
@@ -3165,9 +2961,7 @@ function syncMonthlyMonthFromExport() {
   if (exportMonth) document.getElementById('monthlyMonth').value = exportMonth;
   renderMonthlyTimes();
 }
-
 function renderMonthlyTimes() {
-  hydratePayrollConfigInputs();
   const monthInput = document.getElementById('monthlyMonth');
   const exportMonthEl = document.getElementById('exportMonth');
   const filterMonthEl = document.getElementById('filterMonth');
@@ -3175,12 +2969,10 @@ function renderMonthlyTimes() {
   if (!monthStr && state.entries.length) monthStr = [...state.entries].sort((a,b)=>b.date.localeCompare(a.date))[0].date.slice(0,7);
   if (monthStr && monthInput && !monthInput.value) monthInput.value = monthStr;
   const body = document.getElementById('monthlyTimesBody');
-  const foot = document.getElementById('monthlyTimesFoot');
-  if (!body || !foot) return;
+  if (!body) return;
   if (!monthStr) {
-    body.innerHTML = '<tr><td colspan="13" class="muted">اختر شهرًا لعرض الأوقات الشهرية.</td></tr>';
-    foot.innerHTML = '';
-    ['monthlyTotalHours','monthlyTransitHours','monthlyPaidHours','monthlyTotalMinutes','monthlyTargetHours','monthlyTotalDue'].forEach(id => {
+    body.innerHTML = '<tr><td colspan="11" class="muted">اختر شهرًا لعرض الأوقات الشهرية.</td></tr>';
+    ['monthlyTotalHours','monthlyTotalMinutes','monthlyTargetHours','monthlyTotalDue'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.textContent = '0';
     });
@@ -3195,27 +2987,17 @@ function renderMonthlyTimes() {
   const projectFilter = norm(projectEl ? projectEl.value : '');
   const rows = monthlyTimeRows(monthStr, { supervisor: supervisorFilter, worker: workerFilter, project: projectFilter });
   renderSupervisorSummary(monthStr, supervisorFilter);
-
-  const totalActualMinutes = rows.reduce((a,b)=>a + Number(b.minutes || 0), 0);
-  const totalTransitMinutes = rows.reduce((a,b)=>a + Number(b.transitMinutes || 0), 0);
-  const totalPaidMinutes = rows.reduce((a,b)=>a + Number(b.paidMinutes || 0), 0);
+  const totalMinutes = rows.reduce((a,b)=>a + b.minutes, 0);
   const targetMinutes = payrollTargetMinutes(monthStr);
   const totalDue = rows.reduce((a,b)=>a + Number(b.dueSalary || 0), 0);
-
-  const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
-  setText('monthlyTotalHours', (totalActualMinutes/60).toFixed(2));
-  setText('monthlyTransitHours', (totalTransitMinutes/60).toFixed(2));
-  setText('monthlyPaidHours', (totalPaidMinutes/60).toFixed(2));
-  setText('monthlyTotalMinutes', totalActualMinutes);
-  setText('monthlyTargetHours', (targetMinutes/60).toFixed(2));
-  setText('monthlyTotalDue', totalDue.toFixed(2));
-
+  document.getElementById('monthlyTotalHours').textContent = (totalMinutes/60).toFixed(2);
+  document.getElementById('monthlyTotalMinutes').textContent = totalMinutes;
+  document.getElementById('monthlyTargetHours').textContent = (targetMinutes/60).toFixed(2);
+  document.getElementById('monthlyTotalDue').textContent = totalDue.toFixed(2);
   if (!rows.length) {
-    body.innerHTML = '<tr><td colspan="13" class="muted">لا توجد نتائج لهذا الشهر وفق الفلاتر المختارة، أو أن أوقات الدخول والخروج غير مكتملة.</td></tr>';
-    foot.innerHTML = '';
+    body.innerHTML = '<tr><td colspan="11" class="muted">لا توجد نتائج لهذا الشهر وفق الفلاتر المختارة، أو أن أوقات الدخول والخروج غير مكتملة.</td></tr>';
     return;
   }
-
   body.innerHTML = rows.map(r => {
     return `<tr>
       <td><span class="badge">${esc(r.role)}</span></td>
@@ -3224,8 +3006,6 @@ function renderMonthlyTimes() {
       <td>${r.days}</td>
       <td>${r.minutes}</td>
       <td>${r.hours}</td>
-      <td>${r.transitMinutes}</td>
-      <td>${r.paidHours}</td>
       <td>${r.hm}</td>
       <td>${r.percentage}%</td>
       <td>${r.baseSalary}</td>
@@ -3233,22 +3013,6 @@ function renderMonthlyTimes() {
       <td>${r.dueSalary}</td>
     </tr>`;
   }).join('');
-
-  const totalPercentage = rows.reduce((a,b)=> a + Number(b.percentage || 0), 0);
-  foot.innerHTML = `
-    <tr style="background:#f7fbf9;font-weight:700;">
-      <td colspan="3">الإجمالي</td>
-      <td>${rows.reduce((a,b)=> a + Number(b.days || 0), 0)}</td>
-      <td>${totalActualMinutes}</td>
-      <td>${(totalActualMinutes/60).toFixed(2)}</td>
-      <td>${totalTransitMinutes}</td>
-      <td>${(totalPaidMinutes/60).toFixed(2)}</td>
-      <td>${formatHM(totalPaidMinutes)}</td>
-      <td>${totalPercentage.toFixed(1)}%</td>
-      <td>-</td>
-      <td>-</td>
-      <td>${totalDue.toFixed(2)}</td>
-    </tr>`;
 }
 
 function xmlCell(value, type='String', style='') {
@@ -3439,45 +3203,17 @@ function importBackupJson(event) {
   reader.onload = () => {
     try {
       const parsed = JSON.parse(reader.result);
-      if (!parsed.projects || !parsed.entries || !parsed.workers || !parsed.supervisors) throw new Error('invalid');
+      if (!parsed.projects || !parsed.entries || !parsed.workers || !parsed.supervisors) throw new Error("invalid");
       state = parsed;
       saveState(true);
       editingEntryId = null;
-      
-function renderDistributionErrors() {
-  ensureProfilesSync();
-  const projectWithoutSup = state.projects.filter(project => !norm((state.projectSupervisorRules || {})[project] || ''));
-  const workerWithoutSup = state.workers.filter(worker => norm((state.workerProfiles[worker]?.supervisor) || '') === '');
-  const supervisorWithoutProjects = state.supervisors.filter(sup => {
-    const projects = uniqueList([...(state.supervisorProfiles[sup]?.projects || []), ...state.projects.filter(project => norm((state.projectSupervisorRules || {})[project] || '') === norm(sup))]);
-    return projects.length === 0;
-  });
-  const workerCounts = {};
-  state.supervisors.forEach(sup => (state.supervisorProfiles[sup]?.workers || []).forEach(worker => workerCounts[worker] = (workerCounts[worker] || 0) + 1));
-  const duplicateWorkers = Object.keys(workerCounts).filter(name => workerCounts[name] > 1);
-  const setText = (id, val) => { const el=document.getElementById(id); if (el) el.textContent = String(val); };
-  setText('distNoProjectSup', projectWithoutSup.length);
-  setText('distNoWorkerSup', workerWithoutSup.length);
-  setText('distNoSupProjects', supervisorWithoutProjects.length);
-  setText('distDuplicateWorkers', duplicateWorkers.length);
-  const box = document.getElementById('distributionErrorsBox');
-  if (!box) return;
-  const section = (title, arr, empty='لا توجد عناصر') => `<div class="manager-box" style="margin-bottom:12px;"><h4>${title}</h4>${arr.length ? '<div class="inline">'+arr.map(v=>`<span class="tag">${esc(v)}</span>`).join('')+'</div>' : `<div class="muted">${empty}</div>`}</div>`;
-  box.innerHTML = [
-    section('مشاريع بدون مشرف', projectWithoutSup, 'جميع المشاريع مرتبطة بمشرف ✅'),
-    section('عمال بدون مشرف', workerWithoutSup, 'لا يوجد عمال بدون مشرف ✅'),
-    section('مشرفون بدون مشاريع', supervisorWithoutProjects, 'كل المشرفين لديهم مشاريع ✅'),
-    section('عمال مكررون عند أكثر من مشرف', duplicateWorkers, 'لا يوجد تكرار في العمال الأساسيين ✅')
-  ].join('');
-}
-
-initAll();
-      alert('تم استيراد البيانات بنجاح.');
+      if (typeof initAll === "function") initAll();
+      alert("تم استيراد البيانات بنجاح.");
     } catch (e) {
-      alert('ملف JSON غير صالح.');
+      alert("ملف JSON غير صالح.");
     }
   };
-  reader.readAsText(file, 'utf-8');
+  reader.readAsText(file, "utf-8");
 }
 
 function showImportFileName() {
@@ -3626,13 +3362,7 @@ function importExcelData() {
         if (!state.projects.includes(project)) state.projects.push(project);
         if (!state.supervisors.includes(supervisor)) state.supervisors.push(supervisor);
         workers.forEach(w => { if (w && !state.workers.includes(w)) state.workers.push(w); });
-        if (!state.projectMeta[project] || typeof state.projectMeta[project] !== 'object') {
-          state.projectMeta[project] = { type: 'daily_visit' };
-        }
-        if (!state.projectMeta[project].type) state.projectMeta[project].type = 'daily_visit';
-        if (!state.projectMeta[project].expectedTime && typeof inferExpectedTime === 'function') {
-          state.projectMeta[project].expectedTime = inferExpectedTime(project);
-        }
+        if (!state.projectMeta[project]) state.projectMeta[project] = { type: 'daily_visit' };
 
         const entry = {
           _id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
@@ -3785,10 +3515,7 @@ function importRowsToState(rows) {
     if (!state.projects.includes(r.project)) state.projects.push(r.project);
     if (!state.supervisors.includes(r.supervisor)) state.supervisors.push(r.supervisor);
     r.workers.forEach(w => { if (w && !state.workers.includes(w)) state.workers.push(w); });
-    if (!state.projectMeta || typeof state.projectMeta !== 'object') state.projectMeta = {};
-    if (!state.projectMeta[r.project] || typeof state.projectMeta[r.project] !== 'object') state.projectMeta[r.project] = { type: 'daily_visit' };
-    if (!state.projectMeta[r.project].type) state.projectMeta[r.project].type = 'daily_visit';
-    if (!state.projectMeta[r.project].expectedTime) state.projectMeta[r.project].expectedTime = inferExpectedTime(r.project);
+    if (!state.projectMeta[r.project]) state.projectMeta[r.project] = { type: 'daily_visit' };
 
     state.entries.push({
       _id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2,7),
@@ -3929,7 +3656,6 @@ function initAll() {
   ensureStateSchema();
   applyAliasesToExistingData();
   refreshAllPickers();
-  hydratePayrollConfigInputs();
   clearEntryForm();
   const latest = [...(state.entries || [])].sort((a,b)=> (b.date+(b.login||'')).localeCompare(a.date+(a.login||'')))[0];
   if (latest) {
@@ -4056,10 +3782,7 @@ initAll();
     if (!window.state) return;
     if (!state.projectMeta || typeof state.projectMeta !== 'object') state.projectMeta = {};
     (state.projects || []).forEach(project => {
-      if (!state.projectMeta[project] || typeof state.projectMeta[project] !== 'object') {
-        state.projectMeta[project] = { type: 'daily_visit' };
-      }
-      if (!state.projectMeta[project].type) state.projectMeta[project].type = 'daily_visit';
+      if (!state.projectMeta[project] || typeof state.projectMeta[project] !== 'object') state.projectMeta[project] = {};
       const current = formatExpectedTime(state.projectMeta[project].expectedTime || '');
       if (!current) state.projectMeta[project].expectedTime = inferExpectedTime(project);
       else state.projectMeta[project].expectedTime = current;
@@ -4073,20 +3796,9 @@ initAll();
   }
   function getEntryTimeColorInfo(entry){
     const actual = window.durationMinutes ? durationMinutes(entry.login, entry.exit) : 0;
-    if (!actual) return {cls:'', label:'—', diff:'—'};
-    ensureExpectedMeta();
-    if (entry?.project) {
-      if (!state.projectMeta?.[entry.project] || typeof state.projectMeta[entry.project] !== 'object') {
-        state.projectMeta[entry.project] = { type: 'daily_visit' };
-      }
-      if (!state.projectMeta[entry.project].type) state.projectMeta[entry.project].type = 'daily_visit';
-      if (!state.projectMeta[entry.project].expectedTime) {
-        state.projectMeta[entry.project].expectedTime = inferExpectedTime(entry.project);
-      }
-    }
     const expected = getProjectExpectedMinutes(entry.project);
     const buffer = 5;
-    if (expected === null) return {cls:'', label:'—', diff:'—'};
+    if (expected === null || !actual) return {cls:'', label:'—', diff:'—'};
     const diff = actual - expected;
     let cls='entry-time-good', label='ضمن الوقت';
     if (diff > buffer){ cls='entry-time-over'; label='أكثر من المطلوب'; }
@@ -4294,18 +4006,6 @@ initAll();
   document.head.appendChild(style);
 
   ensureExpectedMeta();
-  if (window.state) {
-    (state.projects || []).forEach(project => {
-      if (!state.projectMeta?.[project] || typeof state.projectMeta[project] !== 'object') {
-        state.projectMeta[project] = { type: 'daily_visit' };
-      }
-      if (!state.projectMeta[project].type) state.projectMeta[project].type = 'daily_visit';
-      if (!state.projectMeta[project].expectedTime) {
-        state.projectMeta[project].expectedTime = inferExpectedTime(project);
-      }
-    });
-    if (window.saveState) saveState(true);
-  }
   if (window.renderProjectTags) renderProjectTags();
   if (window.renderEntriesTable) renderEntriesTable();
 })();
@@ -4709,7 +4409,7 @@ initAll();
     setAttendanceToday();
     buildAttendanceWorkerRows('', '', []);
     const title = document.getElementById('attendanceFormTitle');
-    if (title) title.textContent = 'الحضور والغياب';
+    if (title) title.textContent = 'تحضير الحضور والجاهزية';
   }
 
   function saveAttendanceRecord(){
@@ -4868,7 +4568,7 @@ initAll();
       const btn = document.createElement('button');
       btn.className = 'tab';
       btn.dataset.tab = 'attendanceTab';
-      btn.textContent = 'الحضور والغياب';
+      btn.textContent = 'الحضور والجاهزية';
       btn.onclick = function(){ showTab('attendanceTab', this); };
       const exportBtn = tabs.querySelector('[data-tab="exportTab"]');
       if (exportBtn) tabs.insertBefore(btn, exportBtn); else tabs.appendChild(btn);
@@ -4881,56 +4581,12 @@ initAll();
       <div class="entry-kpis">
         <div class="entry-mini"><div class="muted">سجلات الحضور</div><div class="num" id="attendanceKpiRecords">0</div></div>
         <div class="entry-mini"><div class="muted">الحاضرون</div><div class="num" id="attendanceKpiPresent">0</div></div>
-        <div class="entry-mini attendance-clickable" onclick="openAttendanceAbsentModal()"><div class="muted">الغياب</div><div class="num" id="attendanceKpiAbsent">0</div><div class="footer-note">اضغط لعرض الغائبين</div></div>
+        <div class="entry-mini"><div class="muted">الغياب</div><div class="num" id="attendanceKpiAbsent">0</div></div>
         <div class="entry-mini"><div class="muted">التأخير</div><div class="num" id="attendanceKpiLate">0</div></div>
       </div>
-      <div id="attendanceAbsentModal" class="attendance-modal-overlay" onclick="closeAttendanceAbsentModal(event)">
-        <div class="attendance-modal-card" onclick="event.stopPropagation()">
-          <div class="attendance-modal-head">
-            <h3 style="margin:0;color:var(--brand);">ملخص الغياب</h3>
-            <button class="light small" onclick="closeAttendanceAbsentModal()">إغلاق</button>
-          </div>
-          <div class="helper-box" id="attendanceAbsentModalSummary" style="margin-bottom:12px;">لا توجد بيانات.</div>
-          <div class="table-wrap" style="max-height:55vh;">
-            <table>
-              <thead>
-                <tr>
-                  <th>الاسم</th>
-                  <th>أيام الغياب</th>
-                  <th>التواريخ</th>
-                  <th>المشاريع</th>
-                </tr>
-              </thead>
-              <tbody id="attendanceAbsentBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div class="panel card-pad" style="margin-bottom:16px;">
-        <div class="entries-toolbar">
-          <div class="helper-box" style="flex:1;min-width:260px;">جدول شهري بنفس فكرة الحضور والغياب: الأخضر = حاضر، الأحمر = غائب، والرمادي = لا توجد بيانات لذلك اليوم.</div>
-          <div class="form-grid" style="min-width:320px;max-width:780px;">
-            <div><label>شهر الجدول</label><input type="month" id="attendanceMatrixMonth" onchange="renderAttendanceMatrix()"></div>
-            <div><label>فلتر المشرف</label><select id="attendanceMatrixSupervisor" onchange="renderAttendanceMatrix()"></select></div>
-            <div><label>فلتر اسم / وظيفة</label><input id="attendanceMatrixSearch" oninput="renderAttendanceMatrix()" placeholder="اسم أو وظيفة"></div>
-          </div>
-        </div>
-        <div class="attendance-legend">
-          <span class="attendance-legend-item"><span class="attendance-color present"></span> حاضر</span>
-          <span class="attendance-legend-item"><span class="attendance-color absent"></span> غائب</span>
-          <span class="attendance-legend-item"><span class="attendance-color empty"></span> بدون بيانات</span>
-        </div>
-        <div class="table-wrap attendance-matrix-wrap">
-          <table class="attendance-matrix-table">
-            <thead id="attendanceMatrixHead"></thead>
-            <tbody id="attendanceMatrixBody"></tbody>
-          </table>
-        </div>
-      </div>
-
       <div class="grid">
         <div class="panel card-pad">
-          <h3 class="section-title" id="attendanceFormTitle">الحضور والغياب</h3>
+          <h3 class="section-title" id="attendanceFormTitle">تحضير الحضور والجاهزية</h3>
           <div class="helper-box">سجل حضور المشروع، حدّد حالة كل عامل، ثم قيّم جاهزية التشغيل من نفس الشاشة.</div>
           <div class="quick-actions">
             <button class="light" onclick="setAttendanceToday()">تاريخ اليوم</button>
@@ -4964,7 +4620,7 @@ initAll();
             <textarea id="attendanceNote" placeholder="مثال: تم تعويض عامل من مشروع آخر"></textarea>
           </div>
           <div class="actions">
-            <button onclick="saveAttendanceRecord()">حفظ السجل</button>
+            <button onclick="saveAttendanceRecord()">حفظ الحضور</button>
             <button class="light" onclick="clearAttendanceForm()">سجل جديد</button>
           </div>
         </div>
@@ -5000,229 +4656,9 @@ initAll();
     .attendance-worker-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
     .attendance-worker-row{display:grid;grid-template-columns:1fr 140px;gap:8px}
     .attendance-checks{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-    .attendance-clickable{cursor:pointer;transition:.2s;position:relative}
-    .attendance-clickable:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(10,64,51,.08)}
-    .attendance-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:99999;padding:24px;align-items:center;justify-content:center}
-    .attendance-modal-overlay.show{display:flex}
-    .attendance-modal-card{width:min(980px,100%);background:#fff;border-radius:24px;border:1px solid var(--line);box-shadow:0 20px 40px rgba(0,0,0,.18);padding:18px}
-    .attendance-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
-    .attendance-legend{display:flex;gap:18px;flex-wrap:wrap;margin:10px 0 12px}
-    .attendance-legend-item{display:inline-flex;align-items:center;gap:8px;font-weight:700;color:var(--brand)}
-    .attendance-color{width:18px;height:18px;border-radius:4px;border:1px solid #d7dfdc;display:inline-block}
-    .attendance-color.present{background:#08b34c}
-    .attendance-color.absent{background:#ef2b2b}
-    .attendance-color.empty{background:#ececec}
-    .attendance-matrix-wrap{max-height:65vh}
-    .attendance-matrix-table th,.attendance-matrix-table td{text-align:center;padding:6px 8px}
-    .attendance-matrix-table th.person-col,.attendance-matrix-table td.person-col{text-align:right;position:sticky;right:0;background:#fff;z-index:3;min-width:170px}
-    .attendance-matrix-table th.role-col,.attendance-matrix-table td.role-col{text-align:right;position:sticky;right:170px;background:#fff;z-index:3;min-width:90px}
-    .attendance-matrix-table th.day-col{min-width:44px}
-    .attendance-matrix-cell{min-width:42px;height:34px;font-weight:700;color:#fff;border-radius:6px}
-    .attendance-matrix-cell.present{background:#08b34c}
-    .attendance-matrix-cell.absent{background:#ef2b2b}
-    .attendance-matrix-cell.empty{background:#ececec;color:#666}
-    .attendance-matrix-daynum{font-weight:800;display:block}
-    .attendance-matrix-dayname{font-size:11px;color:#6f7976;display:block;margin-top:2px}
-    @media (max-width:1100px){.attendance-worker-grid,.attendance-checks{grid-template-columns:1fr}.attendance-worker-row{grid-template-columns:1fr}.attendance-modal-overlay{padding:12px}.attendance-matrix-table th.person-col,.attendance-matrix-table td.person-col{min-width:140px}.attendance-matrix-table th.role-col,.attendance-matrix-table td.role-col{right:140px;min-width:80px}}
+    @media (max-width:1100px){.attendance-worker-grid,.attendance-checks{grid-template-columns:1fr}.attendance-worker-row{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
-
-
-  function getAttendanceMonthValue(){
-    const el = document.getElementById('attendanceMatrixMonth');
-    if (el && el.value) return el.value;
-    const dateFilter = norm(document.getElementById('attendanceFilterDate')?.value);
-    if (dateFilter && /^\d{4}-\d{2}-\d{2}$/.test(dateFilter)) return dateFilter.slice(0,7);
-    const d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-  }
-
-  function getAttendancePeopleMap(monthStr){
-    ensureAttendanceState();
-    const rows = (state.attendance || []).filter(r => (r.date || '').startsWith(monthStr + '-'));
-    const map = new Map();
-    const ensurePerson = (name, role) => {
-      const key = norm(name);
-      if (!key) return null;
-      if (!map.has(key)) map.set(key, {name:key, role:role || 'عامل', days:{}});
-      const item = map.get(key);
-      if (!item.role || item.role === 'عامل') item.role = role || item.role || 'عامل';
-      return item;
-    };
-
-    rows.forEach(r => {
-      const sup = ensurePerson(r.supervisor, 'مشرف');
-      if (sup && r.date) {
-        const prev = sup.days[r.date];
-        sup.days[r.date] = prev === 'غائب' ? 'غائب' : 'حاضر';
-      }
-      (r.workers || []).forEach(w => {
-        const item = ensurePerson(w.name, 'عامل');
-        if (!item || !r.date) return;
-        const status = norm(w.status) === 'غائب' ? 'غائب' : 'حاضر';
-        const prev = item.days[r.date];
-        if (prev === 'حاضر') return;
-        item.days[r.date] = status;
-      });
-    });
-
-    return Array.from(map.values());
-  }
-
-  function populateAttendanceMatrixSupervisorFilter(){
-    const el = document.getElementById('attendanceMatrixSupervisor');
-    if (!el) return;
-    ensureProfilesSync();
-    const current = norm(el.value);
-    const options = ['<option value="">الكل</option>']
-      .concat((state.supervisors || []).slice().sort((a,b)=>a.localeCompare(b, 'ar')).map(name => `<option value="${esc(name)}">${esc(name)}</option>`));
-    el.innerHTML = options.join('');
-    if (current && (state.supervisors || []).includes(current)) el.value = current;
-  }
-
-  function getAttendanceMatrixPeopleForSupervisor(monthStr, supervisorName){
-    const allPeople = getAttendancePeopleMap(monthStr);
-    const selected = norm(supervisorName);
-    if (!selected) return allPeople;
-
-    ensureProfilesSync();
-
-    const byName = new Map(allPeople.map(person => [norm(person.name), person]));
-    const allowedNames = new Set([selected]);
-
-    const supervisorProfile = state.supervisorProfiles?.[selected] || {workers:[], projects:[]};
-    (supervisorProfile.workers || []).forEach(name => { if (norm(name)) allowedNames.add(norm(name)); });
-
-    (state.attendance || []).forEach(record => {
-      if (!record || !record.date || !record.date.startsWith(monthStr + '-')) return;
-      if (norm(record.supervisor) !== selected) return;
-      (record.workers || []).forEach(worker => {
-        const name = norm(worker?.name || worker);
-        if (name) allowedNames.add(name);
-      });
-    });
-
-    const selectedPeople = Array.from(allowedNames).map(name => {
-      const existing = byName.get(name);
-      if (existing) return existing;
-      return {
-        name,
-        role: name === selected ? 'مشرف' : 'عامل',
-        days: {}
-      };
-    });
-
-    return selectedPeople.sort((a,b) => {
-      if (a.name === selected) return -1;
-      if (b.name === selected) return 1;
-      if (a.role !== b.role) return a.role === 'مشرف' ? -1 : 1;
-      return a.name.localeCompare(b.name, 'ar');
-    });
-  }
-
-  function renderAttendanceMatrix(){
-    const head = document.getElementById('attendanceMatrixHead');
-    const body = document.getElementById('attendanceMatrixBody');
-    const monthInput = document.getElementById('attendanceMatrixMonth');
-    if (!head || !body) return;
-    populateAttendanceMatrixSupervisorFilter();
-    const monthStr = getAttendanceMonthValue();
-    if (monthInput && !monthInput.value) monthInput.value = monthStr;
-    const [year, month] = monthStr.split('-').map(Number);
-    if (!year || !month) {
-      body.innerHTML = '<tr><td class="muted">حدد الشهر أولًا.</td></tr>';
-      return;
-    }
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const search = norm(document.getElementById('attendanceMatrixSearch')?.value).toLowerCase();
-    const selectedSupervisor = norm(document.getElementById('attendanceMatrixSupervisor')?.value);
-    const people = getAttendanceMatrixPeopleForSupervisor(monthStr, selectedSupervisor).filter(p => {
-      if (!search) return true;
-      return [p.name, p.role].join(' ').toLowerCase().includes(search);
-    }).sort((a,b) => {
-      if (selectedSupervisor) {
-        if (a.name === selectedSupervisor) return -1;
-        if (b.name === selectedSupervisor) return 1;
-      }
-      if (a.role !== b.role) return a.role === 'مشرف' ? -1 : 1;
-      return a.name.localeCompare(b.name, 'ar');
-    });
-
-    head.innerHTML = '<tr><th class="person-col">الاسم</th><th class="role-col">الوظيفة</th>' + Array.from({length:daysInMonth}, (_,i) => {
-      const date = new Date(year, month-1, i+1);
-      const dayName = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][date.getDay()];
-      return `<th class="day-col"><span class="attendance-matrix-daynum">${i+1}</span><span class="attendance-matrix-dayname">${dayName}</span></th>`;
-    }).join('') + '</tr>';
-
-    body.innerHTML = people.length ? people.map(person => {
-      const absentDays = Object.values(person.days).filter(v => v === 'غائب').length;
-      return '<tr>' +
-        `<td class="person-col">${esc(person.name)}${absentDays ? `<div class="footer-note" style="margin:4px 0 0;">غياب: ${absentDays}</div>` : ''}</td>` +
-        `<td class="role-col">${esc(person.role)}</td>` +
-        Array.from({length:daysInMonth}, (_,i) => {
-          const dateKey = monthStr + '-' + String(i+1).padStart(2,'0');
-          const status = person.days[dateKey] || '';
-          const cls = status === 'حاضر' ? 'present' : status === 'غائب' ? 'absent' : 'empty';
-          const label = status === 'حاضر' ? 'P' : status === 'غائب' ? 'A' : '—';
-          const title = `${person.name} — ${dateKey} — ${status || 'بدون بيانات'}`;
-          return `<td><div class="attendance-matrix-cell ${cls}" title="${esc(title)}">${label}</div></td>`;
-        }).join('') +
-      '</tr>';
-    }).join('') : `<tr><td colspan="${daysInMonth + 2}" class="muted">${selectedSupervisor ? 'لا توجد بيانات لهذا المشرف أو عمالته في الشهر المحدد.' : 'لا توجد بيانات حضور وغياب لهذا الشهر.'}</td></tr>`;
-  }
-
-  function getAttendanceAbsenceSummary(){
-    const rows = getFilteredAttendance();
-    const map = new Map();
-    rows.forEach(r => {
-      (r.workers || []).forEach(w => {
-        if ((w.status || '') !== 'غائب') return;
-        const key = norm(w.name);
-        if (!key) return;
-        if (!map.has(key)) map.set(key, {name:key, dates:new Set(), projects:new Set()});
-        const item = map.get(key);
-        if (r.date) item.dates.add(r.date);
-        if (r.project) item.projects.add(r.project);
-      });
-    });
-    return Array.from(map.values())
-      .map(x => ({name:x.name, days:x.dates.size, dates:Array.from(x.dates).sort(), projects:Array.from(x.projects).sort()}))
-      .sort((a,b) => b.days - a.days || a.name.localeCompare(b.name, 'ar'));
-  }
-
-  function openAttendanceAbsentModal(){
-    const modal = document.getElementById('attendanceAbsentModal');
-    const body = document.getElementById('attendanceAbsentBody');
-    const summary = document.getElementById('attendanceAbsentModalSummary');
-    if (!modal || !body || !summary) return;
-    const items = getAttendanceAbsenceSummary();
-    const project = norm(document.getElementById('attendanceFilterProject')?.value);
-    const date = norm(document.getElementById('attendanceFilterDate')?.value);
-    const q = norm(document.getElementById('attendanceSearch')?.value);
-    const scope = [
-      project ? `المشروع: ${project}` : '',
-      date ? `التاريخ: ${date}` : '',
-      q ? `البحث: ${q}` : ''
-    ].filter(Boolean).join(' — ');
-    summary.textContent = items.length
-      ? `عدد الغائبين: ${items.length}${scope ? ' — ' + scope : ''}`
-      : `لا يوجد غياب${scope ? ' ضمن الفلاتر الحالية — ' + scope : ''}`;
-    body.innerHTML = items.length ? items.map(item => `
-      <tr>
-        <td>${esc(item.name)}</td>
-        <td><strong>${item.days}</strong></td>
-        <td>${esc(item.dates.join('، '))}</td>
-        <td>${esc(item.projects.join('، '))}</td>
-      </tr>
-    `).join('') : '<tr><td colspan="4" class="muted">لا يوجد موظفون غائبون ضمن الفلاتر الحالية.</td></tr>';
-    modal.classList.add('show');
-  }
-
-  function closeAttendanceAbsentModal(event){
-    if (event && event.target && event.target !== event.currentTarget) return;
-    const modal = document.getElementById('attendanceAbsentModal');
-    if (modal) modal.classList.remove('show');
-  }
 
   window.setAttendanceToday = setAttendanceToday;
   window.setAttendanceNow = setAttendanceNow;
@@ -5233,9 +4669,6 @@ initAll();
   window.renderAttendanceTable = renderAttendanceTable;
   window.editAttendanceRecord = editAttendanceRecord;
   window.deleteAttendanceRecord = deleteAttendanceRecord;
-  window.openAttendanceAbsentModal = openAttendanceAbsentModal;
-  window.closeAttendanceAbsentModal = closeAttendanceAbsentModal;
-  window.renderAttendanceMatrix = renderAttendanceMatrix;
 
   const oldInitAll = window.initAll;
   window.initAll = function(){
@@ -5243,10 +4676,8 @@ initAll();
     ensureAttendanceState();
     ensureAttendanceShell();
     populateAttendanceProjectSelects();
-    populateAttendanceMatrixSupervisorFilter();
     clearAttendanceForm();
     renderAttendanceTable();
-    renderAttendanceMatrix();
   };
 
   const oldSaveState = window.saveState;
@@ -5260,623 +4691,556 @@ initAll();
   populateAttendanceProjectSelects();
   clearAttendanceForm();
   renderAttendanceTable();
-  renderAttendanceMatrix();
 })();
 </script>
 
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
 <script>
+/* ====== TASNEEF USER MANAGEMENT RESTORE V3 ======
+   يعيد إدارة المستخدمين ويحفظ مباشرة في جدول users بدون حذف أي بيانات.
+*/
 (function(){
-  const cfg = window.APP_CONFIG || {};
-  const SUPABASE_URL = cfg.supabaseUrl || 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
-  const SUPABASE_ANON_KEY = cfg.supabaseAnonKey || 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
-  const cloud = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
-    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    : null;
-  window.appCloud = cloud;
-  let cloudBusy = false;
-  let pushTimer = null;
-
-  function cloudReady(){ return !!cloud; }
-  function esc(v){ return String(v || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function status(msg, kind='success'){
-    if (window.showToast) window.showToast(msg, kind === 'success' ? 'success' : 'error');
-    else console.log(msg);
+  function clean(v){ return String(v || '').trim(); }
+  function toast(text, type='success'){
+    if (typeof window.showToast === 'function') window.showToast(text, type);
+    else alert(text);
   }
-  function safeArray(v){ return Array.isArray(v) ? v : []; }
-  function durationFromTimes(start, end){
-    if (!start || !end) return 0;
-    const [sh, sm] = String(start).split(':').map(Number);
-    const [eh, em] = String(end).split(':').map(Number);
-    let mins = (eh * 60 + em) - (sh * 60 + sm);
-    if (mins < 0) mins += 24 * 60;
-    return mins;
+  function dbClient(){
+    const cfg = window.APP_CONFIG || {};
+    const url = cfg.supabaseUrl || cfg.SUPABASE_URL || '';
+    const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || '';
+    if (!window.supabase || !url || !key) return null;
+    if (!window.tasneefUsersDb) window.tasneefUsersDb = window.supabase.createClient(url, key);
+    return window.tasneefUsersDb;
   }
-  function entryToDailyRow(entry){
+  function makeUsername(name){
+    const base = clean(name).toLowerCase()
+      .replace(/[أإآا]/g,'a').replace(/ى/g,'y').replace(/ي/g,'y').replace(/و/g,'w')
+      .replace(/محمد/g,'mohamed').replace(/فهد/g,'fahd').replace(/مازن/g,'mazen')
+      .replace(/[^a-z0-9\u0600-\u06FF]+/g,'_')
+      .replace(/^_+|_+$/g,'');
+    if (typeof window.slugifyArabic === 'function') return window.slugifyArabic(name) || base || ('user_' + Date.now());
+    return base || ('user_' + Date.now());
+  }
+  function ensureUsersLocal(){
+    if (!window.state) return;
+    if (!Array.isArray(state.users)) state.users = [];
+    if (!state.users.some(u => clean(u.username).toLowerCase() === 'admin')) {
+      state.users.unshift({
+        id:'u-admin', fullName:'مدير النظام', username:'admin', password:'1234', role:'admin',
+        linkedSupervisor:'', isActive:true, permissions:{all:true}, createdAt:new Date().toISOString()
+      });
+    }
+  }
+  function userRoleText(role){
+    if (role === 'admin') return 'مدير النظام';
+    if (role === 'supervisor') return 'مشرف';
+    if (role === 'viewer') return 'مشاهد';
+    return role || '-';
+  }
+  function getPermsFromForm(){
     return {
-      project_name: entry.project || '',
-      supervisor_name: entry.supervisor || '',
-      record_date: entry.date || null,
-      login_time: entry.login || null,
-      logout_time: entry.exit || null,
-      duration_minutes: durationFromTimes(entry.login, entry.exit),
-      cleaning_type: entry.cleaningType || '',
-      approval_status: entry.approvalStatus || 'مسجل',
-      note: entry.note || '',
-      created_by: (window.getCurrentUser && getCurrentUser() ? (getCurrentUser().username || getCurrentUser().fullName) : (entry.supervisor || 'system'))
+      entries: !!document.getElementById('umPermEntries')?.checked,
+      people: !!document.getElementById('umPermPeople')?.checked,
+      projects: !!document.getElementById('umPermProjects')?.checked,
+      monthly: !!document.getElementById('umPermMonthly')?.checked,
+      export: !!document.getElementById('umPermExport')?.checked,
+      users: !!document.getElementById('umPermUsers')?.checked
     };
   }
-  function mapDbUsersToState(rows){
-    return safeArray(rows).map(r => ({
-      id: 'db-' + r.id,
-      _dbId: r.id,
-      fullName: r.full_name || r.linked_supervisor || r.supervisor_name || r.username,
-      username: r.username,
-      password: r.password,
-      role: r.role || 'supervisor',
-      linkedSupervisor: r.linked_supervisor || r.supervisor_name || '',
-      isActive: r.is_active !== false,
-      permissions: r.permissions_json || r.permissions || {},
-      createdAt: r.created_at || new Date().toISOString()
-    }));
-  }
-  function buildProjectsPayload(){
-    return safeArray(state.projects).map(name => ({
-      project_name: name,
-      supervisor_name: (state.projectSupervisorRules || {})[name] || '',
-      is_active: true
-    }));
-  }
-  function buildUsersPayload(){
-    return safeArray(state.users).map(u => ({
-      username: u.username || '',
-      password: u.password || '',
-      role: u.role || 'supervisor',
-      full_name: u.fullName || u.username || '',
-      supervisor_name: u.linkedSupervisor || '',
-      linked_supervisor: u.linkedSupervisor || '',
-      is_active: u.isActive !== false,
-      permissions_json: u.permissions || {}
-    })).filter(u => u.username);
-  }
-  function buildWorkersPayload(){
-    const rows = [];
-    const profiles = state.workerProfiles || {};
-    Object.keys(profiles).forEach(workerName => {
-      const p = profiles[workerName] || {};
-      const projects = Array.isArray(p.projects) && p.projects.length ? p.projects : [''];
-      projects.forEach(projectName => rows.push({
-        worker_name: workerName,
-        project_name: projectName || '',
-        is_active: true
-      }));
+  function setPermsToForm(perms){
+    perms = perms || {};
+    ['Entries','People','Projects','Monthly','Export','Users'].forEach(k=>{
+      const el = document.getElementById('umPerm'+k);
+      if (el) el.checked = !!perms[k.charAt(0).toLowerCase()+k.slice(1)] || !!perms.all;
     });
-    if (!rows.length) {
-      safeArray(state.workers).forEach(name => rows.push({ worker_name:name, project_name:'', is_active:true }));
-    }
-    return rows;
   }
-  async function replaceTable(tableName, rows){
-    if (!cloudReady() || !rows || !rows.length) return;
-    const chunk = 200;
-    let onConflict = '';
-    if (tableName === 'users') onConflict = 'username';
-    else if (tableName === 'projects') onConflict = 'project_name';
-    else if (tableName === 'workers') onConflict = 'worker_name,project_name';
-    for (let i=0; i<rows.length; i+=chunk) {
-      const part = rows.slice(i, i+chunk);
-      const query = cloud.from(tableName).upsert(part, onConflict ? { onConflict } : {});
-      const { error } = await query;
+  function userRowHtml(u){
+    const active = u.is_active !== false && u.isActive !== false;
+    const username = clean(u.username);
+    const id = u.id || username;
+    const full = clean(u.full_name || u.fullName || u.supervisor_name || u.linked_supervisor || username);
+    const linked = clean(u.linked_supervisor || u.linkedSupervisor || u.supervisor_name || '');
+    const role = clean(u.role || 'viewer');
+    return `<tr>
+      <td><span class="badge">${active ? 'مفعل' : 'موقوف'}</span></td>
+      <td>${full || '-'}</td>
+      <td>${username || '-'}</td>
+      <td>${userRoleText(role)}</td>
+      <td>${linked || '-'}</td>
+      <td>
+        <button class="small light" onclick="editSystemUser('${String(id).replace(/'/g,'\\&#39;')}')">تعديل</button>
+        <button class="small ${active ? 'danger' : 'secondary'}" onclick="toggleSystemUser('${String(id).replace(/'/g,'\\&#39;')}')">${active ? 'إيقاف' : 'تفعيل'}</button>
+      </td>
+    </tr>`;
+  }
+  function systemUsers(){
+    ensureUsersLocal();
+    return (state.users || []).map((u, i) => ({...u, id: u.id || u.username || ('u-'+i)}));
+  }
+  function fillUserSupervisorSelect(){
+    const sel = document.getElementById('umLinkedSupervisor');
+    if (!sel) return;
+    const current = sel.value;
+    const sups = [...new Set([...(state?.supervisors || []), ...(state?.users || []).map(u=>u.linked_supervisor||u.linkedSupervisor||u.supervisor_name||'')].map(clean).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+    sel.innerHTML = '<option value="">بدون ربط</option>' + sups.map(s=>`<option value="${s.replace(/"/g,'&quot;')}">${s}</option>`).join('');
+    sel.value = current;
+  }
+  function renderUsersTable(){
+    ensureUsersLocal();
+    fillUserSupervisorSelect();
+    const body = document.getElementById('usersManagementBody');
+    if (body) body.innerHTML = systemUsers().map(userRowHtml).join('') || '<tr><td colspan="6">لا توجد مستخدمين</td></tr>';
+    const c = document.getElementById('usersCountBox');
+    if (c) c.textContent = (state.users || []).length + ' مستخدم';
+  }
+  async function loadUsersFromCloud(){
+    ensureUsersLocal();
+    const db = dbClient();
+    if (!db) { renderUsersTable(); return; }
+    try{
+      const { data, error } = await db.from('users').select('*').order('id', { ascending:true });
+      if (error) throw error;
+      const localAdmin = (state.users || []).find(u => clean(u.username).toLowerCase() === 'admin') || {id:'u-admin',fullName:'مدير النظام',username:'admin',password:'1234',role:'admin',isActive:true,permissions:{all:true}};
+      const mapped = (data || []).map((u, idx) => ({
+        id: u.id || ('db-'+idx),
+        dbId: u.id,
+        fullName: u.full_name || u.supervisor_name || u.username || '',
+        username: (u.username || '').toLowerCase(),
+        password: u.password || '',
+        role: u.role || 'viewer',
+        linkedSupervisor: u.linked_supervisor || u.supervisor_name || '',
+        isActive: u.is_active !== false,
+        permissions: u.permissions_json || {},
+        createdAt: u.created_at || new Date().toISOString()
+      })).filter(u => clean(u.username).toLowerCase() !== 'admin');
+      state.users = [localAdmin, ...mapped];
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+      renderUsersTable();
+    }catch(e){
+      console.warn('load users', e.message || e);
+      renderUsersTable();
+    }
+  }
+  async function upsertCloudUser(user){
+    const db = dbClient();
+    if (!db) throw new Error('تعذر الاتصال بقاعدة البيانات: تحقق من config.js');
+    const row = {
+      username: clean(user.username).toLowerCase(),
+      password: clean(user.password || '1234'),
+      role: clean(user.role || 'viewer'),
+      supervisor_name: clean(user.linkedSupervisor || user.fullName || ''),
+      full_name: clean(user.fullName || user.username),
+      linked_supervisor: clean(user.linkedSupervisor || ''),
+      is_active: user.isActive !== false,
+      permissions_json: user.permissions || {}
+    };
+    const { data: found, error: findErr } = await db.from('users').select('id').eq('username', row.username).limit(1);
+    if (findErr) throw findErr;
+    if (found && found.length) {
+      const { error } = await db.from('users').update(row).eq('id', found[0].id);
+      if (error) throw error;
+    } else {
+      const { error } = await db.from('users').insert([row]);
       if (error) throw error;
     }
   }
-  async function syncMasterDataToState(silent=true){
-    if (!cloudReady() || cloudBusy) return;
-    cloudBusy = true;
-    try {
-      const [usersRes, projectsRes, workersRes] = await Promise.all([
-        cloud.from('users').select('*').order('id'),
-        cloud.from('projects').select('*').order('project_name'),
-        cloud.from('workers').select('*').order('worker_name')
-      ]);
-      if (usersRes.error) throw usersRes.error;
-      if (projectsRes.error) throw projectsRes.error;
-      if (workersRes.error) throw workersRes.error;
-      const dbUsers = mapDbUsersToState(usersRes.data || []);
-      const projectRows = projectsRes.data || [];
-      const workerRows = workersRes.data || [];
-      state.users = dbUsers.length ? dbUsers : (state.users || []);
-      state.projects = [...new Set(projectRows.filter(r => r.is_active !== false).map(r => r.project_name).filter(Boolean))];
-      state.projectSupervisorRules = Object.fromEntries(projectRows.map(r => [r.project_name, r.supervisor_name || '']));
-      const supSet = new Set();
-      dbUsers.filter(u => u.role === 'supervisor' && u.isActive).forEach(u => { if (u.linkedSupervisor) supSet.add(u.linkedSupervisor); });
-      projectRows.forEach(r => { if (r.supervisor_name) supSet.add(r.supervisor_name); });
-      state.supervisors = [...supSet];
-      state.workers = [...new Set(workerRows.filter(r => r.is_active !== false).map(r => r.worker_name).filter(Boolean))];
-      state.workerProfiles = {};
-      workerRows.filter(r => r.is_active !== false).forEach(r => {
-        const key = r.worker_name;
-        const inferredSupervisor = (state.projectSupervisorRules || {})[r.project_name] || '';
-        if (!state.workerProfiles[key]) state.workerProfiles[key] = { supervisor: inferredSupervisor, projects:[], status:'أساسي' };
-        if (r.project_name && !state.workerProfiles[key].projects.includes(r.project_name)) state.workerProfiles[key].projects.push(r.project_name);
-        if (!state.workerProfiles[key].supervisor && inferredSupervisor) state.workerProfiles[key].supervisor = inferredSupervisor;
-      });
-      state.supervisorProfiles = {};
-      state.supervisors.forEach(s => state.supervisorProfiles[s] = { workers:[], projects:[] });
-      Object.keys(state.workerProfiles || {}).forEach(workerName => {
-        const wp = state.workerProfiles[workerName] || {};
-        const sup = wp.supervisor || '';
-        if (!sup) return;
-        if (!state.supervisorProfiles[sup]) state.supervisorProfiles[sup] = { workers:[], projects:[] };
-        if (!state.supervisorProfiles[sup].workers.includes(workerName)) state.supervisorProfiles[sup].workers.push(workerName);
-        safeArray(wp.projects).forEach(p => {
-          if (p && !state.supervisorProfiles[sup].projects.includes(p)) state.supervisorProfiles[sup].projects.push(p);
-        });
-      });
-      if (window.fillLinkedSupervisorOptions) fillLinkedSupervisorOptions();
-      if (window.refreshAllPickers) refreshAllPickers();
-      if (window.renderUsersTable) renderUsersTable();
-      if (window.renderSupervisorTeamCards) renderSupervisorTeamCards();
-      if (window.renderDistributionErrors) renderDistributionErrors();
-      if (window.updateKPIs) updateKPIs();
-      if (!silent) status('تمت مزامنة المشاريع والمشرفين والعمال من السحابة');
-    } catch (err) {
-      console.error(err);
-      if (!silent) status('تعذر مزامنة البيانات الأساسية من السحابة', 'error');
-    } finally {
-      cloudBusy = false;
+  function clearUserForm(){
+    ['umUserId','umFullName','umUsername','umPassword'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    const role=document.getElementById('umRole'); if(role) role.value='viewer';
+    const sup=document.getElementById('umLinkedSupervisor'); if(sup) sup.value='';
+    const active=document.getElementById('umIsActive'); if(active) active.checked=true;
+    setPermsToForm({entries:true});
+  }
+  async function saveSystemUser(){
+    ensureUsersLocal();
+    const id = clean(document.getElementById('umUserId')?.value);
+    const fullName = clean(document.getElementById('umFullName')?.value);
+    const role = clean(document.getElementById('umRole')?.value || 'viewer');
+    let username = clean(document.getElementById('umUsername')?.value).toLowerCase();
+    const password = clean(document.getElementById('umPassword')?.value || '1234');
+    const linkedSupervisor = clean(document.getElementById('umLinkedSupervisor')?.value);
+    const isActive = !!document.getElementById('umIsActive')?.checked;
+    if (!fullName && !username) { toast('اكتب اسم المستخدم أو الاسم الكامل', 'error'); return; }
+    if (!username) username = makeUsername(fullName);
+    if (!password) { toast('اكتب كلمة المرور', 'error'); return; }
+    if (role === 'supervisor' && !linkedSupervisor && fullName) {
+      const sup = fullName;
+      if (!state.supervisors.includes(sup)) state.supervisors.push(sup);
+    }
+    const user = {id: id || ('u-'+Date.now()), fullName: fullName || username, username, password, role, linkedSupervisor: linkedSupervisor || (role==='supervisor' ? (fullName || username) : ''), isActive, permissions:getPermsFromForm(), createdAt:new Date().toISOString()};
+    if (user.role === 'admin') user.permissions = {all:true, ...user.permissions};
+    if (user.role === 'supervisor' && user.linkedSupervisor && !state.supervisors.includes(user.linkedSupervisor)) state.supervisors.push(user.linkedSupervisor);
+    const idx = state.users.findIndex(u => (String(u.id) === String(id) && id) || clean(u.username).toLowerCase() === username);
+    if (idx >= 0) state.users[idx] = {...state.users[idx], ...user}; else state.users.push(user);
+    try{
+      await upsertCloudUser(user);
+      if (typeof refreshAllPickers === 'function') refreshAllPickers();
+      if (typeof saveState === 'function') saveState(true);
+      renderUsersTable();
+      clearUserForm();
+      toast('تم حفظ المستخدم مباشرة في قاعدة البيانات');
+    }catch(e){
+      toast((e && e.message) ? e.message : 'فشل حفظ المستخدم', 'error');
     }
   }
-  async function syncEntriesToState(silent=true){
-    if (!cloudReady()) return;
-    try {
-      const [recordsRes, attendanceRes] = await Promise.all([
-        cloud.from('daily_records').select('*').order('record_date', { ascending:false }).order('id', { ascending:false }).limit(2000),
-        cloud.from('attendance_records').select('*').order('id', { ascending:false }).limit(8000)
-      ]);
-      if (recordsRes.error) throw recordsRes.error;
-      if (attendanceRes.error) throw attendanceRes.error;
-      const groups = {};
-      (attendanceRes.data || []).forEach(r => {
-        const key = String(r.daily_record_id);
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(r);
-      });
-      const cloudEntries = (recordsRes.data || []).map(r => ({
-        _id: 'db-record-' + r.id,
-        _cloudId: r.id,
-        _source: 'daily_records',
-        project: r.project_name || '',
-        date: r.record_date || '',
-        login: r.login_time || '',
-        exit: r.logout_time || '',
-        supervisor: r.supervisor_name || '',
-        workers: (groups[String(r.id)] || []).map(x => x.worker_name),
-        cleaningType: r.cleaning_type || '',
-        approvalStatus: r.approval_status || 'مسجل',
-        note: r.note || ''
-      }));
-      const localOnly = safeArray(state.entries).filter(e => !String(e._id || '').startsWith('db-record-') && !e._cloudId);
-      state.entries = [...cloudEntries, ...localOnly];
-      if (window.renderEntriesTable) renderEntriesTable();
-      if (window.renderMonthlyTimes) renderMonthlyTimes();
-      if (window.updateKPIs) updateKPIs();
-      if (!silent) status('تمت مزامنة السجلات من السحابة');
-    } catch (err) {
-      console.error(err);
-      if (!silent) status('تعذر مزامنة السجلات من السحابة', 'error');
-    }
+  function editSystemUser(id){
+    ensureUsersLocal();
+    const u = systemUsers().find(x => String(x.id) === String(id) || String(x.dbId) === String(id));
+    if (!u) return;
+    fillUserSupervisorSelect();
+    document.getElementById('umUserId').value = u.id || '';
+    document.getElementById('umFullName').value = u.fullName || u.full_name || '';
+    document.getElementById('umUsername').value = u.username || '';
+    document.getElementById('umPassword').value = u.password || '';
+    document.getElementById('umRole').value = u.role || 'viewer';
+    document.getElementById('umLinkedSupervisor').value = u.linkedSupervisor || u.linked_supervisor || '';
+    document.getElementById('umIsActive').checked = u.isActive !== false && u.is_active !== false;
+    setPermsToForm(u.permissions || u.permissions_json || {});
+    const tab = document.querySelector('[data-tab="usersTab"]'); if (tab && typeof showTab === 'function') showTab('usersTab', tab);
   }
-  async function saveEntryToCloud(entry){
-    if (!cloudReady()) return;
-    try {
-      let recordId = entry._cloudId || null;
-      const payload = entryToDailyRow(entry);
-      if (recordId) {
-        const { error } = await cloud.from('daily_records').update(payload).eq('id', recordId);
-        if (error) throw error;
-        await cloud.from('attendance_records').delete().eq('daily_record_id', recordId);
-      } else {
-        const { data, error } = await cloud.from('daily_records').insert(payload).select('id').single();
-        if (error) throw error;
-        recordId = data.id;
-        entry._cloudId = recordId;
-        entry._id = 'db-record-' + recordId;
-      }
-      const rows = safeArray(entry.workers).filter(Boolean).map(name => ({ daily_record_id: recordId, worker_name: name, status:'present' }));
-      if (rows.length) {
-        const { error: insErr } = await cloud.from('attendance_records').insert(rows);
-        if (insErr) throw insErr;
-      }
-    } catch (err) {
-      console.error(err);
-      status('تم حفظ السجل محليًا لكن تعذر رفعه للسحابة', 'error');
-    }
+  async function toggleSystemUser(id){
+    ensureUsersLocal();
+    const idx = state.users.findIndex(u => String(u.id) === String(id) || String(u.dbId) === String(id));
+    if (idx < 0) return;
+    state.users[idx].isActive = !(state.users[idx].isActive !== false);
+    try{
+      await upsertCloudUser(state.users[idx]);
+      if (typeof saveState === 'function') saveState(true);
+      renderUsersTable();
+      toast('تم تحديث حالة المستخدم');
+    }catch(e){ toast((e&&e.message)||'فشل تحديث المستخدم','error'); }
   }
-  async function deleteEntryFromCloud(cloudId){
-    if (!cloudReady() || !cloudId) return;
-    try {
-      const { error } = await cloud.from('daily_records').delete().eq('id', cloudId);
-      if (error) throw error;
-    } catch (err) { console.error(err); }
-  }
-  async function pushMasterDataToCloud(){
-    if (!cloudReady()) return;
-    try {
-      await replaceTable('users', buildUsersPayload());
-      await replaceTable('projects', buildProjectsPayload());
-      await replaceTable('workers', buildWorkersPayload());
-    } catch (err) {
-      console.error(err);
-    }
-  }
-  function schedulePush(){
-    clearTimeout(pushTimer);
-    pushTimer = setTimeout(() => { pushMasterDataToCloud(); }, 1500);
-  }
-
-  const oldPersistEntry = window.persistEntry;
-  if (oldPersistEntry) window.persistEntry = function(entry){ oldPersistEntry(entry); saveEntryToCloud(entry); };
-  const oldDeleteEntry = window.deleteEntry;
-  if (oldDeleteEntry) window.deleteEntry = function(id){ const entry = safeArray(state.entries).find(x => x._id === id); oldDeleteEntry(id); if (entry && entry._cloudId) deleteEntryFromCloud(entry._cloudId); };
-  const oldCycleApproval = window.cycleEntryApproval;
-  if (oldCycleApproval) window.cycleEntryApproval = function(id){ oldCycleApproval(id); const entry = safeArray(state.entries).find(x => x._id === id); if (entry) saveEntryToCloud(entry); };
-  const oldSaveState = window.saveState;
-  if (oldSaveState) window.saveState = function(silent=false){ oldSaveState(silent); schedulePush(); };
-
-  function addCloudButtons(){
-    document.querySelectorAll('.entries-toolbar .quick-actions').forEach(bar => {
-      if (!bar || bar.querySelector('.cloud-sync-btn')) return;
+  function ensureUsersShell(){
+    const tabs = document.querySelector('.tabs');
+    if (tabs && !document.querySelector('[data-tab="usersTab"]')) {
       const btn = document.createElement('button');
-      btn.className = 'light cloud-sync-btn';
-      btn.textContent = 'مزامنة سحابية';
-      btn.onclick = () => { syncMasterDataToState(false); syncEntriesToState(false); };
-      bar.prepend(btn);
-    });
+      btn.className = 'tab';
+      btn.dataset.tab = 'usersTab';
+      btn.textContent = 'إدارة المستخدمين';
+      btn.onclick = function(){ showTab('usersTab', this); renderUsersTable(); };
+      const exportBtn = tabs.querySelector('[data-tab="exportTab"]');
+      tabs.insertBefore(btn, exportBtn || null);
+    }
+    if (!document.getElementById('usersTab')) {
+      const page = document.createElement('div');
+      page.id = 'usersTab';
+      page.className = 'tab-page hidden';
+      page.innerHTML = `
+      <div class="manager-grid">
+        <div class="panel card-pad">
+          <h3 class="section-title">إضافة / تعديل مستخدم</h3>
+          <input type="hidden" id="umUserId">
+          <div class="form-grid">
+            <div><label>الاسم الكامل</label><input id="umFullName" placeholder="مثال: محمد إبراهيم"></div>
+            <div><label>اسم المستخدم</label><input id="umUsername" placeholder="مثال: m_ibrahim"></div>
+            <div><label>كلمة المرور</label><input id="umPassword" placeholder="1234"></div>
+            <div><label>الدور</label><select id="umRole"><option value="viewer">مشاهد</option><option value="supervisor">مشرف</option><option value="admin">مدير النظام</option></select></div>
+            <div><label>ربط بمشرف</label><select id="umLinkedSupervisor"></select></div>
+            <div style="display:flex;align-items:end;gap:8px"><label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" id="umIsActive" checked style="width:auto"> مستخدم مفعل</label></div>
+          </div>
+          <div class="hr"></div>
+          <h4 style="margin:0 0 10px;color:var(--brand);">الصلاحيات</h4>
+          <div class="check-grid">
+            <label class="check-item"><input id="umPermEntries" type="checkbox" checked> السجلات اليومية</label>
+            <label class="check-item"><input id="umPermPeople" type="checkbox"> العمال والمشرفون</label>
+            <label class="check-item"><input id="umPermProjects" type="checkbox"> المشاريع</label>
+            <label class="check-item"><input id="umPermMonthly" type="checkbox"> الأوقات الشهرية</label>
+            <label class="check-item"><input id="umPermExport" type="checkbox"> التصدير</label>
+            <label class="check-item"><input id="umPermUsers" type="checkbox"> إدارة المستخدمين</label>
+          </div>
+          <div class="actions">
+            <button onclick="saveSystemUser()">حفظ المستخدم</button>
+            <button class="light" onclick="clearUserForm()">جديد</button>
+            <button class="light" onclick="loadUsersFromCloud()">تحديث من السحابة</button>
+          </div>
+          <div class="footer-note">أي مستخدم تضيفه هنا ينحفظ مباشرة في جدول users في Supabase.</div>
+        </div>
+        <div class="panel card-pad">
+          <div class="entries-toolbar"><h3 class="section-title" style="margin:0">المستخدمون</h3><div id="usersCountBox" class="helper-box">0 مستخدم</div></div>
+          <div class="table-wrap"><table><thead><tr><th>الحالة</th><th>الاسم</th><th>اسم المستخدم</th><th>الدور</th><th>المشرف المرتبط</th><th>إجراء</th></tr></thead><tbody id="usersManagementBody"></tbody></table></div>
+        </div>
+      </div>`;
+      const exportTab = document.getElementById('exportTab');
+      if (exportTab && exportTab.parentNode) exportTab.parentNode.insertBefore(page, exportTab);
+      else document.querySelector('.wrap')?.appendChild(page);
+    }
   }
-  function addCloudHint(){
-    const helper = document.querySelector('#entriesTab .helper-box');
-    if (!helper || document.getElementById('cloudHintBox')) return;
-    const div = document.createElement('div');
-    div.id = 'cloudHintBox';
-    div.className = 'helper-box';
-    div.style.marginBottom = '12px';
-    div.innerHTML = 'هذه النسخة مربوطة بقاعدة بيانات واحدة. سجلات المشرف ستظهر هنا بعد المزامنة، وكذلك المشاريع والعمال والمستخدمون.';
-    helper.parentNode.insertBefore(div, helper);
+  const oldRefreshAllPickers = window.refreshAllPickers;
+  if (typeof oldRefreshAllPickers === 'function') {
+    window.refreshAllPickers = function(){
+      const r = oldRefreshAllPickers.apply(this, arguments);
+      try { renderUsersTable(); } catch(e){}
+      return r;
+    };
   }
   const oldInitAll = window.initAll;
   window.initAll = function(){
     if (oldInitAll) oldInitAll();
-    addCloudButtons();
-    addCloudHint();
-    syncMasterDataToState(true);
-    syncEntriesToState(true);
+    ensureUsersShell();
+    ensureUsersLocal();
+    renderUsersTable();
+    setTimeout(loadUsersFromCloud, 700);
   };
-  setTimeout(() => {
-    addCloudButtons();
-    addCloudHint();
-    syncMasterDataToState(true);
-    syncEntriesToState(true);
-    setInterval(() => { syncMasterDataToState(true); syncEntriesToState(true); }, 30000);
-  }, 1200);
+  window.ensureUsersShell = ensureUsersShell;
+  window.renderUsersTable = renderUsersTable;
+  window.loadUsersFromCloud = loadUsersFromCloud;
+  window.saveSystemUser = saveSystemUser;
+  window.clearUserForm = clearUserForm;
+  window.editSystemUser = editSystemUser;
+  window.toggleSystemUser = toggleSystemUser;
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ()=>{ ensureUsersShell(); ensureUsersLocal(); renderUsersTable(); setTimeout(loadUsersFromCloud, 900); });
+  else { ensureUsersShell(); ensureUsersLocal(); renderUsersTable(); setTimeout(loadUsersFromCloud, 900); }
 })();
 </script>
-<div class="auth-toolbar" id="authToolbar" style="display:none">
-  <div class="auth-chip" id="authChip"></div>
-  <button class="light" onclick="openLoginOverlay(true)">تبديل المستخدم</button>
-  <button class="light" onclick="logoutCurrentUser()">تسجيل خروج</button>
-</div>
-<div class="login-overlay" id="loginOverlay">
-  <div class="login-card">
-    <h2>تسجيل الدخول</h2>
-    <p>اختر المستخدم المناسب للدخول إلى نسخة الإدارة. يمكن منح كل إداري صلاحية تعديل أو مشاهدة لكل قسم بشكل مستقل.</p>
-    <div class="form-grid">
-      <div><label>اسم المستخدم</label><input id="loginUsername" autocomplete="username" placeholder="مثل: admin"></div>
-      <div><label>كلمة المرور</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="••••••"></div>
-    </div>
-    <div id="loginErrorBox" class="error-box" style="margin-top:12px;"></div>
-    <div class="actions" style="margin-top:14px;">
-      <button onclick="loginNow()">دخول</button>
-      
-      <button class="light" onclick="emergencyResetAdmin()">استعادة بيانات المدير</button>
-    </div>
-    <div class="footer-note" style="margin-top:12px">المدير الافتراضي: <strong>admin</strong> / <strong>123456</strong></div>
-  </div>
-</div>
+
 <script>
+/* ====== TASNEEF SAFE SUPABASE SYNC V2 ======
+   آمن: لا يحذف أي جدول من السحابة. يدمج البيانات فقط ويمنع رجوع العدد من 7 إلى 6.
+*/
 (function(){
-  const AUTH_STORAGE_KEY = 'fm_auth_session_v1';
-  const TAB_LABELS = {dashboardTab:'الداشبورد',entriesTab:'السجلات اليومية',peopleTab:'العمال والمشرفون',projectsTab:'المشاريع',distributionTab:'أخطاء التوزيع',monthlyTab:'الأوقات الشهرية',alertsTab:'التنبيهات',exportTab:'التصدير',usersTab:'إدارة المستخدمين'};
-  const ALL_TABS = ['dashboardTab','entriesTab','peopleTab','projectsTab','distributionTab','monthlyTab','alertsTab','exportTab','usersTab'];
-  const DEFAULT_TAB_PERMS = Object.fromEntries(ALL_TABS.map(t => [t,'edit']));
-  function norm(v){ return String(v||'').trim(); }
-  function esc(v){ return String(v||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function slugifyArabic(name){ const map = {'أ':'a','ا':'a','إ':'e','آ':'a','ب':'b','ت':'t','ث':'th','ج':'j','ح':'h','خ':'kh','د':'d','ذ':'th','ر':'r','ز':'z','س':'s','ش':'sh','ص':'s','ض':'d','ط':'t','ظ':'z','ع':'a','غ':'gh','ف':'f','ق':'q','ك':'k','ل':'l','م':'m','ن':'n','ه':'h','ة':'h','و':'w','ي':'y','ى':'a','ئ':'y','ؤ':'w'}; return norm(name).split('').map(ch => map[ch] || (/[a-zA-Z0-9]/.test(ch) ? ch.toLowerCase() : '')).join('').replace(/[^a-z0-9]+/g,'').slice(0,12) || 'user'; }
-  function ensureUsersState(){
-    window.state = window.state || {};
-    if (!Array.isArray(state.users)) state.users = [];
-    let changed = false;
-    let adminUser = state.users.find(u => norm(u.id) === 'u-admin');
-    if (!adminUser) {
-      const legacy = state.users.find(u => norm(u.role) === 'admin');
-      if (legacy) {
-        adminUser = legacy;
-        adminUser.id = 'u-admin';
-        changed = true;
+  const cfg = window.APP_CONFIG || {};
+  const SUPABASE_URL = cfg.supabaseUrl || cfg.SUPABASE_URL || '';
+  const SUPABASE_ANON_KEY = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || '';
+  if (!window.supabase || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn('Supabase غير مفعّل: تأكد من config.js');
+    return;
+  }
+
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window.tasneefCloudDb = db;
+  let syncing = false;
+  let pushTimer = null;
+
+  const clean = v => String(v || '').trim();
+  const unique = arr => [...new Set((arr || []).map(clean).filter(Boolean))];
+  function msg(text, kind='success'){
+    if (typeof window.showToast === 'function') showToast(text, kind);
+    else console.log(text);
+  }
+  function addUnique(listName, value){
+    value = clean(value);
+    if (!value) return;
+    if (!Array.isArray(state[listName])) state[listName] = [];
+    if (!state[listName].some(x => clean(x) === value)) state[listName].push(value);
+  }
+  function safeRender(){
+    try { if (typeof ensureProfilesSync === 'function') ensureProfilesSync(); } catch(e){}
+    ['refreshAllPickers','renderEntriesTable','renderMonthlyTimes','updateKPIs','renderProjectTags','renderSupervisorCards','renderDistributionErrors','renderAlerts','renderAttendanceTable','populateAttendanceProjectSelects','renderUsersTable'].forEach(fn=>{
+      try { if (typeof window[fn] === 'function') window[fn](); } catch(e){ console.warn(fn, e); }
+    });
+  }
+
+  async function selectRows(table, cols='*'){
+    try {
+      const { data, error } = await db.from(table).select(cols);
+      if (error) { console.warn(table, error.message); return []; }
+      return data || [];
+    } catch(e){ console.warn(table, e); return []; }
+  }
+  async function insertRow(table, row){
+    try {
+      const { data, error } = await db.from(table).insert([row]).select().single();
+      if (error) throw error;
+      return data || null;
+    } catch(e){ console.warn('insert '+table, e.message || e); return null; }
+  }
+  async function updateOrInsertBy(table, match, row){
+    try {
+      let q = db.from(table).select('id').limit(1);
+      Object.entries(match).forEach(([k,v]) => q = q.eq(k, v));
+      const found = await q;
+      if (found.error) throw found.error;
+      if (found.data && found.data.length && found.data[0].id !== undefined) {
+        const { error } = await db.from(table).update(row).eq('id', found.data[0].id);
+        if (error) throw error;
+        return true;
       }
-    }
-    if (!adminUser) {
-      adminUser = { id:'u-admin', fullName:'مدير النظام', username:'admin', password:'123456', role:'admin', linkedSupervisor:'', isActive:true, permissions:{...DEFAULT_TAB_PERMS, usersTab:'edit'}, createdAt:new Date().toISOString() };
-      state.users.unshift(adminUser);
-      changed = true;
-    } else {
-      if (!norm(adminUser.fullName)) { adminUser.fullName = 'مدير النظام'; changed = true; }
-      if (adminUser.role !== 'admin') { adminUser.role = 'admin'; changed = true; }
-      if (adminUser.isActive !== true) { adminUser.isActive = true; changed = true; }
-      if (!norm(adminUser.username)) { adminUser.username = 'admin'; changed = true; }
-      if (!norm(adminUser.password)) { adminUser.password = '123456'; changed = true; }
-      adminUser.permissions = {...DEFAULT_TAB_PERMS, ...(adminUser.permissions || {}), usersTab:'edit'};
-    }
-    state.users = state.users.filter((u, idx, arr) => {
-      if (norm(u.id) === 'u-admin' && u !== adminUser) { changed = true; return false; }
+      const { error } = await db.from(table).insert([row]);
+      if (error) throw error;
       return true;
-    });
-    if (window.currentUser && norm(window.currentUser.id) === 'u-admin') {
-      window.currentUser = adminUser;
-    }
-    if (changed && window.saveState) saveState(true);
-  }
-  function getUsers(){ ensureUsersState(); return state.users || []; }
-  function getSystemAdmin(){ ensureUsersState(); return (state.users || []).find(u => norm(u.id) === 'u-admin') || null; }
-  function setSession(user){ localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ username:user.username })); }
-  function getSession(){ try { return JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || 'null'); } catch(e){ return null; } }
-  function clearSession(){ localStorage.removeItem(AUTH_STORAGE_KEY); }
-  function getCurrentUser(){ const session = getSession(); if (!session) return null; return getUsers().find(u => norm(u.username).toLowerCase() === norm(session.username).toLowerCase() && u.isActive); }
-  function getUserProjects(user){ if (!user) return []; if (user.role === 'supervisor' && norm(user.linkedSupervisor)) { const sup = norm(user.linkedSupervisor); const rules = state.projectSupervisorRules || {}; return (state.projects || []).filter(p => norm(rules[p]) === sup); } return state.projects || []; }
-  function getUserTabPermission(user, tabId){ if (!user) return 'hidden'; if (user.role === 'admin') return (user.permissions && user.permissions[tabId]) || 'edit'; if (user.role === 'viewer') return (user.permissions && user.permissions[tabId]) || 'view'; if (user.role === 'supervisor') { const map = {dashboardTab:'view', entriesTab:'edit', monthlyTab:'view', alertsTab:'view', exportTab:'view', usersTab:'hidden', peopleTab:'hidden', projectsTab:'hidden', distributionTab:'hidden'}; return map[tabId] || 'hidden'; } return 'hidden'; }
-  function canEditTab(tabId, user = getCurrentUser()){ return getUserTabPermission(user, tabId) === 'edit'; }
-  function emergencyResetAdmin(){
-    ensureUsersState();
-    const admin = getSystemAdmin();
-    if (!admin) return;
-    admin.username = 'admin';
-    admin.password = '123456';
-    admin.isActive = true;
-    admin.fullName = admin.fullName || 'مدير النظام';
-    admin.permissions = {...DEFAULT_TAB_PERMS, ...(admin.permissions || {}), usersTab:'edit'};
-    if (window.saveState) saveState(true);
-    fillDefaultAdminCredentials();
-    const err = document.getElementById('loginErrorBox');
-    if (err) { err.style.display = 'none'; err.textContent = ''; }
-    if (window.showToast) showToast('تمت إعادة بيانات المدير الافتراضية');
-  }
-  function addUsersTabUI(){ const tabsBar = document.querySelector('.tabs'); if (!tabsBar || document.querySelector('[data-tab="usersTab"]')) return; const btn = document.createElement('button'); btn.className = 'tab'; btn.setAttribute('data-tab','usersTab'); btn.textContent = 'إدارة المستخدمين'; btn.onclick = function(){ if (window.showTab) showTab('usersTab', this); }; tabsBar.appendChild(btn); const page = document.createElement('div'); page.id = 'usersTab'; page.className = 'tab-page hidden'; page.innerHTML = `<div class="panel card-pad"><div class="entries-toolbar"><div class="helper-box" style="flex:1;min-width:260px;">هنا تدير حسابات الإداريين والمشرفين. يمكنك تحديد لكل إداري هل له <strong>تعديل</strong> أو <strong>مشاهدة</strong> أو <strong>إخفاء</strong> في كل قسم.</div><div class="users-actions"><button class="secondary" onclick="generateUsersFromSupervisors()">إنشاء تلقائي للمشرفين</button><button class="light" onclick="clearUserForm()">مستخدم جديد</button><button class="light" onclick="exportUsersCsv()">تصدير CSV</button></div></div><div id="usersReadonlyHint" class="readonly-mask" style="display:none;">هذه الصفحة للعرض فقط حسب صلاحيات حسابك الحالي.</div><div class="grid" style="grid-template-columns:560px 1fr;"><div class="panel card-pad" style="background:#fbfdfc;"><h3 class="section-title" id="userFormTitle">إضافة / تعديل مستخدم</h3><div class="form-grid"><div><label>الاسم الكامل</label><input id="userFullName"></div><div><label>اسم المستخدم</label><input id="userUsername"></div><div><label>كلمة المرور</label><input id="userPassword"></div><div><label>الدور</label><select id="userRole" onchange="toggleUserFormByRole()"><option value="admin">إداري</option><option value="viewer">مشاهدة فقط</option><option value="supervisor">مشرف</option></select></div><div id="linkedSupervisorWrap"><label>المشرف المرتبط</label><select id="userLinkedSupervisor"></select></div><div><label>الحالة</label><select id="userActive"><option value="1">نشط</option><option value="0">موقوف</option></select></div></div><div class="hr"></div><h4 style="margin:0 0 10px;color:var(--brand);">صلاحيات الأقسام</h4><div id="userPermissionsBox" class="permission-grid"></div><div id="userFormError" class="error-box" style="margin-top:12px;"></div><div class="actions"><button onclick="saveUserAccount()">حفظ المستخدم</button><button class="light" onclick="fillAutoUsername()">توليد اسم مستخدم</button></div></div><div><div class="search-grid" style="grid-template-columns:1.3fr 1fr 1fr;"><div><label>بحث</label><input id="userSearch" oninput="renderUsersTable()" placeholder="اسم، يوزر، مشرف..."></div><div><label>فلتر الدور</label><select id="userRoleFilter" onchange="renderUsersTable()"><option value="">الكل</option><option value="admin">إداري</option><option value="viewer">مشاهدة فقط</option><option value="supervisor">مشرف</option></select></div><div><label>فلتر الحالة</label><select id="userStatusFilter" onchange="renderUsersTable()"><option value="">الكل</option><option value="1">نشط</option><option value="0">موقوف</option></select></div></div><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>اسم المستخدم</th><th>الدور</th><th>المشرف المرتبط</th><th>الحالة</th><th>الصلاحيات</th><th>إجراءات</th></tr></thead><tbody id="usersTableBody"></tbody></table></div></div></div></div>`; const exportTab = document.getElementById('exportTab'); if (exportTab && exportTab.parentNode) exportTab.parentNode.insertBefore(page, exportTab.nextSibling); renderPermissionMatrix(); fillLinkedSupervisorOptions(); }
-  function fillLinkedSupervisorOptions(){ const el = document.getElementById('userLinkedSupervisor'); if (!el) return; el.innerHTML = '<option value="">—</option>' + (state.supervisors || []).map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join(''); }
-  function renderPermissionMatrix(){ const box = document.getElementById('userPermissionsBox'); if (!box) return; const header = `<div class="head">القسم</div><div class="head">تعديل</div><div class="head">مشاهدة</div><div class="head">مخفي</div>`; box.innerHTML = header + ALL_TABS.filter(t => t !== 'usersTab').map(tabId => `<div class="label">${TAB_LABELS[tabId]}</div><label><input type="radio" name="perm_${tabId}" value="edit" checked></label><label><input type="radio" name="perm_${tabId}" value="view"></label><label><input type="radio" name="perm_${tabId}" value="hidden"></label>`).join(''); }
-  function getPermissionsFromForm(){ const perms = {}; ALL_TABS.filter(t => t !== 'usersTab').forEach(tabId => { const checked = document.querySelector(`input[name="perm_${tabId}"]:checked`); perms[tabId] = checked ? checked.value : 'edit'; }); perms.usersTab = 'hidden'; return perms; }
-  function setPermissionsToForm(perms){ const all = {...DEFAULT_TAB_PERMS, usersTab:'hidden', ...(perms || {})}; ALL_TABS.filter(t => t !== 'usersTab').forEach(tabId => { const radio = document.querySelector(`input[name="perm_${tabId}"][value="${all[tabId] || 'edit'}"]`); if (radio) radio.checked = true; }); }
-  let editingUserId = null;
-  function clearUserForm(){ editingUserId = null; const map = {userFullName:'', userUsername:'', userPassword:'123456', userRole:'admin', userLinkedSupervisor:'', userActive:'1'}; Object.entries(map).forEach(([id,val]) => { const el = document.getElementById(id); if (el) el.value = val; }); setPermissionsToForm(DEFAULT_TAB_PERMS); const err = document.getElementById('userFormError'); if (err) { err.style.display='none'; err.textContent=''; } const title = document.getElementById('userFormTitle'); if (title) title.textContent = 'إضافة / تعديل مستخدم'; refreshLinkedSupervisorOptions(); toggleUserFormByRole(); }
-  
-function fillAutoUsername(){ const full = document.getElementById('userFullName'); const username = document.getElementById('userUsername'); if (!full || !username) return; const taken = getUsers().map(u => norm(u.username).toLowerCase()); let base = slugifyArabic(full.value), i=1, candidate = base; while (taken.includes(candidate.toLowerCase())) { i += 1; candidate = base + String(i).padStart(2,'0'); } username.value = candidate; }
-
-  function collectSupervisorNames(){
-    const names = [];
-    const pushName = (val) => {
-      const clean = norm(val);
-      if (!clean) return;
-      if (!names.some(n => norm(n) === clean)) names.push(clean);
-    };
-    (state.supervisors || []).forEach(pushName);
-    Object.keys(state.supervisorProfiles || {}).forEach(pushName);
-    Object.values(state.projectSupervisorRules || {}).forEach(pushName);
-    (state.entries || []).forEach(e => pushName(e.supervisor));
-    (getUsers() || []).forEach(u => {
-      if (norm(u.role) === 'supervisor') {
-        pushName(u.linkedSupervisor || u.fullName);
-        pushName(u.fullName);
-      }
-    });
-    return names;
-  }
-
-  function refreshLinkedSupervisorOptions(selectedValue=''){
-    const select = document.getElementById('userLinkedSupervisor');
-    if (!select) return;
-    const current = norm(selectedValue || select.value);
-    const names = collectSupervisorNames();
-    const options = ['<option value="">-</option>'].concat(names.map(name => `<option value="${esc(name)}">${esc(name)}</option>`));
-    select.innerHTML = options.join('');
-    if (current && names.some(name => norm(name) === current)) select.value = current;
-    else if (current && norm(document.getElementById('userRole')?.value) === 'supervisor') select.value = current;
-    else select.value = '';
-  }
-
-  function toggleUserFormByRole(){
-    const role = norm(document.getElementById('userRole')?.value);
-    const permsBox = document.getElementById('userPermissionsBox');
-    const wrap = document.getElementById('linkedSupervisorWrap');
-    const select = document.getElementById('userLinkedSupervisor');
-    const fullName = norm(document.getElementById('userFullName')?.value);
-    refreshLinkedSupervisorOptions(fullName || (select ? select.value : ''));
-    if (role === 'supervisor') {
-      setPermissionsToForm({dashboardTab:'view', entriesTab:'edit', peopleTab:'hidden', projectsTab:'hidden', distributionTab:'hidden', monthlyTab:'view', alertsTab:'view', exportTab:'view', usersTab:'hidden'});
-      if (permsBox) permsBox.style.opacity = '.65';
-      if (wrap) wrap.style.opacity = '.65';
-      if (select) {
-        select.disabled = true;
-        select.value = fullName || select.value || '';
-      }
-    } else if (role === 'viewer') {
-      setPermissionsToForm({dashboardTab:'view', entriesTab:'view', peopleTab:'view', projectsTab:'view', distributionTab:'view', monthlyTab:'view', alertsTab:'view', exportTab:'view', usersTab:'hidden'});
-      if (permsBox) permsBox.style.opacity = '1';
-      if (wrap) wrap.style.opacity = '1';
-      if (select) select.disabled = false;
-    } else {
-      if (permsBox) permsBox.style.opacity = '1';
-      if (wrap) wrap.style.opacity = '1';
-      if (select) select.disabled = false;
+    } catch(e){
+      console.warn('upsert '+table, e.message || e, row);
+      return false;
     }
   }
-  
-async function saveUserAccount(){
-    if (!canEditTab('usersTab')) { if (window.showToast) showToast('ليس لديك صلاحية تعديل إدارة المستخدمين'); return; }
-    ensureUsersState();
-    const fullName = norm(document.getElementById('userFullName')?.value);
-    const username = norm(document.getElementById('userUsername')?.value).toLowerCase();
-    const password = norm(document.getElementById('userPassword')?.value);
-    const role = norm(document.getElementById('userRole')?.value) || 'admin';
-    const linkedSupervisorInput = norm(document.getElementById('userLinkedSupervisor')?.value);
-    const linkedSupervisor = role === 'supervisor' ? (fullName || linkedSupervisorInput) : linkedSupervisorInput;
-    const isActive = document.getElementById('userActive')?.value === '1';
-    const err = document.getElementById('userFormError');
-    if (err) { err.style.display='none'; err.textContent=''; }
-    if (!fullName || !username || !password) {
-      if (err) { err.textContent = 'الاسم واسم المستخدم وكلمة المرور مطلوبة.'; err.style.display='block'; }
-      return;
-    }
-    if (role === 'supervisor' && !linkedSupervisor) {
-      if (err) { err.textContent = 'اكتب اسم المشرف أولاً وسيتم ربط الحساب به تلقائيًا.'; err.style.display='block'; }
-      return;
-    }
-    const exists = getUsers().find(u => norm(u.username).toLowerCase() === username && u.id !== editingUserId);
-    if (exists) {
-      if (err) { err.textContent = 'اسم المستخدم موجود مسبقًا.'; err.style.display='block'; }
-      return;
-    }
-    const perms = role === 'supervisor'
-      ? {dashboardTab:'view', entriesTab:'edit', peopleTab:'hidden', projectsTab:'hidden', distributionTab:'hidden', monthlyTab:'view', alertsTab:'view', exportTab:'view', usersTab:'hidden'}
-      : getPermissionsFromForm();
 
-    if (role === 'supervisor') {
-      if (!Array.isArray(state.supervisors)) state.supervisors = [];
-      if (!state.supervisors.some(name => norm(name) === linkedSupervisor)) state.supervisors.push(linkedSupervisor);
-      if (!state.supervisorProfiles || typeof state.supervisorProfiles !== 'object') state.supervisorProfiles = {};
-      if (!state.supervisorProfiles[linkedSupervisor] || typeof state.supervisorProfiles[linkedSupervisor] !== 'object') {
-        state.supervisorProfiles[linkedSupervisor] = { workers:[], projects:[] };
-      }
-    }
+  function projectSupervisor(project){
+    const p = clean(project);
+    return clean((state.projectSupervisorRules || {})[p] || '') || clean((state.entries || []).find(e => clean(e.project) === p)?.supervisor || '');
+  }
+  function workerProjects(worker){
+    const w = clean(worker);
+    const prof = state.workerProfiles && state.workerProfiles[w];
+    let projects = prof && Array.isArray(prof.projects) ? prof.projects : [];
+    if (!projects.length) projects = (state.entries || []).filter(e => (e.workers || []).some(x => clean(x) === w)).map(e => e.project);
+    return unique(projects);
+  }
 
-    if (editingUserId) {
-      const user = getUsers().find(u => u.id === editingUserId);
-      if (!user) return;
-      Object.assign(user, { fullName, username, password, role, linkedSupervisor, isActive, permissions: perms });
-    } else {
-      getUsers().push({ id:'u-'+Date.now(), fullName, username, password, role, linkedSupervisor, isActive, permissions: perms, createdAt:new Date().toISOString() });
-    }
-    refreshLinkedSupervisorOptions(linkedSupervisor);
+  async function mergeCloudMasterIntoState(){
+    if (syncing) return;
+    syncing = true;
     try {
-      await replaceTable('users', buildUsersPayload());
-      await syncMasterDataToState(true);
-    } catch (cloudErr) {
-      console.error(cloudErr);
-      if (err) { err.textContent = 'تم الحفظ محليًا لكن فشل رفع المستخدم للسحابة.'; err.style.display='block'; }
-    }
-    if (window.saveState) saveState(true);
-    renderUsersTable();
-    clearUserForm();
-    if (window.showToast) showToast('تم حفظ المستخدم');
-  }
-  
-function editUserAccount(id){
-    const user = getUsers().find(u => u.id === id);
-    if (!user) return;
-    editingUserId = id;
-    refreshLinkedSupervisorOptions(user.linkedSupervisor || user.fullName || '');
-    const map = {
-      userFullName:user.fullName || '',
-      userUsername:user.username || '',
-      userPassword:user.password || '',
-      userRole:user.role || 'admin',
-      userLinkedSupervisor:user.linkedSupervisor || '',
-      userActive:user.isActive ? '1' : '0'
-    };
-    Object.entries(map).forEach(([k,v]) => { const el = document.getElementById(k); if (el) el.value = v; });
-    setPermissionsToForm(user.permissions || DEFAULT_TAB_PERMS);
-    const title = document.getElementById('userFormTitle');
-    if (title) title.textContent = 'تعديل المستخدم: ' + user.fullName;
-    toggleUserFormByRole();
-    const btn = document.querySelector('[data-tab="usersTab"]');
-    if (btn && window.showTab) showTab('usersTab', btn);
-  }
-  async function toggleUserActive(id){
-    if (!canEditTab('usersTab')) { if (window.showToast) showToast('ليس لديك صلاحية تعديل إدارة المستخدمين'); return; }
-    const user = getUsers().find(u => u.id === id); if (!user) return;
-    user.isActive = !user.isActive;
-    try { await replaceTable('users', buildUsersPayload()); await syncMasterDataToState(true); } catch (err) { console.error(err); }
-    if (window.saveState) saveState(true); renderUsersTable(); }
-  async function deleteUserAccount(id){
-    if (!canEditTab('usersTab')) { if (window.showToast) showToast('ليس لديك صلاحية تعديل إدارة المستخدمين'); return; }
-    if (!confirm('حذف هذا المستخدم؟')) return;
-    state.users = getUsers().filter(u => u.id !== id);
-    try { await replaceTable('users', buildUsersPayload()); await syncMasterDataToState(true); } catch (err) { console.error(err); }
-    if (window.saveState) saveState(true); renderUsersTable(); clearUserForm(); }
-  
-function generateUsersFromSupervisors(){
-    ensureUsersState();
-    const sourceNames = collectSupervisorNames();
-    const existing = getUsers().map(u => norm(u.username).toLowerCase());
-    sourceNames.forEach((sup, idx) => {
-      const linked = norm(sup);
-      if (!linked) return;
-      const already = getUsers().some(u => u.role === 'supervisor' && norm(u.linkedSupervisor || u.fullName) === linked);
-      if (already) return;
-      let base = slugifyArabic(linked), i=1, username = base;
-      while (existing.includes(username.toLowerCase())) { i += 1; username = base + String(i).padStart(2,'0'); }
-      existing.push(username.toLowerCase());
-      getUsers().push({
-        id:'u-auto-'+Date.now()+'-'+idx,
-        fullName:linked,
-        username,
-        password:'123456',
-        role:'supervisor',
-        linkedSupervisor:linked,
-        isActive:true,
-        permissions:{dashboardTab:'view', entriesTab:'edit', peopleTab:'hidden', projectsTab:'hidden', distributionTab:'hidden', monthlyTab:'view', alertsTab:'view', exportTab:'view', usersTab:'hidden'},
-        createdAt:new Date().toISOString()
+      const [projects, workers, users] = await Promise.all([
+        selectRows('projects','*'),
+        selectRows('workers','*'),
+        selectRows('users','*')
+      ]);
+
+      state.projectSupervisorRules = state.projectSupervisorRules || {};
+      state.workerProfiles = state.workerProfiles || {};
+      state.supervisorProfiles = state.supervisorProfiles || {};
+
+      (users || []).forEach(u => {
+        if (u && u.is_active !== false && clean(u.role) === 'supervisor') {
+          const sup = clean(u.supervisor_name || u.linked_supervisor || u.full_name || u.username);
+          addUnique('supervisors', sup);
+          if (!state.supervisorProfiles[sup]) state.supervisorProfiles[sup] = {workers:[], projects:[]};
+        }
       });
-    });
-    refreshLinkedSupervisorOptions();
-    if (window.saveState) saveState(true);
-    renderUsersTable();
-    if (window.showToast) showToast('تم إنشاء حسابات المشرفين غير الموجودين');
+
+      (projects || []).forEach(p => {
+        if (p && p.is_active !== false) {
+          const name = clean(p.project_name || p.name);
+          const sup = clean(p.supervisor_name || p.supervisor || '');
+          addUnique('projects', name);
+          if (name && sup) {
+            addUnique('supervisors', sup);
+            state.projectSupervisorRules[name] = sup;
+            if (!state.supervisorProfiles[sup]) state.supervisorProfiles[sup] = {workers:[], projects:[]};
+            state.supervisorProfiles[sup].projects = unique([...(state.supervisorProfiles[sup].projects || []), name]);
+          }
+        }
+      });
+
+      (workers || []).forEach(w => {
+        if (w && w.is_active !== false) {
+          const name = clean(w.worker_name || w.name);
+          const project = clean(w.project_name || w.project || '');
+          addUnique('workers', name);
+          if (name) {
+            if (!state.workerProfiles[name]) state.workerProfiles[name] = {supervisor:'', projects:[], status:'أساسي'};
+            if (project) {
+              addUnique('projects', project);
+              state.workerProfiles[name].projects = unique([...(state.workerProfiles[name].projects || []), project]);
+            }
+            const sup = project ? projectSupervisor(project) : clean(state.workerProfiles[name].supervisor || '');
+            if (sup) {
+              state.workerProfiles[name].supervisor = sup;
+              addUnique('supervisors', sup);
+              if (!state.supervisorProfiles[sup]) state.supervisorProfiles[sup] = {workers:[], projects:[]};
+              state.supervisorProfiles[sup].workers = unique([...(state.supervisorProfiles[sup].workers || []), name]);
+            }
+          }
+        }
+      });
+
+      if (typeof window.saveState === 'function') { window.__tasneefSilentSave = true; saveState(true); window.__tasneefSilentSave = false; }
+      safeRender();
+    } finally { syncing = false; }
   }
-  function permissionSummary(user){ const perms = user.permissions || {}; const edit = Object.entries(perms).filter(([k,v]) => v === 'edit' && k !== 'usersTab').length; const view = Object.entries(perms).filter(([k,v]) => v === 'view').length; return `تعديل ${edit} / مشاهدة ${view}`; }
-  function renderUsersTable(){ refreshLinkedSupervisorOptions(); const body = document.getElementById('usersTableBody'); if (!body) return; const q = norm(document.getElementById('userSearch')?.value).toLowerCase(); const roleFilter = norm(document.getElementById('userRoleFilter')?.value); const statusFilter = norm(document.getElementById('userStatusFilter')?.value); let rows = [...getUsers()]; if (q) rows = rows.filter(u => [u.fullName,u.username,u.linkedSupervisor].join(' ').toLowerCase().includes(q)); if (roleFilter) rows = rows.filter(u => norm(u.role) === roleFilter); if (statusFilter) rows = rows.filter(u => (u.isActive ? '1' : '0') === statusFilter); body.innerHTML = rows.map(u => `<tr><td>${esc(u.fullName)}</td><td>${esc(u.username)}</td><td><span class="user-role-badge">${u.role === 'admin' ? 'إداري' : u.role === 'viewer' ? 'مشاهدة فقط' : 'مشرف'}</span></td><td>${esc(u.linkedSupervisor || '-')}</td><td><span class="user-role-badge ${u.isActive ? '' : 'user-status-off'}">${u.isActive ? 'نشط' : 'موقوف'}</span></td><td>${esc(permissionSummary(u))}</td><td><button class="small light" onclick="editUserAccount('${u.id}')">تعديل</button><button class="small light" onclick="toggleUserActive('${u.id}')">${u.isActive ? 'إيقاف' : 'تفعيل'}</button>${norm(u.id) === 'u-admin' ? '' : `<button class="small danger" onclick="deleteUserAccount('${u.id}')">حذف</button>`}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">لا توجد حسابات</td></tr>'; }
-  function exportUsersCsv(){ const rows = [['الاسم','اسم المستخدم','الدور','المشرف المرتبط','الحالة']].concat(getUsers().map(u => [u.fullName,u.username,u.role,u.linkedSupervisor || '',u.isActive ? 'نشط' : 'موقوف'])); const csv = rows.map(r => r.map(v => '"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n'); const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'users.csv'; a.click(); }
-  function fillDefaultAdminCredentials(){ const admin = getSystemAdmin(); const u = document.getElementById('loginUsername'); const p = document.getElementById('loginPassword'); if (u) u.value = admin?.username || 'admin'; if (p) p.value = admin?.password || '123456'; }
-  function openLoginOverlay(force=false){ const ov = document.getElementById('loginOverlay'); if (!ov) return; if (force || !getCurrentUser()) ov.classList.add('show'); const err = document.getElementById('loginErrorBox'); if (err) { err.style.display='none'; err.textContent=''; } }
-  function closeLoginOverlay(){ const ov = document.getElementById('loginOverlay'); if (ov) ov.classList.remove('show'); }
-  function loginNow(){ ensureUsersState(); const username = norm(document.getElementById('loginUsername')?.value).toLowerCase(); const password = norm(document.getElementById('loginPassword')?.value); const err = document.getElementById('loginErrorBox'); if (err) { err.style.display='none'; err.textContent=''; } const user = getUsers().find(u => norm(u.username).toLowerCase() === username && norm(u.password) === password && u.isActive); if (!user) { if (err) { err.textContent = 'بيانات الدخول غير صحيحة أو الحساب موقوف.'; err.style.display='block'; } return; } setSession(user); closeLoginOverlay(); applyAuthUI(); if (window.showToast) showToast('مرحبًا ' + (user.fullName || user.username)); }
-  function logoutCurrentUser(){ clearSession(); openLoginOverlay(true); applyAuthUI(); }
-  function disableEditingInTab(tabId){ const page = document.getElementById(tabId); if (!page) return; page.querySelectorAll('input, textarea, select, button').forEach(el => { if (el.closest('.tabs')) return; if (el.id === 'loginUsername' || el.id === 'loginPassword') return; if (el.closest('#authToolbar')) return; if (['searchText','filterProject','filterMonth','filterDay','filterSupervisor','filterEntryStatus','filterApprovalStatus','monthlyMonth','monthlySupervisorFilter','monthlyWorkerFilter','monthlyProjectFilter','userSearch','userRoleFilter','userStatusFilter'].includes(el.id)) return; if (el.tagName === 'BUTTON') { el.disabled = true; el.style.opacity = '.55'; } else { el.disabled = true; el.setAttribute('readonly','readonly'); } }); if (!page.querySelector('.readonly-mask')) { const note = document.createElement('div'); note.className = 'readonly-mask'; note.textContent = 'هذه الصفحة في وضع المشاهدة فقط حسب صلاحيات حسابك.'; page.querySelector('.panel')?.prepend(note); } }
-  function enableEditingInTab(tabId){ const page = document.getElementById(tabId); if (!page) return; page.querySelectorAll('.readonly-mask').forEach(el => { if (el.id !== 'usersReadonlyHint') el.remove(); }); page.querySelectorAll('input, textarea, select, button').forEach(el => { if (el.closest('#authToolbar')) return; el.disabled = false; el.style.opacity = ''; }); }
-  function applySupervisorScope(user){ if (!user || user.role !== 'supervisor' || !norm(user.linkedSupervisor)) return; const sup = norm(user.linkedSupervisor); const projects = getUserProjects(user); const fill = (selectId, withBlank=true) => { const el = document.getElementById(selectId); if (!el) return; const current = el.value; const opts = (withBlank ? '<option value="">الكل</option>' : '') + projects.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join(''); el.innerHTML = opts; if (projects.includes(current)) el.value = current; }; const entrySup = document.getElementById('entrySupervisor'); if (entrySup) { entrySup.value = sup; entrySup.disabled = true; } const filterSup = document.getElementById('filterSupervisor'); if (filterSup) { filterSup.innerHTML = `<option value="${esc(sup)}">${esc(sup)}</option>`; filterSup.value = sup; filterSup.disabled = true; } const monthlySup = document.getElementById('monthlySupervisorFilter'); if (monthlySup) { monthlySup.innerHTML = `<option value="${esc(sup)}">${esc(sup)}</option>`; monthlySup.value = sup; monthlySup.disabled = true; } fill('entryProject', false); fill('filterProject', true); fill('monthlyProjectFilter', true); if (window.renderEntriesTable) renderEntriesTable(); if (window.renderMonthlyTimes) renderMonthlyTimes(); }
-  function restoreDefaultPickers(){ const entrySup = document.getElementById('entrySupervisor'); if (entrySup) entrySup.disabled = false; ['filterSupervisor','monthlySupervisorFilter'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; }); if (window.refreshAllPickersBase) window.refreshAllPickersBase(); }
-  function applyAuthUI(){ ensureUsersState(); const user = getCurrentUser(); const toolbar = document.getElementById('authToolbar'); const chip = document.getElementById('authChip'); if (toolbar) toolbar.style.display = user ? 'flex' : 'none'; if (chip) chip.innerHTML = user ? `${esc(user.fullName || user.username)}<small>${user.role === 'admin' ? 'إداري' : user.role === 'viewer' ? 'مشاهدة فقط' : 'مشرف'}</small>` : ''; addUsersTabUI(); restoreDefaultPickers(); ALL_TABS.forEach(tabId => { const btn = document.querySelector(`[data-tab="${tabId}"]`); const page = document.getElementById(tabId); const perm = getUserTabPermission(user, tabId); const show = !!user && perm !== 'hidden'; if (btn) btn.style.display = show ? '' : 'none'; if (page) page.classList.toggle('hidden', !show); if (show && perm === 'view') disableEditingInTab(tabId); else enableEditingInTab(tabId); }); const usersHint = document.getElementById('usersReadonlyHint'); if (usersHint && user) usersHint.style.display = getUserTabPermission(user,'usersTab') === 'view' ? '' : 'none'; if (!user) { openLoginOverlay(true); return; } if (user.role === 'supervisor') applySupervisorScope(user); const activeBtn = document.querySelector('.tab.active'); if (!activeBtn || activeBtn.style.display === 'none') { const firstVisible = [...document.querySelectorAll('.tab[data-tab]')].find(b => b.style.display !== 'none'); if (firstVisible && window.showTab) showTab(firstVisible.getAttribute('data-tab'), firstVisible); } }
-  const oldInit = window.initAll; window.initAll = function(){ if (oldInit) oldInit(); ensureUsersState(); addUsersTabUI(); fillLinkedSupervisorOptions(); clearUserForm(); renderUsersTable(); applyAuthUI(); };
-  if (window.refreshAllPickers) { window.refreshAllPickersBase = window.refreshAllPickers; window.refreshAllPickers = function(){ window.refreshAllPickersBase(); fillLinkedSupervisorOptions(); const user = getCurrentUser(); if (user && user.role === 'supervisor') applySupervisorScope(user); }; }
-  window.generateUsersFromSupervisors = generateUsersFromSupervisors; window.renderUsersTable = renderUsersTable; window.saveUserAccount = saveUserAccount; window.editUserAccount = editUserAccount; window.toggleUserActive = toggleUserActive; window.deleteUserAccount = deleteUserAccount; window.exportUsersCsv = exportUsersCsv; window.clearUserForm = clearUserForm; window.toggleUserFormByRole = toggleUserFormByRole; window.fillAutoUsername = fillAutoUsername; window.openLoginOverlay = openLoginOverlay; window.loginNow = loginNow; window.logoutCurrentUser = logoutCurrentUser; window.fillDefaultAdminCredentials = fillDefaultAdminCredentials; window.canEditTab = canEditTab; window.emergencyResetAdmin = emergencyResetAdmin;
-  setTimeout(() => { ensureUsersState(); addUsersTabUI(); fillLinkedSupervisorOptions(); clearUserForm(); renderUsersTable(); applyAuthUI(); }, 1300);
-})();
-</script>
 
-
-<script src="shared_bridge.js"></script>
-<script>
-(function(){
-  function boot(){
+  async function pushMasterToCloud(){
+    if (syncing) return;
+    syncing = true;
     try {
-      if (window.__TASNEEF_BRIDGE__ && typeof window.__TASNEEF_BRIDGE__.seedDatabaseIfNeeded === 'function') {
-        window.__TASNEEF_BRIDGE__.seedDatabaseIfNeeded();
+      for (const sup of unique(state.supervisors || [])) {
+        const username = (typeof slug === 'function' ? slug(sup) : sup).replace(/\s+/g,'_').toLowerCase() || sup.toLowerCase();
+        await updateOrInsertBy('users', {username}, {
+          username,
+          password: '1234',
+          role: 'supervisor',
+          supervisor_name: sup,
+          full_name: sup,
+          linked_supervisor: sup,
+          is_active: true,
+          permissions_json: {}
+        });
       }
-    } catch (e) { console.error('bridge boot failed', e); }
+      for (const project of unique(state.projects || [])) {
+        await updateOrInsertBy('projects', {project_name: project}, {
+          project_name: project,
+          supervisor_name: projectSupervisor(project),
+          is_active: true
+        });
+      }
+      for (const worker of unique(state.workers || [])) {
+        const projects = workerProjects(worker);
+        if (!projects.length) {
+          await updateOrInsertBy('workers', {worker_name: worker, project_name: ''}, {worker_name: worker, project_name: '', is_active: true});
+        } else {
+          for (const project of projects) {
+            await updateOrInsertBy('workers', {worker_name: worker, project_name: project}, {worker_name: worker, project_name: project, is_active: true});
+          }
+        }
+      }
+    } finally { syncing = false; }
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+
+  async function saveEntryToCloud(entry){
+    entry = entry || {};
+    const project = clean(entry.project);
+    const date = clean(entry.date);
+    if (!project || !date) return;
+    try {
+      const row = {
+        project_name: project,
+        supervisor_name: clean(entry.supervisor),
+        record_date: date,
+        login_time: /^\d{2}:\d{2}$/.test(entry.login || '') ? entry.login : null,
+        logout_time: /^\d{2}:\d{2}$/.test(entry.exit || '') ? entry.exit : null,
+        duration_minutes: (typeof durationMinutes === 'function') ? durationMinutes(entry.login, entry.exit) : 0,
+        cleaning_type: clean(entry.cleaningType || ''),
+        approval_status: clean(entry.approvalStatus || 'مسجل') || 'مسجل',
+        note: clean(entry.note || ''),
+        created_by: 'admin'
+      };
+      const rec = await insertRow('daily_records', row);
+      if (rec && rec.id && Array.isArray(entry.workers)) {
+        const attendance = unique(entry.workers).map(worker_name => ({daily_record_id: rec.id, worker_name, status: 'present'}));
+        if (attendance.length) {
+          const { error } = await db.from('attendance_records').insert(attendance);
+          if (error) console.warn('attendance_records', error.message);
+        }
+      }
+    } catch(e){ console.warn('saveEntryToCloud', e.message || e); }
+  }
+
+  const oldSaveState = window.saveState;
+  window.saveState = function(silent=false){
+    if (oldSaveState) oldSaveState(silent);
+    if (!window.__tasneefSilentSave) {
+      clearTimeout(pushTimer);
+      pushTimer = setTimeout(() => pushMasterToCloud(), 900);
+    }
+  };
+
+  const oldPersistEntry = window.persistEntry;
+  if (typeof oldPersistEntry === 'function') {
+    window.persistEntry = function(entry){
+      const result = oldPersistEntry(entry);
+      saveEntryToCloud(entry);
+      return result;
+    };
+  }
+
+  async function bootCloud(){
+    await mergeCloudMasterIntoState();
+    await pushMasterToCloud();
+    msg('تم تفعيل المزامنة السحابية الآمنة');
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(bootCloud, 600));
+  else setTimeout(bootCloud, 600);
+
+  window.tasneefCloudSyncNow = async function(){
+    await mergeCloudMasterIntoState();
+    await pushMasterToCloud();
+    safeRender();
+    msg('تمت المزامنة السحابية');
+  };
 })();
 </script>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </body>
+</html>
