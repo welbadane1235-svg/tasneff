@@ -1724,300 +1724,6 @@ function printDailyEntriesReport() {
   <table><thead><tr><th>التاريخ</th><th>اليوم</th><th>المشروع</th><th>المشرف</th><th>العمال</th><th>الدخول</th><th>الخروج</th><th>المدة</th><th>التقديري</th><th>حالة المدة</th><th>الحالة</th><th>الاعتماد</th><th>الملاحظة</th></tr></thead><tbody>
   ${rows.map(e=>{ const mins = durationMinutes(e.login,e.exit); const timeInfo = (window.getEntryTimeColorInfo ? getEntryTimeColorInfo(e) : {label:'—'}); const expectedText = (window.formatExpectedTime ? formatExpectedTime(state.projectMeta?.[e.project]?.expectedTime || '') : '') || '—'; return `<tr><td>${esc(e.date)}</td><td>${esc(getArabicDayName(e.date))}</td><td>${esc(e.project)}</td><td>${esc(e.supervisor||'-')}</td><td>${esc((e.workers||[]).join('، '))}</td><td>${esc(e.login||'-')}</td><td>${esc(e.exit||'-')}</td><td>${esc(formatHM(mins))}</td><td>${esc(expectedText)}</td><td>${esc(timeInfo.label || '—')}</td><td>${entryStatusInfo(e).complete ? 'مكتمل' : 'ناقص'}</td><td>${esc(e.approvalStatus||'مسجل')}</td><td>${esc(e.note||'')}</td></tr>`; }).join('')}
   </tbody></table><div class="footer">شركة تصنيف لإدارة المرافق</div>
-
-<script>
-/* ===== TASNEEF FINAL PATCH: dashboard time counters + normalized missing projects + cloud attendance ===== */
-(function(){
-  function esc(v){ return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function setText(id, val){ const el=document.getElementById(id); if(el) el.textContent=String(val); }
-  function normProject(v){
-    return String(v || '')
-      .trim()
-      .replace(/[ً-ٰٟ]/g,'')
-      .replace(/[أإآ]/g,'ا')
-      .replace(/ة/g,'ه')
-      .replace(/\s+/g,' ')
-      .replace(/^ال/,'')
-      .toLowerCase();
-  }
-  function parseHM(v){
-    const s=String(v || '').trim();
-    const m=s.match(/^(\d{1,3})(?::(\d{1,2}))?$/);
-    if(!m) return null;
-    const h=Number(m[1] || 0), mm=Number(m[2] || 0);
-    if(Number.isNaN(h) || Number.isNaN(mm) || mm > 59) return null;
-    return h*60+mm;
-  }
-  function durationMinutes(start,end){
-    if(!start || !end) return 0;
-    const a=String(start).slice(0,5).split(':').map(Number);
-    const b=String(end).slice(0,5).split(':').map(Number);
-    if(a.length<2 || b.length<2 || a.some(Number.isNaN) || b.some(Number.isNaN)) return 0;
-    let mins=(b[0]*60+b[1])-(a[0]*60+a[1]);
-    if(mins<0) mins += 1440;
-    return mins;
-  }
-  function hm(mins){
-    mins=Math.max(0, Math.round(Number(mins)||0));
-    const h=Math.floor(mins/60), m=mins%60;
-    return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
-  }
-  function expectedMinutes(project){
-    try{
-      const meta = window.state && window.state.projectMeta ? window.state.projectMeta : {};
-      const wanted = normProject(project);
-      let row = meta[project];
-      if(!row){
-        const key = Object.keys(meta).find(k => normProject(k) === wanted);
-        if(key) row = meta[key];
-      }
-      const raw = row && (row.expectedTime || row.expected_time || row.duration);
-      const parsed = parseHM(raw);
-      if(parsed && parsed > 0) return parsed;
-    }catch(e){}
-    return 60; // المعيار الافتراضي الظاهر في الجدول: 01:00
-  }
-  function actualMinutesFromRecord(r){
-    const direct = Number(r.duration_minutes ?? r.duration ?? 0);
-    if(direct > 0) return direct;
-    return durationMinutes(r.login_time || r.login || r.check_in, r.logout_time || r.exit || r.check_out);
-  }
-  function timeInfoForRecord(r){
-    const project = r.project_name || r.project || '';
-    const actual = actualMinutesFromRecord(r);
-    const expected = expectedMinutes(project);
-    if(!actual || !expected) return {key:'none', label:'—', diff:0, actual, expected};
-    const diff = actual - expected;
-    if(diff > 5) return {key:'over', label:'أكثر من المطلوب', diff, actual, expected};
-    if(diff < -5) return {key:'under', label:'أقل من المطلوب', diff, actual, expected};
-    return {key:'good', label:'ضمن الوقت', diff, actual, expected};
-  }
-
-  // اجعل أي جدول يستخدم نفس منطق حالة الوقت
-  window.getEntryTimeColorInfo = function(entry){
-    const r = {
-      project_name: entry?.project_name || entry?.project,
-      login_time: entry?.login_time || entry?.login,
-      logout_time: entry?.logout_time || entry?.exit,
-      duration_minutes: entry?.duration_minutes
-    };
-    const info = timeInfoForRecord(r);
-    const cls = info.key === 'good' ? 'entry-time-good' : info.key === 'under' ? 'entry-time-under' : info.key === 'over' ? 'entry-time-over' : '';
-    const sign = info.diff > 0 ? '+' : info.diff < 0 ? '-' : '±';
-    return {cls, label:info.label, diff: info.key==='none' ? '—' : sign + hm(Math.abs(info.diff)), actual:info.actual, expected:info.expected};
-  };
-
-  function getCloud(){
-    if(window.appCloud) return window.appCloud;
-    const cfg = window.APP_CONFIG || {};
-    const url = cfg.supabaseUrl || cfg.SUPABASE_URL || 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
-    const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
-    if(window.supabase && url && key){
-      window.appCloud = window.supabase.createClient(url,key);
-      return window.appCloud;
-    }
-    return null;
-  }
-
-  async function finalDashboardFix(){
-    const cloud = getCloud();
-    if(!cloud) return;
-
-    const [usersRes, projectsRes, workersRes, recordsRes, attendanceRes] = await Promise.all([
-      cloud.from('users').select('*').limit(10000),
-      cloud.from('projects').select('*').limit(10000),
-      cloud.from('workers').select('*').limit(20000),
-      cloud.from('daily_records').select('*').order('record_date',{ascending:false}).order('id',{ascending:false}).limit(10000),
-      cloud.from('attendance_records').select('*').order('id',{ascending:false}).limit(30000)
-    ]);
-
-    const users = usersRes.data || [];
-    const projects = (projectsRes.data || []).filter(p => p.is_active !== false);
-    const workers = (workersRes.data || []).filter(w => w.is_active !== false);
-    const records = recordsRes.data || [];
-    const attendanceRows = attendanceRes.data || [];
-
-    setText('kpiProjects', projects.length);
-    setText('kpiEntries', records.length);
-    setText('kpiSups', users.filter(u => String(u.role||'').toLowerCase()==='supervisor').length);
-    setText('kpiWorkers', workers.length);
-
-    const latestDate = records.map(r => r.record_date || r.date).filter(Boolean).sort().slice(-1)[0] || '';
-    const latest = latestDate ? records.filter(r => (r.record_date || r.date) === latestDate) : [];
-    const projectSet = new Set(latest.map(r => normProject(r.project_name || r.project)).filter(Boolean));
-    const missing = projects.filter(p => !projectSet.has(normProject(p.project_name || p.name)));
-
-    let good=0, under=0, over=0, incomplete=0;
-    latest.forEach(r => {
-      if(!(r.project_name || r.project) || !(r.supervisor_name || r.supervisor) || !(r.login_time || r.login) || !(r.logout_time || r.exit)) incomplete++;
-      const info = timeInfoForRecord(r);
-      if(info.key === 'good') good++;
-      else if(info.key === 'under') under++;
-      else if(info.key === 'over') over++;
-    });
-
-    setText('dashLatestDate', latestDate || '—');
-    setText('dashEntriesToday', latest.length);
-    setText('dashProjectsToday', projectSet.size);
-    setText('dashMissingProjects', missing.length);
-    setText('dashGreenCount', good);
-    setText('dashYellowCount', under);
-    setText('dashRedCount', over);
-    setText('dashIncompleteCount', incomplete);
-
-    const quick = document.getElementById('dashQuickAlert');
-    if(quick){
-      quick.innerHTML = latestDate
-        ? `آخر يوم مسجل: <b>${esc(latestDate)}</b>، يوجد <b>${latest.length}</b> سجل. ضمن الوقت: <b>${good}</b>، أقل من المطلوب: <b>${under}</b>، أكثر من المطلوب: <b>${over}</b>.`
-        : 'لا توجد سجلات بعد.';
-    }
-
-    const missingEl = document.getElementById('dashMissingList');
-    if(missingEl){
-      missingEl.innerHTML = missing.length
-        ? missing.slice(0,16).map(p => `<div class="dashboard-item warn">${esc(p.project_name || p.name || '')}</div>`).join('')
-        : '<div class="dashboard-item ok">كل المشاريع مسجلة في آخر يوم.</div>';
-    }
-
-    const followEl = document.getElementById('dashFollowupList');
-    if(followEl){
-      const items = [];
-      if(under) items.push(`<div class="dashboard-item warn">يوجد ${under} سجل أقل من الوقت المطلوب.</div>`);
-      if(over) items.push(`<div class="dashboard-item danger">يوجد ${over} سجل أكثر من الوقت المطلوب.</div>`);
-      if(incomplete) items.push(`<div class="dashboard-item warn">يوجد ${incomplete} سجل ناقص البيانات.</div>`);
-      followEl.innerHTML = items.length ? items.join('') : '<div class="dashboard-item ok">لا توجد ملاحظات تشغيلية حالية.</div>';
-    }
-
-    const projBody = document.getElementById('dashProjectsBody');
-    if(projBody){
-      const grouped = {};
-      latest.forEach(r => {
-        const p = r.project_name || r.project || '-';
-        if(!grouped[p]) grouped[p] = {project:p, supervisor:r.supervisor_name || r.supervisor || '-', count:0, mins:0, good:0, under:0, over:0};
-        grouped[p].count++;
-        grouped[p].mins += actualMinutesFromRecord(r);
-        const k = timeInfoForRecord(r).key;
-        if(k==='good') grouped[p].good++;
-        if(k==='under') grouped[p].under++;
-        if(k==='over') grouped[p].over++;
-      });
-      projBody.innerHTML = Object.values(grouped).slice(0,30).map(x => {
-        const status = x.over ? 'أكثر من المطلوب' : x.under ? 'أقل من المطلوب' : 'مسجل';
-        const cls = x.over ? 'danger' : x.under ? 'warn' : 'good';
-        return `<tr><td>${esc(x.project)}</td><td>${esc(x.supervisor)}</td><td>${x.count}</td><td>${hm(x.mins)}</td><td><span class="dash-status ${cls}">${status}</span></td></tr>`;
-      }).join('') || '<tr><td colspan="5" class="muted">لا توجد سجلات لعرضها.</td></tr>';
-    }
-
-    const supBody = document.getElementById('dashSupervisorsBody');
-    if(supBody){
-      const grouped = {};
-      latest.forEach(r => {
-        const s = r.supervisor_name || r.supervisor || '-';
-        if(!grouped[s]) grouped[s] = {supervisor:s, count:0, projects:new Set(), mins:0};
-        grouped[s].count++;
-        grouped[s].projects.add(r.project_name || r.project || '-');
-        grouped[s].mins += actualMinutesFromRecord(r);
-      });
-      supBody.innerHTML = Object.values(grouped)
-        .sort((a,b)=>b.count-a.count)
-        .slice(0,20)
-        .map(x => `<tr><td>${esc(x.supervisor)}</td><td>${x.count}</td><td>${x.projects.size}</td><td>${hm(x.mins)}</td></tr>`)
-        .join('') || '<tr><td colspan="4" class="muted">لا توجد بيانات.</td></tr>';
-    }
-
-    // تحميل حضور العمال القادم من تطبيق المشرف إلى تبويب الحضور والغياب
-    if(window.state){
-      const byRecord = {};
-      attendanceRows.forEach(a => {
-        const id = String(a.daily_record_id || '');
-        if(!id) return;
-        (byRecord[id] ||= []).push(a);
-      });
-      const statusMap = {
-        present:'حاضر', 'حاضر':'حاضر',
-        absent:'غائب', 'غائب':'غائب',
-        late:'متأخر', 'متأخر':'متأخر',
-        substitute:'بديل', sub:'بديل', 'بدل':'بديل', 'بديل':'بديل'
-      };
-      const cloudAttendance = records
-        .filter(r => byRecord[String(r.id)])
-        .map(r => {
-          const project = r.project_name || '';
-          const rec = {
-            _id:'cloud-att-' + r.id,
-            _cloudId:r.id,
-            project,
-            date:r.record_date || '',
-            supervisor:r.supervisor_name || '',
-            expectedStart:'',
-            expectedEnd:'',
-            expectedDuration:hm(expectedMinutes(project)),
-            actualStart:r.login_time || '',
-            actualEnd:r.logout_time || '',
-            note:r.note || '',
-            readiness:{tasksDistributed:true,equipmentReady:true,materialsReady:true,noShortage:true},
-            workers:(byRecord[String(r.id)] || []).map(a => ({
-              name:a.worker_name || '',
-              status:statusMap[a.status] || statusMap[String(a.status || '').toLowerCase()] || 'حاضر'
-            }))
-          };
-          rec.statusSummary = (function(items){
-            const counts={present:0,late:0,absent:0,substitute:0,moved:0};
-            items.forEach(w => {
-              if(w.status==='حاضر') counts.present++;
-              else if(w.status==='متأخر') counts.late++;
-              else if(w.status==='غائب') counts.absent++;
-              else if(w.status==='بديل') counts.substitute++;
-            });
-            let label='جاهز بالكامل';
-            if(counts.absent && !counts.substitute) label='غياب جزئي';
-            else if(counts.absent && counts.substitute) label='تم التعويض';
-            else if(counts.late) label='تأخر بدء العمل';
-            return {counts,label};
-          })(rec.workers);
-          return rec;
-        });
-
-      const localAttendance = Array.isArray(window.state.attendance)
-        ? window.state.attendance.filter(x => !String(x._id || '').startsWith('cloud-att-') && !x._cloudId)
-        : [];
-      window.state.attendance = cloudAttendance.concat(localAttendance);
-
-      if(typeof window.renderAttendanceTable === 'function') window.renderAttendanceTable();
-      if(typeof window.renderAttendanceMatrix === 'function') window.renderAttendanceMatrix();
-      const totals = {records:cloudAttendance.length,present:0,absent:0,late:0};
-      const latestAttDate = cloudAttendance.map(x=>x.date).filter(Boolean).sort().slice(-1)[0] || '';
-      cloudAttendance.filter(x => !latestAttDate || x.date===latestAttDate).forEach(r => {
-        (r.workers || []).forEach(w => {
-          if(w.status==='حاضر') totals.present++;
-          else if(w.status==='غائب') totals.absent++;
-          else if(w.status==='متأخر') totals.late++;
-        });
-      });
-      setText('attendanceKpiRecords', totals.records);
-      setText('attendanceKpiPresent', totals.present);
-      setText('attendanceKpiAbsent', totals.absent);
-      setText('attendanceKpiLate', totals.late);
-    }
-  }
-
-  const oldRenderDashboard = window.renderDashboard;
-  window.renderDashboard = function(){
-    try{ if(typeof oldRenderDashboard === 'function') oldRenderDashboard(); }catch(e){ console.warn('old dashboard skipped', e); }
-    finalDashboardFix().catch(e => console.error('final dashboard fix failed', e));
-  };
-
-  window.finalDashboardFix = finalDashboardFix;
-  window.finalCloudAttendanceFix = finalDashboardFix;
-
-  document.addEventListener('DOMContentLoaded', function(){
-    setTimeout(finalDashboardFix, 1200);
-    setTimeout(finalDashboardFix, 2600);
-  });
-  setInterval(finalDashboardFix, 30000);
-})();
-</script>
-
 </body></html>`;
   const win = window.open('', '_blank');
   if (!win) { showToast('المتصفح منع فتح نافذة الطباعة', 'error'); return; }
@@ -6844,4 +6550,607 @@ window.addEventListener(
 })();
 /* ===== END TASNEEF MASTER DATA FIX ===== */
 </script>
+
+<script>
+/* ===== TASNEEF FINAL CLOUD DASHBOARD + ATTENDANCE FIX ===== */
+(function(){
+  const STATUS_AR = {
+    present:'حاضر', حاضر:'حاضر',
+    absent:'غائب', غائب:'غائب',
+    late:'متأخر', متأخر:'متأخر',
+    substitute:'بدل', sub:'بدل', بدل:'بدل'
+  };
+  function esc(v){ return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function clean(v){ return String(v || '').trim(); }
+  function todayISO(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+  function getArabicDayName(dateStr){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr||''))) return '—';
+    const d=new Date(dateStr+'T12:00:00');
+    return ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][d.getDay()] || '—';
+  }
+  function durationMinutes(start,end){
+    if(!start || !end) return 0;
+    const [sh,sm]=String(start).split(':').map(Number);
+    const [eh,em]=String(end).split(':').map(Number);
+    if(Number.isNaN(sh)||Number.isNaN(sm)||Number.isNaN(eh)||Number.isNaN(em)) return 0;
+    let mins=(eh*60+em)-(sh*60+sm);
+    if(mins<0) mins+=1440;
+    return mins;
+  }
+  function formatHM(mins){
+    mins=Number(mins)||0;
+    return `${String(Math.floor(mins/60)).padStart(2,'0')}:${String(mins%60).padStart(2,'0')}`;
+  }
+  function setText(id,val){
+    const el=document.getElementById(id);
+    if(el) el.textContent=String(val);
+  }
+  function getCloud(){
+    if(window.appCloud) return window.appCloud;
+    const cfg=window.APP_CONFIG || {};
+    const url=cfg.supabaseUrl || cfg.SUPABASE_URL || 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
+    const key=cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
+    if(window.supabase && url && key){
+      window.appCloud = window.supabase.createClient(url,key);
+      return window.appCloud;
+    }
+    return null;
+  }
+  async function fetchAllCloud(){
+    const cloud=getCloud();
+    if(!cloud) return null;
+    const [usersRes, projectsRes, workersRes, recordsRes, attendanceRes] = await Promise.all([
+      cloud.from('users').select('*'),
+      cloud.from('projects').select('*'),
+      cloud.from('workers').select('*'),
+      cloud.from('daily_records').select('*').order('record_date',{ascending:false}).order('id',{ascending:false}).limit(3000),
+      cloud.from('attendance_records').select('*').order('id',{ascending:false}).limit(12000)
+    ]);
+    [usersRes,projectsRes,workersRes,recordsRes,attendanceRes].forEach(r=>{ if(r.error) throw r.error; });
+    return {
+      users: usersRes.data || [],
+      projects: projectsRes.data || [],
+      workers: workersRes.data || [],
+      records: recordsRes.data || [],
+      attendance: attendanceRes.data || []
+    };
+  }
+  function groupAttendance(rows){
+    const g={};
+    (rows||[]).forEach(r=>{
+      const k=String(r.daily_record_id || '');
+      if(!k) return;
+      if(!g[k]) g[k]=[];
+      g[k].push(r);
+    });
+    return g;
+  }
+  function cloudRowsToState(data){
+    if(!window.state || !data) return;
+    const groups=groupAttendance(data.attendance);
+    const cloudEntries=(data.records||[]).map(r=>({
+      _id:'db-record-'+r.id,
+      _cloudId:r.id,
+      _source:'daily_records',
+      project: clean(r.project_name),
+      date: clean(r.record_date),
+      login: clean(r.login_time),
+      exit: clean(r.logout_time),
+      supervisor: clean(r.supervisor_name),
+      workers: (groups[String(r.id)] || []).map(x=>clean(x.worker_name)).filter(Boolean),
+      workerStatuses: (groups[String(r.id)] || []).map(x=>({name:clean(x.worker_name),status:STATUS_AR[clean(x.status)] || clean(x.status) || 'حاضر'})),
+      cleaningType: clean(r.cleaning_type),
+      approvalStatus: clean(r.approval_status) || 'مسجل',
+      note: clean(r.note)
+    }));
+    const localOnly=(Array.isArray(state.entries)?state.entries:[]).filter(e=>!String(e._id||'').startsWith('db-record-') && !e._cloudId);
+    state.entries=[...cloudEntries,...localOnly];
+
+    const cloudAttendance=(data.records||[]).map(r=>{
+      const workers=(groups[String(r.id)] || []).map(x=>({
+        name: clean(x.worker_name),
+        status: STATUS_AR[clean(x.status)] || clean(x.status) || 'حاضر'
+      })).filter(x=>x.name);
+      return {
+        _id:'cloud-att-'+r.id,
+        _cloudId:r.id,
+        project: clean(r.project_name),
+        date: clean(r.record_date),
+        supervisor: clean(r.supervisor_name),
+        actualStart: clean(r.login_time),
+        actualEnd: clean(r.logout_time),
+        expectedDuration: (window.state && state.projectMeta && state.projectMeta[clean(r.project_name)] && state.projectMeta[clean(r.project_name)].expectedTime) || '01:00',
+        workers,
+        readiness:{tasksDistributed:true,equipmentReady:true,materialsReady:true,noShortage:true},
+        statusSummary:null,
+        note:clean(r.note)
+      };
+    });
+    const manualOnly=(Array.isArray(state.attendance)?state.attendance:[]).filter(r=>!String(r._id||'').startsWith('cloud-att-') && !r._cloudId);
+    state.attendance=[...cloudAttendance,...manualOnly];
+  }
+  function ensureDashboardShellFinal(){
+    const tabs=document.querySelector('.tabs');
+    if(tabs && !document.querySelector('[data-tab="dashboardTab"]')){
+      tabs.insertAdjacentHTML('afterbegin', `<button class="tab active" data-tab="dashboardTab" onclick="showTab('dashboardTab', this)">الداشبورد</button>`);
+      const e=tabs.querySelector('[data-tab="entriesTab"]'); if(e) e.classList.remove('active');
+    }
+    const entries=document.getElementById('entriesTab');
+    if(entries && !document.getElementById('dashboardTab')){
+      entries.classList.add('hidden');
+      entries.insertAdjacentHTML('beforebegin', `
+      <div id="dashboardTab" class="tab-page">
+        <div class="dashboard-grid">
+          <div class="dashboard-main">
+            <div class="dashboard-kpis">
+              <div class="kpi"><div class="muted">آخر يوم مسجل</div><div class="v" id="dashLatestDate">—</div></div>
+              <div class="kpi"><div class="muted">سجلات اليوم</div><div class="v" id="dashEntriesToday">0</div></div>
+              <div class="kpi"><div class="muted">مشاريع اليوم</div><div class="v" id="dashProjectsToday">0</div></div>
+              <div class="kpi"><div class="muted">مشاريع غير مسجلة</div><div class="v" id="dashMissingProjects">0</div></div>
+            </div>
+            <div class="dashboard-kpis">
+              <div class="kpi"><div class="muted">ضمن الوقت</div><div class="v" id="dashGreenCount">0</div></div>
+              <div class="kpi"><div class="muted">أقل من المطلوب</div><div class="v" id="dashYellowCount">0</div></div>
+              <div class="kpi"><div class="muted">أكثر من المطلوب</div><div class="v" id="dashRedCount">0</div></div>
+              <div class="kpi"><div class="muted">سجلات ناقصة</div><div class="v" id="dashIncompleteCount">0</div></div>
+            </div>
+            <div class="dashboard-panels">
+              <div class="panel card-pad">
+                <h3 class="section-title">ملخص المشاريع في آخر يوم</h3>
+                <div class="table-wrap" style="max-height:340px"><table><thead><tr><th>المشروع</th><th>المشرف</th><th>السجلات</th><th>الساعات</th><th>الحالة</th></tr></thead><tbody id="dashProjectsBody"></tbody></table></div>
+              </div>
+              <div class="panel card-pad">
+                <h3 class="section-title">المشرفون الأكثر نشاطًا</h3>
+                <div class="table-wrap" style="max-height:340px"><table><thead><tr><th>المشرف</th><th>السجلات</th><th>المشاريع</th><th>الساعات</th></tr></thead><tbody id="dashSupervisorsBody"></tbody></table></div>
+              </div>
+            </div>
+          </div>
+          <div class="dashboard-side">
+            <div class="panel card-pad"><h3 class="section-title">تنبيه سريع</h3><div id="dashQuickAlert" class="dashboard-note">لا توجد بيانات بعد.</div></div>
+            <div class="panel card-pad"><h3 class="section-title">مشاريع تحتاج متابعة</h3><div id="dashFollowupList" class="dashboard-list"></div></div>
+            <div class="panel card-pad"><h3 class="section-title">مشاريع غير مسجلة</h3><div id="dashMissingList" class="dashboard-list"></div></div>
+          </div>
+        </div>
+      </div>`);
+    }
+    if(!document.getElementById('tasneefFinalDashStyle')){
+      const st=document.createElement('style');
+      st.id='tasneefFinalDashStyle';
+      st.textContent=`
+        .dashboard-grid{display:grid;grid-template-columns:1.6fr .9fr;gap:16px;max-width:1380px;margin:0 auto;padding:0 16px}
+        .dashboard-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+        .dashboard-panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        .dashboard-note,.dashboard-item{padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:#f7fbf9;line-height:1.8}
+        .dashboard-list{display:grid;gap:8px}.dashboard-item.warn{background:#fff8e3}.dashboard-item.danger{background:#fdeeee}.dashboard-item.ok{background:#eef8f2}
+        @media(max-width:1100px){.dashboard-grid,.dashboard-kpis,.dashboard-panels{grid-template-columns:1fr}}
+      `;
+      document.head.appendChild(st);
+    }
+  }
+  function renderDashboardFinal(){
+    ensureDashboardShellFinal();
+    const projects=(state?.projects||[]).map(clean).filter(Boolean);
+    const entries=(state?.entries||[]);
+    setText('kpiProjects', projects.length);
+    setText('kpiEntries', entries.length);
+    setText('kpiSups', (state?.supervisors||[]).length);
+    setText('kpiWorkers', (state?.workers||[]).length);
+
+    const dates=entries.map(e=>clean(e.date)).filter(Boolean).sort();
+    const latest=dates.length ? dates[dates.length-1] : '';
+    const latestRows=latest ? entries.filter(e=>clean(e.date)===latest) : [];
+    const latestProjects=[...new Set(latestRows.map(e=>clean(e.project)).filter(Boolean))];
+    const missing=projects.filter(p=>!latestProjects.includes(p));
+    let green=0,yellow=0,red=0,incomplete=0;
+    const byProject={}, bySup={};
+    latestRows.forEach(e=>{
+      const mins=durationMinutes(e.login,e.exit);
+      if(!e.supervisor || !(e.workers||[]).length || !e.login || !e.exit) incomplete++;
+      if(mins===0) yellow++; else green++;
+      const p=clean(e.project)||'—';
+      byProject[p]=byProject[p]||{project:p,supervisor:clean(e.supervisor),count:0,minutes:0};
+      byProject[p].count++; byProject[p].minutes+=mins;
+      const s=clean(e.supervisor)||'—';
+      bySup[s]=bySup[s]||{supervisor:s,count:0,projects:new Set(),minutes:0};
+      bySup[s].count++; bySup[s].projects.add(p); bySup[s].minutes+=mins;
+    });
+    setText('dashLatestDate', latest||'—');
+    setText('dashEntriesToday', latestRows.length);
+    setText('dashProjectsToday', latestProjects.length);
+    setText('dashMissingProjects', missing.length);
+    setText('dashGreenCount', green);
+    setText('dashYellowCount', yellow);
+    setText('dashRedCount', red);
+    setText('dashIncompleteCount', incomplete);
+    const pb=document.getElementById('dashProjectsBody');
+    if(pb) pb.innerHTML=Object.values(byProject).map(r=>`<tr><td>${esc(r.project)}</td><td>${esc(r.supervisor||'—')}</td><td>${r.count}</td><td>${formatHM(r.minutes)}</td><td><span class="status-pill status-ok">مسجل</span></td></tr>`).join('') || '<tr><td colspan="5" class="muted">لا توجد سجلات لعرضها.</td></tr>';
+    const sb=document.getElementById('dashSupervisorsBody');
+    if(sb) sb.innerHTML=Object.values(bySup).map(r=>`<tr><td>${esc(r.supervisor)}</td><td>${r.count}</td><td>${r.projects.size}</td><td>${formatHM(r.minutes)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">لا توجد بيانات.</td></tr>';
+    const q=document.getElementById('dashQuickAlert');
+    if(q) q.textContent=latest ? `آخر يوم مسجل ${latest} وفيه ${latestRows.length} سجل.` : 'لا توجد سجلات بعد.';
+    const fl=document.getElementById('dashFollowupList');
+    if(fl) fl.innerHTML=incomplete ? `<div class="dashboard-item warn">يوجد ${incomplete} سجل ناقص يحتاج مراجعة.</div>` : '<div class="dashboard-item ok">لا توجد ملاحظات تشغيلية حالية.</div>';
+    const ml=document.getElementById('dashMissingList');
+    if(ml) ml.innerHTML=missing.length ? missing.slice(0,12).map(p=>`<div class="dashboard-item warn">${esc(p)}</div>`).join('') : '<div class="dashboard-item ok">كل المشاريع مسجلة في آخر يوم.</div>';
+  }
+  function ensureAttendanceShellFinal(){
+    if(document.getElementById('attendanceTab')) return;
+    const tabs=document.querySelector('.tabs');
+    if(tabs && !document.querySelector('[data-tab="attendanceTab"]')){
+      const btn=document.createElement('button');
+      btn.className='tab'; btn.dataset.tab='attendanceTab'; btn.textContent='الحضور والغياب';
+      btn.onclick=function(){ showTab('attendanceTab', this); };
+      const exportBtn=tabs.querySelector('[data-tab="exportTab"]');
+      if(exportBtn) tabs.insertBefore(btn, exportBtn); else tabs.appendChild(btn);
+    }
+    const entries=document.getElementById('entriesTab');
+    if(entries){
+      entries.insertAdjacentHTML('afterend', `
+      <div id="attendanceTab" class="tab-page hidden">
+        <div class="entry-kpis">
+          <div class="entry-mini"><div class="muted">سجلات الحضور</div><div class="num" id="attendanceKpiRecords">0</div></div>
+          <div class="entry-mini"><div class="muted">الحاضرون</div><div class="num" id="attendanceKpiPresent">0</div></div>
+          <div class="entry-mini"><div class="muted">الغياب</div><div class="num" id="attendanceKpiAbsent">0</div></div>
+          <div class="entry-mini"><div class="muted">التأخير</div><div class="num" id="attendanceKpiLate">0</div></div>
+        </div>
+        <div class="panel card-pad">
+          <div class="search-grid">
+            <div><label>بحث</label><input id="attendanceSearch" oninput="renderAttendanceTable()" placeholder="مشروع، مشرف، عامل..."></div>
+            <div><label>فلتر شهر</label><input type="month" id="attendanceMonth" onchange="renderAttendanceTable()"></div>
+            <div><label>فلتر مشروع</label><select id="attendanceFilterProject" onchange="renderAttendanceTable()"></select></div>
+            <div><label>فلتر حالة</label><select id="attendanceFilterStatus" onchange="renderAttendanceTable()"><option value="">الكل</option><option value="حاضر">حاضر</option><option value="غائب">غائب</option><option value="متأخر">متأخر</option><option value="بدل">بدل</option></select></div>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>اليوم</th><th>المشروع</th><th>المشرف</th><th>الدخول</th><th>الخروج</th><th>المدة</th><th>حاضر</th><th>متأخر</th><th>غائب</th><th>بدل</th><th>العمال</th></tr></thead><tbody id="attendanceBody"></tbody></table></div>
+        </div>
+      </div>`);
+    }
+  }
+  function summarizeWorkers(workers){
+    const c={present:0,late:0,absent:0,sub:0};
+    (workers||[]).forEach(w=>{
+      const s=clean(w.status);
+      if(s==='حاضر') c.present++;
+      else if(s==='متأخر') c.late++;
+      else if(s==='غائب') c.absent++;
+      else if(s==='بدل') c.sub++;
+      else c.present++;
+    });
+    return c;
+  }
+  function renderAttendanceTableFinal(){
+    ensureAttendanceShellFinal();
+    const body=document.getElementById('attendanceBody');
+    if(!body) return;
+    const q=clean(document.getElementById('attendanceSearch')?.value).toLowerCase();
+    const month=clean(document.getElementById('attendanceMonth')?.value);
+    const project=clean(document.getElementById('attendanceFilterProject')?.value);
+    const status=clean(document.getElementById('attendanceFilterStatus')?.value);
+    const rows=(state?.attendance||[]).filter(r=>{
+      if(month && !clean(r.date).startsWith(month)) return false;
+      if(project && clean(r.project)!==project) return false;
+      if(status && !(r.workers||[]).some(w=>clean(w.status)===status)) return false;
+      if(q){
+        const hay=[r.date,r.project,r.supervisor,(r.workers||[]).map(w=>w.name).join(' ')].join(' ').toLowerCase();
+        if(!hay.includes(q)) return false;
+      }
+      return true;
+    });
+    let totals={present:0,late:0,absent:0,sub:0};
+    rows.forEach(r=>{ const c=summarizeWorkers(r.workers); totals.present+=c.present; totals.late+=c.late; totals.absent+=c.absent; totals.sub+=c.sub; });
+    setText('attendanceKpiRecords', rows.length);
+    setText('attendanceKpiPresent', totals.present);
+    setText('attendanceKpiAbsent', totals.absent);
+    setText('attendanceKpiLate', totals.late);
+    body.innerHTML=rows.length ? rows.map(r=>{
+      const c=summarizeWorkers(r.workers);
+      return `<tr>
+        <td>${esc(r.date)}</td><td>${esc(getArabicDayName(r.date))}</td><td>${esc(r.project)}</td><td>${esc(r.supervisor)}</td>
+        <td>${esc(r.actualStart||'—')}</td><td>${esc(r.actualEnd||'—')}</td><td>${formatHM(durationMinutes(r.actualStart,r.actualEnd))}</td>
+        <td>${c.present}</td><td>${c.late}</td><td>${c.absent}</td><td>${c.sub}</td>
+        <td>${esc((r.workers||[]).map(w=>`${w.name} (${w.status})`).join('، '))}</td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="12" class="muted">لا توجد سجلات حضور بعد.</td></tr>';
+  }
+  function refreshAttendanceFilters(){
+    const sel=document.getElementById('attendanceFilterProject');
+    if(sel){
+      const cur=sel.value;
+      const projects=[...new Set((state?.projects||[]).map(clean).filter(Boolean))];
+      sel.innerHTML='<option value="">كل المشاريع</option>'+projects.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+      if(projects.includes(cur)) sel.value=cur;
+    }
+  }
+  async function syncCloudFinal(){
+    try{
+      const data=await fetchAllCloud();
+      if(data){
+        cloudRowsToState(data);
+        refreshAttendanceFilters();
+        renderDashboardFinal();
+        renderAttendanceTableFinal();
+        if(typeof window.renderEntriesTable==='function') window.renderEntriesTable();
+        if(typeof window.renderMonthlyTimes==='function') window.renderMonthlyTimes();
+      }
+    }catch(e){ console.error('final cloud sync failed', e); }
+  }
+  window.renderDashboard = renderDashboardFinal;
+  window.renderAttendanceTable = renderAttendanceTableFinal;
+  window.tasneefFinalCloudSync = syncCloudFinal;
+  const oldShowTab=window.showTab;
+  if(typeof oldShowTab==='function'){
+    window.showTab=function(tabId, btn){
+      const r=oldShowTab.apply(this, arguments);
+      if(tabId==='dashboardTab') setTimeout(renderDashboardFinal,50);
+      if(tabId==='attendanceTab') setTimeout(()=>{refreshAttendanceFilters();renderAttendanceTableFinal();},50);
+      return r;
+    };
+  }
+  window.addEventListener('load', function(){
+    ensureDashboardShellFinal();
+    ensureAttendanceShellFinal();
+    refreshAttendanceFilters();
+    renderDashboardFinal();
+    renderAttendanceTableFinal();
+    setTimeout(syncCloudFinal, 700);
+    setTimeout(syncCloudFinal, 2200);
+    setInterval(syncCloudFinal, 30000);
+  });
+  setTimeout(()=>{ ensureDashboardShellFinal(); ensureAttendanceShellFinal(); syncCloudFinal(); }, 1200);
+})();
+/* ===== END TASNEEF FINAL CLOUD DASHBOARD + ATTENDANCE FIX ===== */
+</script>
+
+
+<script>
+/* ===== TASNEEF SAFE PATCH: users linked supervisor + dashboard/time normalization ===== */
+(function(){
+  function N(v){ return String(v ?? '').trim().replace(/\s+/g,' '); }
+  function E(v){ return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function canonName(v){
+    return N(v)
+      .replace(/[أإآ]/g,'ا')
+      .replace(/ة/g,'ه')
+      .replace(/ى/g,'ي')
+      .replace(/\s+/g,' ')
+      .replace(/^ال/,'');
+  }
+  function uniq(arr){
+    const out=[]; (arr||[]).forEach(x=>{ const n=N(x); if(n && !out.some(y=>canonName(y)===canonName(n))) out.push(n); });
+    return out;
+  }
+  function st(){ window.state = window.state || {}; return window.state; }
+  function getUsersSafe(){ const s=st(); if(!Array.isArray(s.users)) s.users=[]; return s.users; }
+  function getSupervisorNamesSafe(){
+    const s=st();
+    const names=[];
+    const push=x=>{ const n=N(x); if(n && !names.some(y=>canonName(y)===canonName(n))) names.push(n); };
+    (s.supervisors||[]).forEach(push);
+    Object.keys(s.supervisorProfiles||{}).forEach(push);
+    Object.values(s.projectSupervisorRules||{}).forEach(push);
+    (s.entries||[]).forEach(r=>push(r.supervisor));
+    getUsersSafe().forEach(u=>{
+      if(N(u.role)==='supervisor'){
+        push(u.linkedSupervisor || u.linked_supervisor || u.supervisor_name || u.fullName || u.full_name);
+        push(u.fullName || u.full_name);
+      }
+    });
+    return names.filter(Boolean);
+  }
+  function refreshLinkedSupervisorOptionsFixed(selectedValue){
+    const select=document.getElementById('userLinkedSupervisor');
+    if(!select) return;
+    const current=N(selectedValue || select.value);
+    const names=getSupervisorNamesSafe();
+    select.innerHTML='<option value="">-</option>'+names.map(n=>'<option value="'+E(n)+'">'+E(n)+'</option>').join('');
+    if(current){
+      const hit=names.find(n=>canonName(n)===canonName(current));
+      if(hit) select.value=hit;
+      else {
+        const opt=document.createElement('option');
+        opt.value=current; opt.textContent=current;
+        select.appendChild(opt); select.value=current;
+      }
+    }
+    select.disabled=false;
+    select.style.pointerEvents='auto';
+    select.style.opacity='1';
+  }
+  window.refreshLinkedSupervisorOptions = refreshLinkedSupervisorOptionsFixed;
+  window.fillLinkedSupervisorOptions = function(){ refreshLinkedSupervisorOptionsFixed(); };
+
+  const oldToggle = window.toggleUserFormByRole;
+  window.toggleUserFormByRole = function(){
+    try{ if(typeof oldToggle==='function') oldToggle.apply(this, arguments); }catch(e){ console.warn('old toggle failed', e); }
+    const role=N(document.getElementById('userRole')?.value);
+    const wrap=document.getElementById('linkedSupervisorWrap');
+    const select=document.getElementById('userLinkedSupervisor');
+    const full=N(document.getElementById('userFullName')?.value);
+    refreshLinkedSupervisorOptionsFixed(select?.value || (role==='supervisor' ? full : ''));
+    if(wrap) { wrap.style.display=''; wrap.style.opacity='1'; }
+    if(select){
+      select.disabled=false;
+      if(role==='supervisor' && !select.value && full){
+        const names=getSupervisorNamesSafe();
+        const hit=names.find(n=>canonName(n)===canonName(full));
+        if(hit) select.value=hit;
+      }
+    }
+  };
+
+  const oldClear = window.clearUserForm;
+  window.clearUserForm = function(){
+    try{ if(typeof oldClear==='function') oldClear.apply(this, arguments); }catch(e){}
+    window.__tasneefEditingUserId=null;
+    setTimeout(()=>refreshLinkedSupervisorOptionsFixed(), 20);
+  };
+
+  const oldEdit = window.editUserAccount;
+  window.editUserAccount = function(id){
+    window.__tasneefEditingUserId=id;
+    try{ if(typeof oldEdit==='function') oldEdit.apply(this, arguments); }catch(e){ console.warn('old edit failed', e); }
+    setTimeout(()=>{
+      const u=getUsersSafe().find(x=>String(x.id)===String(id));
+      refreshLinkedSupervisorOptionsFixed(u?.linkedSupervisor || u?.linked_supervisor || u?.supervisor_name || u?.fullName || u?.full_name || '');
+      const sel=document.getElementById('userLinkedSupervisor');
+      if(sel) sel.disabled=false;
+    }, 30);
+  };
+
+  function defaultPermsFor(role){
+    if(role==='supervisor') return {dashboardTab:'view', entriesTab:'edit', peopleTab:'hidden', projectsTab:'hidden', distributionTab:'hidden', monthlyTab:'view', alertsTab:'view', exportTab:'view', usersTab:'hidden'};
+    if(role==='viewer') return {dashboardTab:'view', entriesTab:'view', peopleTab:'view', projectsTab:'view', distributionTab:'view', monthlyTab:'view', alertsTab:'view', exportTab:'view', usersTab:'hidden'};
+    return {dashboardTab:'edit', entriesTab:'edit', peopleTab:'edit', projectsTab:'edit', distributionTab:'edit', monthlyTab:'edit', alertsTab:'edit', exportTab:'edit', usersTab:'edit'};
+  }
+  function readPerms(){
+    if(typeof window.getPermissionsFromForm==='function'){
+      try{ return window.getPermissionsFromForm(); }catch(e){}
+    }
+    return defaultPermsFor(N(document.getElementById('userRole')?.value)||'admin');
+  }
+  window.saveUserAccount = function(){
+    const fullName=N(document.getElementById('userFullName')?.value);
+    const username=N(document.getElementById('userUsername')?.value).toLowerCase();
+    const password=N(document.getElementById('userPassword')?.value);
+    const role=N(document.getElementById('userRole')?.value)||'admin';
+    const selectedSup=N(document.getElementById('userLinkedSupervisor')?.value);
+    const linkedSupervisor = role==='supervisor' ? (selectedSup || fullName) : selectedSup;
+    const isActive=(document.getElementById('userActive')?.value||'1')==='1';
+    const err=document.getElementById('userFormError');
+    if(err){ err.style.display='none'; err.textContent=''; }
+    if(!fullName || !username || !password){
+      if(err){ err.textContent='الاسم واسم المستخدم وكلمة المرور مطلوبة.'; err.style.display='block'; }
+      return;
+    }
+    if(role==='supervisor' && !linkedSupervisor){
+      if(err){ err.textContent='اختر المشرف المرتبط.'; err.style.display='block'; }
+      return;
+    }
+    const users=getUsersSafe();
+    const editId=window.__tasneefEditingUserId;
+    if(users.some(u=>N(u.username).toLowerCase()===username && String(u.id)!==String(editId||''))){
+      if(err){ err.textContent='اسم المستخدم موجود مسبقًا.'; err.style.display='block'; }
+      return;
+    }
+    const s=st();
+    if(role==='supervisor'){
+      s.supervisors=uniq([...(s.supervisors||[]), linkedSupervisor]);
+      s.supervisorProfiles=s.supervisorProfiles||{};
+      if(!s.supervisorProfiles[linkedSupervisor]) s.supervisorProfiles[linkedSupervisor]={workers:[], projects:[]};
+    }
+    let user=editId ? users.find(u=>String(u.id)===String(editId)) : null;
+    if(!user){
+      user={id:'u-'+Date.now()};
+      users.push(user);
+      window.__tasneefEditingUserId=user.id;
+    }
+    Object.assign(user,{fullName, username, password, role, linkedSupervisor, isActive, permissions:readPerms(), createdAt:user.createdAt||new Date().toISOString()});
+    // mirror snake_case fields for Supabase sync compatibility
+    user.full_name=fullName;
+    user.linked_supervisor=linkedSupervisor;
+    user.supervisor_name=linkedSupervisor;
+    user.is_active=isActive;
+    user.permissions_json=user.permissions;
+    if(typeof window.saveState==='function') { try{ window.saveState(true); }catch(e){} }
+    refreshLinkedSupervisorOptionsFixed(linkedSupervisor);
+    if(typeof window.renderUsersTable==='function') { try{ window.renderUsersTable(); }catch(e){} }
+    if(typeof window.showToast==='function') showToast('تم حفظ المستخدم');
+  };
+
+  function parseHM(v){
+    const s=N(v);
+    const m=s.match(/^(\d{1,2}):(\d{2})$/);
+    if(!m) return null;
+    const h=Number(m[1]), mi=Number(m[2]);
+    if(!Number.isFinite(h)||!Number.isFinite(mi)||mi>59) return null;
+    return h*60+mi;
+  }
+  function duration(start,end){
+    const a=parseHM(start), b=parseHM(end);
+    if(a===null||b===null) return 0;
+    let d=b-a; if(d<0) d+=1440;
+    return d;
+  }
+  function expectedFor(project){
+    const s=st();
+    const meta=s.projectMeta?.[project] || {};
+    return parseHM(meta.expectedTime || meta.expected_time || meta.estimated || '01:00') ?? 60;
+  }
+  function timeInfo(entry){
+    const actual=duration(entry.login || entry.actualStart || entry.check_in, entry.exit || entry.actualEnd || entry.check_out);
+    const expected=Number(entry.expectedMinutes)||expectedFor(entry.project || entry.project_name);
+    if(!actual || !expected) return {key:'none', label:'—', diff:0};
+    const diff=actual-expected;
+    if(diff>5) return {key:'over', label:'أكثر من المطلوب', diff};
+    if(diff<-5) return {key:'under', label:'أقل من المطلوب', diff};
+    return {key:'good', label:'ضمن الوقت', diff};
+  }
+  window.getEntryTimeColorInfo = function(entry){
+    const info=timeInfo(entry||{});
+    return {
+      cls: info.key==='over'?'entry-time-over':info.key==='under'?'entry-time-under':'entry-time-good',
+      label: info.label,
+      diff: (info.diff>0?'+':info.diff<0?'-':'±') + (typeof window.formatHM==='function'?window.formatHM(Math.abs(info.diff)):Math.abs(info.diff)+' د')
+    };
+  };
+  window.getEntryColor = function(entry){
+    const info=timeInfo(entry||{});
+    return {key:info.key==='over'?'danger':info.key==='under'?'warn':info.key==='good'?'good':'none', label:info.label};
+  };
+
+  function normalizeProject(n){ return canonName(n).replace(/\b(مشروع)\b/g,'').trim(); }
+  function renderDashboardSafe(){
+    const s=st();
+    const entries=Array.isArray(s.entries)?s.entries:[];
+    const projects=Array.isArray(s.projects)?s.projects:[];
+    const workers=Array.isArray(s.workers)?s.workers:[];
+    const sups=Array.isArray(s.supervisors)?s.supervisors:[];
+    const dates=entries.map(e=>N(e.date)).filter(Boolean).sort();
+    const latest=dates[dates.length-1] || new Date().toISOString().slice(0,10);
+    const latestEntries=entries.filter(e=>N(e.date)===latest);
+    const set=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
+    set('kpiProjects', projects.length); set('kpiEntries', entries.length); set('kpiSups', sups.length); set('kpiWorkers', workers.length);
+    set('entryTodayCount', latestEntries.length);
+    set('entryTodayProjects', uniq(latestEntries.map(e=>e.project)).length);
+    set('entryIncompleteCount', latestEntries.filter(e=>!N(e.supervisor)||!(e.workers||[]).some(Boolean)||!duration(e.login,e.exit)).length);
+    const good=latestEntries.filter(e=>timeInfo(e).key==='good').length;
+    const under=latestEntries.filter(e=>timeInfo(e).key==='under').length;
+    const over=latestEntries.filter(e=>timeInfo(e).key==='over').length;
+    set('dashGreenCount', good); set('dashYellowCount', under); set('dashRedCount', over);
+    set('dashTodayEntries', latestEntries.length); set('dashTodayProjects', uniq(latestEntries.map(e=>e.project)).length);
+    const latestEl=document.getElementById('dashLatestDate'); if(latestEl) latestEl.textContent=latest || '—';
+    const registered=new Set(latestEntries.map(e=>normalizeProject(e.project)));
+    const missing=projects.filter(p=>!registered.has(normalizeProject(p)));
+    const box=document.getElementById('dashUnregisteredProjects') || document.getElementById('dashMissingProjectsList');
+    if(box){
+      box.innerHTML = missing.length ? missing.slice(0,20).map(p=>'<div class="alert-item warn">'+E(p)+'</div>').join('') : '<div class="alert-item ok">كل المشاريع مسجلة في آخر يوم.</div>';
+    }
+    return true;
+  }
+  const oldRenderDashboard=window.renderDashboard;
+  window.renderDashboard=function(){
+    try{ if(typeof oldRenderDashboard==='function') oldRenderDashboard.apply(this, arguments); }catch(e){}
+    setTimeout(renderDashboardSafe, 10);
+  };
+
+  function boot(){
+    refreshLinkedSupervisorOptionsFixed();
+    const full=document.getElementById('userFullName');
+    if(full && !full.__linkedFix){
+      full.__linkedFix=true;
+      full.addEventListener('input',()=>setTimeout(()=>window.toggleUserFormByRole(),20));
+    }
+    renderDashboardSafe();
+  }
+  window.addEventListener('load',()=>setTimeout(boot,300));
+  document.addEventListener('click',e=>{
+    if(e.target && (e.target.id==='userLinkedSupervisor' || e.target.closest?.('[data-tab="usersTab"]'))){
+      setTimeout(()=>refreshLinkedSupervisorOptionsFixed(document.getElementById('userLinkedSupervisor')?.value), 30);
+    }
+  }, true);
+  setInterval(renderDashboardSafe, 8000);
+})();
+ /* ===== END TASNEEF SAFE PATCH ===== */
+</script>
+
 </body>
+</html>
