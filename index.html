@@ -4550,26 +4550,58 @@ initAll();
     }
   };
 
-  const oldInitAll = window.initAll;
-  window.initAll = function(){
-    if (oldInitAll) oldInitAll();
-    window.renderDashboard();
-  };
+<script>
+(async function(){
 
-  const oldUpdateKPIs = window.updateKPIs;
-  window.updateKPIs = function(){
-    if (oldUpdateKPIs) oldUpdateKPIs();
-    window.renderDashboard();
-  };
+async function renderDashboard(){
+  try{
+    const [usersRes, projectsRes, workersRes, recordsRes] = await Promise.all([
+      db.from('users').select('*'),
+      db.from('projects').select('*'),
+      db.from('workers').select('*'),
+      db.from('daily_records').select('*')
+    ]);
 
-  const oldRenderEntriesTable = window.renderEntriesTable;
-  window.renderEntriesTable = function(){
-    if (oldRenderEntriesTable) oldRenderEntriesTable();
-    window.renderDashboard();
-  };
+    const users = usersRes.data || [];
+    const projects = projectsRes.data || [];
+    const workers = workersRes.data || [];
+    const records = recordsRes.data || [];
 
-  ensureDashboardShell();
+    const setText = (id, val) => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = val;
+    };
+
+    setText('kpiProjects', projects.length);
+    setText('kpiEntries', records.length);
+    setText('kpiSups', users.filter(u => u.role === 'supervisor').length);
+    setText('kpiWorkers', workers.length);
+
+  }catch(e){
+    console.error('dashboard error', e);
+  }
+}
+
+window.renderDashboard = renderDashboard;
+
+const oldInitAll = window.initAll;
+window.initAll = function(){
+  if(oldInitAll) oldInitAll();
   window.renderDashboard();
+};
+
+const oldUpdateKPIs = window.updateKPIs;
+window.updateKPIs = function(){
+  if(oldUpdateKPIs) oldUpdateKPIs();
+  window.renderDashboard();
+};
+
+document.addEventListener('DOMContentLoaded', function(){
+  window.renderDashboard();
+});
+
+setTimeout(window.renderDashboard, 1200);
+
 })();
 </script>
 
