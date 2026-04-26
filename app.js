@@ -729,3 +729,126 @@ window.showSupervisorWindow = function(id, btn){
   if(id === 'supTickets' && typeof renderTickets === 'function') renderTickets();
   if(id === 'supSummary' && typeof renderSupervisorDailySummary === 'function') renderSupervisorDailySummary();
 };
+
+/* ===== V15.2: Fix supervisor daily summary ===== */
+(function(){
+  function parseDateSafe(v){
+    if(!v) return null;
+    const d = new Date(v);
+    return isNaN(d) ? null : d;
+  }
+  function dateOfLog(l){ return l.log_date || String(l.check_in || '').slice(0,10) || ''; }
+  function sameDate(a,b){ return String(a||'') === String(b||''); }
+  function addDays(dateObj, days){ const d = new Date(dateObj); d.setDate(d.getDate()+days); return d; }
+  function localDateStr(d){
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,'0');
+    const day=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function supervisorSummaryRange(){
+    const mode = document.getElementById('summaryRange')?.value || 'today';
+    const custom = document.getElementById('summaryDate')?.value;
+    const now = new Date();
+    const todayStr = localDateStr(now);
+    if(mode === 'custom'){
+      const d = custom || todayStr;
+      return {start:d, end:d, label:d};
+    }
+    if(mode === 'yesterday'){
+      const d = localDateStr(addDays(now,-1));
+      return {start:d, end:d, label:'أمس'};
+    }
+    if(mode === 'week'){
+      const start = localDateStr(addDays(now,-6));
+      return {start, end:todayStr, label:'آخر 7 أيام'};
+    }
+    return {start:todayStr, end:todayStr, label:'اليوم'};
+  }
+  function inRangeDate(ds, range){ return ds && ds >= range.start && ds <= range.end; }
+  function ticketStatusClosed(t){ return (t.status || 'open') === 'closed'; }
+  function durationText(mins){
+    mins = Number(mins || 0);
+    const h = Math.floor(mins / 60), m = mins % 60;
+    if(h && m) return `${h}س ${m}د`;
+    if(h) return `${h}س`;
+    return `${m}د`;
+  }
+  function summaryCard(label, value){
+    return `<div class="summary-card-mini"><small>${esc(label)}</small><b>${esc(value)}</b></div>`;
+  }
+  window.renderSupervisorDailySummary = function(){
+    const cards = document.getElementById('supervisorSummaryCards');
+    const body = document.getElementById('supervisorSummaryBody');
+    if(!cards && !body) return;
+    const u = session && session();
+    const range = supervisorSummaryRange();
+    if(document.getElementById('summaryRange')?.value !== 'custom' && document.getElementById('summaryDate')){
+      // Keep custom field available but do not override it every time.
+    }
+
+    const logs = (data.logs || []).filter(l => {
+      const ds = dateOfLog(l);
+      const bySupervisor = !u || !l.supervisor_id || String(l.supervisor_id) === String(u.id);
+      return bySupervisor && inRangeDate(ds, range);
+    });
+    const workMinutes = logs.reduce((sum,l)=>{
+      const saved = Number(l.duration_minutes || 0);
+      const calc = (typeof minutesBetween === 'function') ? minutesBetween(l.check_in, l.check_out) : 0;
+      return sum + (saved > 0 ? saved : calc);
+    },0);
+    const travelMinutes = logs.reduce((sum,l)=> sum + Number(l.travel_minutes || 0), 0);
+
+    const attendance = (data.attendance || []).filter(a => {
+      const ds = a.attendance_date || String(a.created_at || '').slice(0,10);
+      const bySupervisor = !u || !a.supervisor_id || String(a.supervisor_id) === String(u.id);
+      return bySupervisor && inRangeDate(ds, range);
+    });
+    const present = attendance.filter(a => a.status === 'present').length;
+    const absent = attendance.filter(a => a.status === 'absent').length;
+
+    const tickets = (data.tickets || []).filter(t => {
+      const ds = String(t.created_at || '').slice(0,10);
+      return inRangeDate(ds, range);
+    });
+    const openTickets = tickets.filter(t => !ticketStatusClosed(t)).length;
+    const closedTickets = tickets.filter(ticketStatusClosed).length;
+
+    if(cards){
+      cards.innerHTML = [
+        summaryCard('عدد التسجيلات', logs.length),
+        summaryCard('ساعات العمل', durationText(workMinutes)),
+        summaryCard('وقت التنقل', durationText(travelMinutes)),
+        summaryCard('الحضور', present),
+        summaryCard('الغياب', absent),
+        summaryCard('التكتات المفتوحة', openTickets),
+        summaryCard('التكتات المغلقة', closedTickets),
+        summaryCard('الفترة', range.label)
+      ].join('');
+    }
+    if(body){
+      const rows = [
+        ['عدد تسجيلات الدخول والخروج', logs.length],
+        ['إجمالي ساعات العمل', durationText(workMinutes)],
+        ['إجمالي وقت التنقل', durationText(travelMinutes)],
+        ['عدد الحضور', present],
+        ['عدد الغياب', absent],
+        ['التكتات المفتوحة', openTickets],
+        ['التكتات المغلقة', closedTickets]
+      ];
+      body.innerHTML = rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('');
+    }
+  };
+
+  const prevShowSupervisorWindowV152 = window.showSupervisorWindow;
+  window.showSupervisorWindow = function(id, btn){
+    if(typeof prevShowSupervisorWindowV152 === 'function') prevShowSupervisorWindowV152(id, btn);
+    if(id === 'supSummary') window.renderSupervisorDailySummary();
+  };
+
+  const prevInitSupervisorV152 = window.initSupervisor;
+  window.initSupervisor = async function(){
+    if(typeof prevInitSupervisorV152 === 'function') await prevInitSupervisorV152();
+    if(document.getElementById('supSummary')?.classList.contains('active')) window.renderSupervisorDailySummary();
+  };
+})();
