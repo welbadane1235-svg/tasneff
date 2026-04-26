@@ -1,9 +1,125 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>لوحة الإدارة - تصنيف</title><link rel="stylesheet" href="style.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body onload="initAdmin()"><div class="app"><aside class="side"><div class="brand"><div class="mark">ت</div><div><h2>تصنيف لإدارة المرافق</h2><p>نسخة الإدارة</p></div></div><nav class="nav"><button class="active" data-section="dash">لوحة التحكم</button><button data-section="users">إدارة المستخدمين</button><button data-section="projects">المشاريع</button><button data-section="workers">العمال</button><button data-section="attendance">الحضور والغياب</button><button data-section="daily">التسجيلات اليومية</button><button data-section="times">الأوقات الشهرية</button><button data-section="tickets">التكتات</button><button onclick="logout()">تسجيل خروج</button></nav></aside><main class="content"><div class="topbar"><h1>لوحة الإدارة</h1><div class="userbox">مرحباً، <b id="currentUser"></b></div></div>
-<section id="dash" class="section active"><div class="grid"><div class="stat"><p>المستخدمون</p><b id="countUsers">0</b></div><div class="stat"><p>المشاريع النشطة</p><b id="countProjects">0</b></div><div class="stat"><p>العمال النشطون</p><b id="countWorkers">0</b></div><div class="stat"><p>تكتات مفتوحة</p><b id="countTickets">0</b></div></div><div class="card"><h2>أدوات سريعة</h2><div class="actions"><button class="btn secondary" onclick="printPage()">طباعة</button><button class="btn light" onclick="location.reload()">تحديث البيانات</button></div></div></section>
-<section id="users" class="section"><div class="card"><h2>إضافة مستخدم</h2><div class="row"><div class="field"><label>الاسم</label><input id="userFullName"></div><div class="field"><label>اسم المستخدم</label><input id="userName"></div><div class="field"><label>كلمة المرور</label><input id="userPassword" placeholder="افتراضي 123456"></div><div class="field"><label>الدور</label><select id="userRole"><option value="admin">مدير</option><option value="supervisor">مشرف</option></select></div></div><div class="row two"><div class="field"><label>مشرف مرتبط / اختياري</label><select id="userLinkedSupervisor"></select></div><div class="actions"><button id="addUserBtn" class="btn">حفظ المستخدم</button></div></div></div><div class="card"><h2>قائمة المستخدمين</h2><div class="table-wrap"><table id="usersTable"><thead><tr><th>الاسم</th><th>المستخدم</th><th>الدور</th><th>مرتبط بمشرف</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="usersBody"></tbody></table></div></div></section>
-<section id="projects" class="section"><div class="card"><h2>إضافة مشروع</h2><div class="row three"><div class="field"><label>اسم المشروع</label><input id="projectName"></div><div class="field"><label>المشرف</label><select id="projectSupervisor"></select></div><div class="field"><label>ملاحظات</label><input id="projectNotes"></div></div><button id="addProjectBtn" class="btn">حفظ المشروع</button></div><div class="card"><h2>المشاريع</h2><div class="filters"><select id="filterSupervisor"></select><button class="btn light" onclick="exportTable('projectsTable','projects')">تصدير CSV</button></div><div class="table-wrap"><table id="projectsTable"><thead><tr><th>المشروع</th><th>المشرف</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody id="projectsBody"></tbody></table></div></div></section>
-<section id="workers" class="section"><div class="card"><h2>إضافة عامل</h2><div class="row"><div class="field"><label>اسم العامل</label><input id="workerName"></div><div class="field"><label>المشرف</label><select id="workerSupervisor"></select></div><div class="field"><label>الراتب</label><input id="workerSalary" type="number" value="1500"></div><div class="field"><label>ملاحظات</label><input id="workerNotes"></div></div><button id="addWorkerBtn" class="btn">حفظ العامل</button></div><div class="card"><h2>العمال</h2><div class="table-wrap"><table id="workersTable"><thead><tr><th>العامل</th><th>المشرف</th><th>الراتب</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody id="workersBody"></tbody></table></div></div></section>
-<section id="attendance" class="section"><div class="card"><h2>تسجيل حضور / غياب</h2><div class="row"><div class="field"><label>التاريخ</label><input id="attendanceDate" type="date"></div><div class="field"><label>العامل</label><select id="attendanceWorker"></select></div><div class="field"><label>المشرف</label><select id="attendanceSupervisor"></select></div><div class="field"><label>المشروع</label><select id="attendanceProject"></select></div></div><div class="row three"><div class="field"><label>الحالة</label><select id="attendanceStatus"><option value="present">حاضر</option><option value="absent">غائب</option></select></div><div class="field"><label>ملاحظات</label><input id="attendanceNotes"></div><button id="addAttendanceBtn" class="btn">حفظ التحضير</button></div></div><div class="card"><h2>سجل الحضور</h2><div class="table-wrap"><table id="attendanceTable"><thead><tr><th>التاريخ</th><th>العامل</th><th>المشرف</th><th>المشروع</th><th>الحالة</th><th>ملاحظات</th></tr></thead><tbody id="attendanceBody"></tbody></table></div></div></section>
-<section id="daily" class="section"><div class="card"><h2>التسجيلات اليومية</h2><div class="row three"><div class="field"><label>التاريخ</label><input id="dailyDate" type="date"></div><div class="field"><label>المشرف</label><select id="dailySupervisor"></select></div><div class="actions"><button class="btn light" onclick="renderDailyLogs()">عرض التسجيلات</button><button class="btn light" onclick="exportTable('dailyTable','daily_logs')">تصدير CSV</button></div></div><div class="grid"><div class="stat"><p>تسجيلات الوقت</p><b id="dailyTimeCount">0</b></div><div class="stat"><p>الحضور</p><b id="dailyPresentCount">0</b></div><div class="stat"><p>الغياب</p><b id="dailyAbsentCount">0</b></div><div class="stat"><p>التكتات</p><b id="dailyTicketsCount">0</b></div></div><div class="table-wrap" style="margin-top:12px"><table id="dailyTable"><thead><tr><th>النوع</th><th>التاريخ</th><th>المشرف</th><th>المشروع</th><th>البيان</th><th>الحالة</th><th>الوقت</th><th>ملاحظات</th></tr></thead><tbody id="dailyBody"></tbody></table></div></div></section><section id="times" class="section"><div class="card"><h2>الأوقات الشهرية</h2><div class="actions"><button class="btn light" onclick="exportTable('logsTable','time_logs')">تصدير CSV</button></div><div class="table-wrap" style="margin-top:12px"><table id="logsTable"><thead><tr><th>التاريخ</th><th>المشرف</th><th>المشروع</th><th>دخول</th><th>خروج</th><th>ساعات العمل</th><th>وقت ضائع / دقيقة</th></tr></thead><tbody id="logsBody"></tbody></table></div></div></section>
-<section id="tickets" class="section"><div class="card"><h2>التكتات</h2><div class="table-wrap"><table id="ticketsTable"><thead><tr><th>رقم</th><th>المشروع</th><th>المشرف</th><th>العنوان</th><th>الحالة</th><th>الأولوية</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="ticketsBody"></tbody></table></div></div></section>
-</main></div><script src="app.js"></script><script>document.addEventListener('DOMContentLoaded',()=>{const d=document.getElementById('attendanceDate'); if(d)d.value=new Date().toISOString().slice(0,10); const dd=document.getElementById('dailyDate'); if(dd)dd.value=new Date().toISOString().slice(0,10);});</script></body></html>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الإدارة - تصنيف</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body onload="initAdmin()">
+<div class="app-shell">
+  <aside class="side">
+    <div class="brand"><span>ت</span><div><b>تصنيف</b><small>إدارة التشغيل</small></div></div>
+    <button class="nav active" onclick="showPage('dashboard',this)">لوحة التحكم</button>
+    <button class="nav" onclick="showPage('daily',this)">التسجيلات اليومية</button>
+    <button class="nav" onclick="showPage('users',this)">إدارة المستخدمين</button>
+    <button class="nav" onclick="showPage('projects',this)">المشاريع</button>
+    <button class="nav" onclick="showPage('workers',this)">العمال</button>
+    <button class="nav" onclick="showPage('attendance',this)">الحضور والغياب</button>
+    <button class="nav" onclick="showPage('monthly',this)">الأوقات الشهرية</button>
+    <button class="nav" onclick="showPage('tickets',this)">التكتات</button>
+    <button class="nav" onclick="showPage('alerts',this)">التنبيهات</button>
+    <button class="nav" onclick="showPage('export',this)">التصدير</button>
+    <button class="nav danger" onclick="logout()">تسجيل خروج</button>
+  </aside>
+  <main class="content">
+    <header class="hero"><div><h1>لوحة تشغيل يومية احترافية</h1><p>إدارة المستخدمين، المشاريع، العمال، الحضور، التسجيلات اليومية والتقارير.</p></div><button onclick="refreshAll()">تحديث البيانات</button></header>
+    <div id="globalMsg" class="msg hidden"></div>
+
+    <section id="dashboard" class="page">
+      <div class="kpis">
+        <div class="kpi"><small>المستخدمون</small><b id="kpiUsers">0</b></div>
+        <div class="kpi"><small>المشاريع</small><b id="kpiProjects">0</b></div>
+        <div class="kpi"><small>العمال</small><b id="kpiWorkers">0</b></div>
+        <div class="kpi"><small>تسجيلات اليوم</small><b id="kpiTodayLogs">0</b></div>
+      </div>
+      <div class="card"><h2>ملخص اليوم</h2><div id="todaySummary" class="summary-grid"></div></div>
+    </section>
+
+    <section id="daily" class="page hidden">
+      <div class="grid two">
+        <div class="card">
+          <h2 id="logFormTitle">تسجيل دخول / خروج</h2>
+          <input type="hidden" id="logId">
+          <label>التاريخ</label><input type="date" id="logDate">
+          <label>المشرف</label><select id="logSupervisor"></select>
+          <label>المشروع</label><select id="logProject"></select>
+          <div class="split"><div><label>وقت الدخول</label><input type="time" id="logIn"></div><div><label>وقت الخروج</label><input type="time" id="logOut"></div></div>
+          <label>وقت الانتقال / الضائع بالدقائق</label><input type="number" id="logTravel" min="0" value="0">
+          <label>ملاحظات</label><textarea id="logNotes"></textarea>
+          <div class="actions"><button onclick="setNow('logIn')">الدخول الآن</button><button onclick="setNow('logOut')">الخروج الآن</button><button onclick="saveTimeLog()">حفظ</button><button class="light" onclick="clearLogForm()">جديد</button></div>
+        </div>
+        <div class="card">
+          <h2>التسجيلات اليومية</h2>
+          <div class="filters"><input type="date" id="dailyDate" onchange="renderTimeLogs()"><select id="dailySupervisor" onchange="renderTimeLogs()"></select><select id="dailyProject" onchange="renderTimeLogs()"></select><input id="dailySearch" oninput="renderTimeLogs()" placeholder="بحث"></div>
+          <div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>المشرف</th><th>المشروع</th><th>الدخول</th><th>الخروج</th><th>المدة</th><th>انتقال</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody id="logsBody"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="users" class="page hidden">
+      <div class="grid two"><div class="card"><h2 id="userFormTitle">إضافة مستخدم</h2><input type="hidden" id="userId"><label>الاسم الكامل</label><input id="userFullName"><label>اسم المستخدم</label><input id="userUsername"><label>كلمة المرور</label><input id="userPassword"><label>الدور</label><select id="userRole"><option value="admin">مدير</option><option value="supervisor">مشرف</option></select><label>الحالة</label><select id="userActive"><option value="true">نشط</option><option value="false">موقوف</option></select><div class="actions"><button onclick="saveUser()">حفظ</button><button class="light" onclick="clearUserForm()">جديد</button></div></div><div class="card"><h2>المستخدمون</h2><div class="table-wrap"><table><thead><tr><th>الاسم</th><th>المستخدم</th><th>الدور</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="usersBody"></tbody></table></div></div></div>
+    </section>
+
+    <section id="projects" class="page hidden">
+      <div class="grid two"><div class="card"><h2 id="projectFormTitle">إضافة مشروع</h2><input type="hidden" id="projectId"><label>اسم المشروع</label><input id="projectName"><label>الموقع</label><input id="projectLocation"><label>المشرف المرتبط</label><select id="projectSupervisor"></select><label>الحالة</label><select id="projectStatus"><option value="active">نشط</option><option value="inactive">متوقف</option></select><label>ملاحظات</label><textarea id="projectNotes"></textarea><div class="actions"><button onclick="saveProject()">حفظ</button><button class="light" onclick="clearProjectForm()">جديد</button></div></div><div class="card"><h2>المشاريع</h2><input id="projectSearch" oninput="renderProjects()" placeholder="بحث"><div class="table-wrap"><table><thead><tr><th>المشروع</th><th>المشرف</th><th>الموقع</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="projectsBody"></tbody></table></div></div></div>
+    </section>
+
+    <section id="workers" class="page hidden">
+      <div class="card section-head">
+        <div>
+          <h2>إدارة العمال</h2>
+          <p>إضافة وتعديل وربط العمال بالمشرفين والمشاريع، مع تمييز العامل الأساسي والبديل.</p>
+        </div>
+        <button class="light" onclick="clearWorkerForm()">عامل جديد</button>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <h2 id="workerFormTitle">إضافة عامل</h2>
+          <input type="hidden" id="workerId">
+          <label>اسم العامل</label><input id="workerName" placeholder="مثال: ياسر">
+          <label>الجوال</label><input id="workerPhone" placeholder="اختياري">
+          <label>الراتب</label><input type="number" id="workerSalary" value="1500">
+          <label>المشرف</label><select id="workerSupervisor" onchange="onWorkerSupervisorChange()"></select>
+          <label>المشروع المرتبط</label><select id="workerProject"></select>
+          <label>نوع العامل</label><select id="workerType"><option value="primary">أساسي</option><option value="support">بديل / مساند</option></select>
+          <label>الحالة</label><select id="workerStatus"><option value="active">نشط</option><option value="inactive">موقوف</option></select>
+          <label>ملاحظات</label><textarea id="workerNotes" placeholder="أي ملاحظة تخص العامل أو توزيعه"></textarea>
+          <div class="actions">
+            <button id="workerSaveBtn" onclick="saveWorker()">حفظ العامل</button>
+            <button id="workerCancelBtn" class="light hidden" onclick="clearWorkerForm()">إلغاء التعديل</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-head">
+            <h2>قائمة العمال</h2>
+            <button class="light" onclick="exportTable('workers')">تصدير CSV</button>
+          </div>
+          <div class="filters">
+            <input id="workerSearch" oninput="renderWorkers()" placeholder="بحث باسم العامل أو المشرف أو المشروع">
+            <select id="workerFilterSupervisor" onchange="renderWorkers()"></select>
+            <select id="workerFilterProject" onchange="renderWorkers()"></select>
+            <select id="workerFilterStatus" onchange="renderWorkers()"><option value="">كل الحالات</option><option value="active">نشط</option><option value="inactive">موقوف</option></select>
+            <select id="workerFilterType" onchange="renderWorkers()"><option value="">كل الأنواع</option><option value="primary">أساسي</option><option value="support">بديل / مساند</option></select>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>العامل</th><th>المشرف</th><th>المشروع</th><th>النوع</th><th>الجوال</th><th>الراتب</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody id="workersBody"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="attendance" class="page hidden">
+      <div class="grid two"><div class="card"><h2 id="attendanceFormTitle">تسجيل حضور / غياب</h2><input type="hidden" id="attendanceId"><label>التاريخ</label><input type="date" id="attendanceDate"><label>المشرف</label><select id="attendanceSupervisor" onchange="renderAttendanceWorkersQuick()"></select><label>المشروع</label><select id="attendanceProject"></select><label>العامل</label><select id="attendanceWorker"></select><label>الحالة</label><select id="attendanceStatus"><option value="present">حاضر</option><option value="absent">غائب</option></select><label>ملاحظات</label><textarea id="attendanceNotes"></textarea><div class="actions"><button onclick="saveAttendance()">حفظ</button><button class="light" onclick="clearAttendanceForm()">جديد</button></div><div class="quick-list" id="attendanceQuick"></div></div><div class="card"><h2>سجلات الحضور</h2><div class="filters"><input type="date" id="attendanceFilterDate" onchange="renderAttendance()"><select id="attendanceFilterSupervisor" onchange="renderAttendance()"></select><input id="attendanceSearch" oninput="renderAttendance()" placeholder="بحث"></div><div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>العامل</th><th>المشرف</th><th>المشروع</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody id="attendanceBody"></tbody></table></div></div></div>
+    </section>
+
+    <section id="monthly" class="page hidden"><div class="card"><h2>الأوقات الشهرية</h2><div class="filters"><input type="month" id="monthlyMonth" onchange="renderMonthly()"><select id="monthlySupervisor" onchange="renderMonthly()"></select><button onclick="exportMonthlyCSV()">تصدير CSV</button></div><div id="monthlySummary" class="kpis small"></div><div class="table-wrap"><table><thead><tr><th>المشرف</th><th>المشروع</th><th>عدد السجلات</th><th>ساعات العمل</th><th>وقت الانتقال</th></tr></thead><tbody id="monthlyBody"></tbody></table></div></div></section>
+
+    <section id="tickets" class="page hidden"><div class="grid two"><div class="card"><h2 id="ticketFormTitle">إضافة تكت</h2><input type="hidden" id="ticketId"><label>المشروع</label><select id="ticketProject"></select><label>المشرف</label><select id="ticketSupervisor"></select><label>العنوان</label><input id="ticketTitle"><label>الأولوية</label><select id="ticketPriority"><option value="normal">عادي</option><option value="high">عاجل</option><option value="low">منخفض</option></select><label>الحالة</label><select id="ticketStatus"><option value="open">مفتوح</option><option value="closed">مغلق</option></select><label>الوصف</label><textarea id="ticketDescription"></textarea><div class="actions"><button onclick="saveTicket()">حفظ</button><button class="light" onclick="clearTicketForm()">جديد</button></div></div><div class="card"><h2>التكتات</h2><div class="filters"><select id="ticketFilterStatus" onchange="renderTickets()"><option value="">الكل</option><option value="open">مفتوح</option><option value="closed">مغلق</option></select><input id="ticketSearch" oninput="renderTickets()" placeholder="بحث"></div><div class="table-wrap"><table><thead><tr><th>المشروع</th><th>المشرف</th><th>العنوان</th><th>الأولوية</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="ticketsBody"></tbody></table></div></div></div></section>
+
+    <section id="alerts" class="page hidden"><div class="card"><h2>التنبيهات وأخطاء التوزيع</h2><div id="alertsList" class="alerts"></div></div></section>
+    <section id="export" class="page hidden"><div class="card"><h2>التصدير</h2><p>صدّر بيانات النظام الحالية بصيغة CSV.</p><div class="actions"><button onclick="exportTable('app_users')">المستخدمين</button><button onclick="exportTable('projects')">المشاريع</button><button onclick="exportTable('workers')">العمال</button><button onclick="exportTable('attendance')">الحضور</button><button onclick="exportTable('time_logs')">التسجيلات اليومية</button><button onclick="exportTable('tickets')">التكتات</button></div></div></section>
+  </main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
