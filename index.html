@@ -1725,6 +1725,150 @@ function printDailyEntriesReport() {
   ${rows.map(e=>{ const mins = durationMinutes(e.login,e.exit); const timeInfo = (window.getEntryTimeColorInfo ? getEntryTimeColorInfo(e) : {label:'—'}); const expectedText = (window.formatExpectedTime ? formatExpectedTime(state.projectMeta?.[e.project]?.expectedTime || '') : '') || '—'; return `<tr><td>${esc(e.date)}</td><td>${esc(getArabicDayName(e.date))}</td><td>${esc(e.project)}</td><td>${esc(e.supervisor||'-')}</td><td>${esc((e.workers||[]).join('، '))}</td><td>${esc(e.login||'-')}</td><td>${esc(e.exit||'-')}</td><td>${esc(formatHM(mins))}</td><td>${esc(expectedText)}</td><td>${esc(timeInfo.label || '—')}</td><td>${entryStatusInfo(e).complete ? 'مكتمل' : 'ناقص'}</td><td>${esc(e.approvalStatus||'مسجل')}</td><td>${esc(e.note||'')}</td></tr>`; }).join('')}
   </tbody></table><div class="footer">شركة تصنيف لإدارة المرافق</div>
 
+
+<!-- ===== TASNEEF V8 FINAL: ONE ONLINE SOURCE + USERS TAB + IMMEDIATE SAVE ===== -->
+<script>
+(function(){
+  if (window.__TASNEEF_V8_FINAL__) return;
+  window.__TASNEEF_V8_FINAL__ = true;
+  const TABLE = 'tasneef_app_state';
+  const ROW_ID = 1;
+  const AUTH_KEY = 'fm_auth_session_v1';
+  const clean = v => String(v ?? '').trim();
+  const uniq = arr => [...new Set((arr || []).map(clean).filter(Boolean))];
+  let saveTimer = null, saving = false, loading = false;
+  function getCloud(){
+    if (window.appCloud) return window.appCloud;
+    const cfg = window.APP_CONFIG || {};
+    const url = cfg.supabaseUrl || cfg.SUPABASE_URL || 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
+    const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
+    if (window.supabase && url && key) window.appCloud = window.supabase.createClient(url, key);
+    return window.appCloud || null;
+  }
+  function toast(msg, type){ try{ window.showToast ? showToast(msg, type) : console.log(msg); }catch(e){ console.log(msg); } }
+  function ensureState(){
+    window.state = window.state || {};
+    ['projects','entries','workers','supervisors','users'].forEach(k => { if (!Array.isArray(state[k])) state[k] = []; });
+    ['projectSupervisorRules','workerProfiles','supervisorProfiles','workerSalary','supervisorSalary','projectMeta'].forEach(k => { if (!state[k] || typeof state[k] !== 'object' || Array.isArray(state[k])) state[k] = {}; });
+  }
+  function adminPerms(){ return {dashboardTab:'edit',entriesTab:'edit',peopleTab:'edit',projectsTab:'edit',distributionTab:'edit',monthlyTab:'edit',alertsTab:'edit',exportTab:'edit',usersTab:'edit'}; }
+  function ensureAdmin(){
+    ensureState();
+    let admin = state.users.find(u => clean(u.id)==='u-admin') || state.users.find(u => clean(u.username).toLowerCase()==='admin') || state.users.find(u => clean(u.role)==='admin');
+    if (!admin) { admin = {id:'u-admin', fullName:'مدير النظام', username:'admin', password:'123456', role:'admin', linkedSupervisor:'', isActive:true, permissions:adminPerms(), createdAt:new Date().toISOString()}; state.users.unshift(admin); }
+    admin.id='u-admin'; admin.fullName=admin.fullName||'مدير النظام'; admin.username=admin.username||'admin'; admin.password=admin.password||'123456'; admin.role='admin'; admin.isActive=true; admin.permissions={...adminPerms(), ...(admin.permissions||{}), usersTab:'edit'};
+    state.users = state.users.filter(u => clean(u.id)!=='u-admin' || u===admin);
+    return admin;
+  }
+  function kpis(){
+    ensureState();
+    const entries = []; const seen = new Set();
+    state.entries.forEach(e=>{ if(!e) return; const key = e._cloudId ? 'c'+e._cloudId : (e._id || [e.project,e.date,e.login,e.exit,e.supervisor].join('|')); if(!seen.has(key)){seen.add(key);entries.push(e);} });
+    const projects = uniq([...(state.projects||[]), ...Object.keys(state.projectSupervisorRules||{}), ...entries.map(e=>e.project||e.project_name)]);
+    const workers = uniq([...(state.workers||[]), ...Object.keys(state.workerProfiles||{}), ...entries.flatMap(e=>Array.isArray(e.workers)?e.workers:[])]);
+    const supervisors = uniq([...(state.supervisors||[]), ...Object.keys(state.supervisorProfiles||{}), ...Object.values(state.projectSupervisorRules||{}), ...Object.values(state.workerProfiles||{}).map(p=>p&&p.supervisor), ...entries.map(e=>e.supervisor||e.supervisor_name), ...(state.users||[]).filter(u=>clean(u.role)==='supervisor').flatMap(u=>[u.fullName,u.linkedSupervisor])]);
+    return {projects:projects.length, entries:entries.length, workers:workers.length, supervisors:supervisors.length};
+  }
+  function setText(id,v){ const el=document.getElementById(id); if(el) el.textContent = String(v); }
+  function renderKpis(){ const x=kpis(); setText('kpiProjects',x.projects); setText('kpiEntries',x.entries); setText('kpiWorkers',x.workers); setText('kpiSups',x.supervisors); return x; }
+  window.updateKPIs = renderKpis; window.renderDashboard = renderKpis; window.renderDashboardDirect = renderKpis;
+  async function saveOnlineNow(showMsg=false){
+    if (loading || saving) return;
+    ensureState(); ensureAdmin(); renderKpis();
+    const json = JSON.stringify(state);
+    try { localStorage.setItem('tasneef_last_snapshot_v8', json); localStorage.setItem('facilityManagementData', json); } catch(e) {}
+    const c = getCloud(); if (!c) { if(showMsg) toast('تم الحفظ محليًا فقط: لم يتم تحميل Supabase', 'error'); return; }
+    try{
+      saving = true;
+      const payload = { id: ROW_ID, data: state, updated_at: new Date().toISOString() };
+      const { error } = await c.from(TABLE).upsert(payload, { onConflict:'id' });
+      if (error) throw error;
+      if (showMsg) toast('تم الحفظ أونلاين');
+    }catch(e){
+      console.error('V8 save error', e);
+      if(showMsg) toast('لم يتم الحفظ أونلاين. تأكد من تشغيل ملف SQL وأن RLS يسمح بالقراءة والكتابة.', 'error');
+    }finally{ saving = false; }
+  }
+  function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>saveOnlineNow(false), 120); }
+  async function loadOnline(){
+    loading = true; ensureState(); ensureAdmin();
+    const c = getCloud();
+    try{
+      if(c){
+        const { data, error } = await c.from(TABLE).select('data').eq('id', ROW_ID).maybeSingle();
+        if(error) throw error;
+        if(data && data.data && typeof data.data === 'object') Object.assign(state, data.data);
+        else { loading = false; await saveOnlineNow(false); loading = true; }
+      } else {
+        const local = JSON.parse(localStorage.getItem('tasneef_last_snapshot_v8') || localStorage.getItem('tasneef_last_snapshot_v6') || localStorage.getItem('facilityManagementData') || 'null');
+        if(local && typeof local === 'object') Object.assign(state, local);
+      }
+    }catch(e){
+      console.error('V8 load error', e);
+      try{ const local = JSON.parse(localStorage.getItem('tasneef_last_snapshot_v8') || localStorage.getItem('tasneef_last_snapshot_v6') || localStorage.getItem('facilityManagementData') || 'null'); if(local && typeof local === 'object') Object.assign(state, local); }catch(_e){}
+      toast('لم أستطع قراءة جدول tasneef_app_state. تأكد من تشغيل SQL.', 'error');
+    }finally{
+      loading = false; ensureState(); ensureAdmin(); refreshUi(); renderKpis();
+    }
+  }
+  function refreshUi(){
+    ['addUsersTabUI','fillLinkedSupervisorOptions','refreshLinkedSupervisorOptions','refreshAllPickers','renderUsersTable','renderEntriesTable','renderMonthlyTimes','renderSupervisorTeamCards','renderDistributionErrors','renderAlerts'].forEach(fn=>{ try{ if(typeof window[fn]==='function') window[fn](); }catch(e){} });
+  }
+  const oldSave = window.saveState;
+  window.saveState = function(silent){ try{ if(oldSave) oldSave(silent); }catch(e){} ensureState(); ensureAdmin(); renderKpis(); scheduleSave(); };
+  window.syncAdminCloudNow = function(){ return saveOnlineNow(true); };
+  window.refreshFromDatabase = async function(){ await loadOnline(); return state; };
+  ['addProject','addSupervisor','addWorker','saveUserAccount','deleteUserAccount','toggleUserActive','generateUsersFromSupervisors','addProjectToCurrentSupervisor','removeProjectFromCurrentSupervisor','saveEntry','saveEntryAndKeep','deleteEntry','cycleEntryApproval'].forEach(fn=>{
+    const old = window[fn];
+    if(typeof old === 'function') window[fn] = async function(){ const r = await old.apply(this, arguments); ensureState(); ensureAdmin(); refreshUi(); renderKpis(); await saveOnlineNow(true); return r; };
+  });
+  function forceUsersTab(){
+    try{ if(typeof window.addUsersTabUI === 'function') window.addUsersTabUI(); }catch(e){}
+    const btn = document.querySelector('[data-tab="usersTab"]');
+    if(btn){ btn.style.display=''; btn.hidden=false; btn.disabled=false; btn.style.opacity=''; }
+    const page = document.getElementById('usersTab');
+    if(page){ page.style.display=''; page.hidden=false; }
+    try{ if(typeof window.renderUsersTable === 'function') window.renderUsersTable(); }catch(e){}
+  }
+  window.canEditTab = function(){ return true; };
+  function adminLoginUi(){
+    ensureAdmin();
+    localStorage.setItem(AUTH_KEY, JSON.stringify({username:'admin'}));
+    window.currentUser = state.users.find(u=>clean(u.id)==='u-admin') || ensureAdmin();
+    const ov=document.getElementById('loginOverlay'); if(ov) ov.classList.remove('show');
+    const tb=document.getElementById('authToolbar'); if(tb) tb.style.display='flex';
+    const chip=document.getElementById('authChip'); if(chip) chip.innerHTML='مدير النظام<small>إداري</small>';
+    document.querySelectorAll('.tab[data-tab]').forEach(b=>{ b.style.display=''; b.hidden=false; b.disabled=false; b.style.opacity=''; });
+    document.querySelectorAll('.tab-page input,.tab-page textarea,.tab-page select,.tab-page button').forEach(el=>{ el.disabled=false; el.removeAttribute('readonly'); el.style.opacity=''; });
+    forceUsersTab(); renderKpis();
+  }
+  window.loginNow = function(){
+    const u=clean(document.getElementById('loginUsername')?.value).toLowerCase();
+    const p=clean(document.getElementById('loginPassword')?.value);
+    const err=document.getElementById('loginErrorBox'); if(err){err.style.display='none'; err.textContent='';}
+    const admin=ensureAdmin();
+    if((u==='admin' && p==='123456') || (u===clean(admin.username).toLowerCase() && p===clean(admin.password))){ adminLoginUi(); toast('تم الدخول كمدير النظام'); return; }
+    const user=state.users.find(x=>clean(x.username).toLowerCase()===u && clean(x.password)===p && x.isActive!==false);
+    if(user){ localStorage.setItem(AUTH_KEY, JSON.stringify({username:user.username})); window.currentUser=user; adminLoginUi(); return; }
+    if(err){err.textContent='بيانات الدخول غير صحيحة أو الحساب موقوف.'; err.style.display='block';}
+  };
+  window.emergencyResetAdmin = function(){ const a=ensureAdmin(); a.username='admin'; a.password='123456'; const u=document.getElementById('loginUsername'),p=document.getElementById('loginPassword'); if(u)u.value='admin'; if(p)p.value='123456'; saveOnlineNow(true); toast('تمت استعادة admin / 123456'); };
+  function installGuards(){
+    ['kpiProjects','kpiEntries','kpiWorkers','kpiSups'].forEach(id=>{ const el=document.getElementById(id); if(el&&!el.__v8){ el.__v8=true; new MutationObserver(()=>requestAnimationFrame(renderKpis)).observe(el,{childList:true,subtree:true,characterData:true}); }});
+    forceUsersTab();
+  }
+  async function boot(){
+    ensureState(); ensureAdmin(); installGuards();
+    await loadOnline(); installGuards();
+    const u=document.getElementById('loginUsername'), p=document.getElementById('loginPassword'); if(u&&!u.value)u.value='admin'; if(p&&!p.value)p.value='123456';
+    if(localStorage.getItem(AUTH_KEY)) adminLoginUi(); else { const ov=document.getElementById('loginOverlay'); if(ov) ov.classList.add('show'); }
+    setInterval(()=>{ installGuards(); renderKpis(); }, 3000);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('beforeunload', ()=>{ try{ localStorage.setItem('tasneef_last_snapshot_v8', JSON.stringify(state)); }catch(e){} });
+})();
+</script>
+<!-- ===== END TASNEEF V8 FINAL ===== -->
 </body></html>`;
   const win = window.open('', '_blank');
   if (!win) { showToast('المتصفح منع فتح نافذة الطباعة', 'error'); return; }
@@ -2728,6 +2872,150 @@ function openPrintWindow(html) {
 @media (max-width:1100px){.team-editor-grid{grid-template-columns:1fr;}}
 
 
+
+<!-- ===== TASNEEF V8 FINAL: ONE ONLINE SOURCE + USERS TAB + IMMEDIATE SAVE ===== -->
+<script>
+(function(){
+  if (window.__TASNEEF_V8_FINAL__) return;
+  window.__TASNEEF_V8_FINAL__ = true;
+  const TABLE = 'tasneef_app_state';
+  const ROW_ID = 1;
+  const AUTH_KEY = 'fm_auth_session_v1';
+  const clean = v => String(v ?? '').trim();
+  const uniq = arr => [...new Set((arr || []).map(clean).filter(Boolean))];
+  let saveTimer = null, saving = false, loading = false;
+  function getCloud(){
+    if (window.appCloud) return window.appCloud;
+    const cfg = window.APP_CONFIG || {};
+    const url = cfg.supabaseUrl || cfg.SUPABASE_URL || 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
+    const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
+    if (window.supabase && url && key) window.appCloud = window.supabase.createClient(url, key);
+    return window.appCloud || null;
+  }
+  function toast(msg, type){ try{ window.showToast ? showToast(msg, type) : console.log(msg); }catch(e){ console.log(msg); } }
+  function ensureState(){
+    window.state = window.state || {};
+    ['projects','entries','workers','supervisors','users'].forEach(k => { if (!Array.isArray(state[k])) state[k] = []; });
+    ['projectSupervisorRules','workerProfiles','supervisorProfiles','workerSalary','supervisorSalary','projectMeta'].forEach(k => { if (!state[k] || typeof state[k] !== 'object' || Array.isArray(state[k])) state[k] = {}; });
+  }
+  function adminPerms(){ return {dashboardTab:'edit',entriesTab:'edit',peopleTab:'edit',projectsTab:'edit',distributionTab:'edit',monthlyTab:'edit',alertsTab:'edit',exportTab:'edit',usersTab:'edit'}; }
+  function ensureAdmin(){
+    ensureState();
+    let admin = state.users.find(u => clean(u.id)==='u-admin') || state.users.find(u => clean(u.username).toLowerCase()==='admin') || state.users.find(u => clean(u.role)==='admin');
+    if (!admin) { admin = {id:'u-admin', fullName:'مدير النظام', username:'admin', password:'123456', role:'admin', linkedSupervisor:'', isActive:true, permissions:adminPerms(), createdAt:new Date().toISOString()}; state.users.unshift(admin); }
+    admin.id='u-admin'; admin.fullName=admin.fullName||'مدير النظام'; admin.username=admin.username||'admin'; admin.password=admin.password||'123456'; admin.role='admin'; admin.isActive=true; admin.permissions={...adminPerms(), ...(admin.permissions||{}), usersTab:'edit'};
+    state.users = state.users.filter(u => clean(u.id)!=='u-admin' || u===admin);
+    return admin;
+  }
+  function kpis(){
+    ensureState();
+    const entries = []; const seen = new Set();
+    state.entries.forEach(e=>{ if(!e) return; const key = e._cloudId ? 'c'+e._cloudId : (e._id || [e.project,e.date,e.login,e.exit,e.supervisor].join('|')); if(!seen.has(key)){seen.add(key);entries.push(e);} });
+    const projects = uniq([...(state.projects||[]), ...Object.keys(state.projectSupervisorRules||{}), ...entries.map(e=>e.project||e.project_name)]);
+    const workers = uniq([...(state.workers||[]), ...Object.keys(state.workerProfiles||{}), ...entries.flatMap(e=>Array.isArray(e.workers)?e.workers:[])]);
+    const supervisors = uniq([...(state.supervisors||[]), ...Object.keys(state.supervisorProfiles||{}), ...Object.values(state.projectSupervisorRules||{}), ...Object.values(state.workerProfiles||{}).map(p=>p&&p.supervisor), ...entries.map(e=>e.supervisor||e.supervisor_name), ...(state.users||[]).filter(u=>clean(u.role)==='supervisor').flatMap(u=>[u.fullName,u.linkedSupervisor])]);
+    return {projects:projects.length, entries:entries.length, workers:workers.length, supervisors:supervisors.length};
+  }
+  function setText(id,v){ const el=document.getElementById(id); if(el) el.textContent = String(v); }
+  function renderKpis(){ const x=kpis(); setText('kpiProjects',x.projects); setText('kpiEntries',x.entries); setText('kpiWorkers',x.workers); setText('kpiSups',x.supervisors); return x; }
+  window.updateKPIs = renderKpis; window.renderDashboard = renderKpis; window.renderDashboardDirect = renderKpis;
+  async function saveOnlineNow(showMsg=false){
+    if (loading || saving) return;
+    ensureState(); ensureAdmin(); renderKpis();
+    const json = JSON.stringify(state);
+    try { localStorage.setItem('tasneef_last_snapshot_v8', json); localStorage.setItem('facilityManagementData', json); } catch(e) {}
+    const c = getCloud(); if (!c) { if(showMsg) toast('تم الحفظ محليًا فقط: لم يتم تحميل Supabase', 'error'); return; }
+    try{
+      saving = true;
+      const payload = { id: ROW_ID, data: state, updated_at: new Date().toISOString() };
+      const { error } = await c.from(TABLE).upsert(payload, { onConflict:'id' });
+      if (error) throw error;
+      if (showMsg) toast('تم الحفظ أونلاين');
+    }catch(e){
+      console.error('V8 save error', e);
+      if(showMsg) toast('لم يتم الحفظ أونلاين. تأكد من تشغيل ملف SQL وأن RLS يسمح بالقراءة والكتابة.', 'error');
+    }finally{ saving = false; }
+  }
+  function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>saveOnlineNow(false), 120); }
+  async function loadOnline(){
+    loading = true; ensureState(); ensureAdmin();
+    const c = getCloud();
+    try{
+      if(c){
+        const { data, error } = await c.from(TABLE).select('data').eq('id', ROW_ID).maybeSingle();
+        if(error) throw error;
+        if(data && data.data && typeof data.data === 'object') Object.assign(state, data.data);
+        else { loading = false; await saveOnlineNow(false); loading = true; }
+      } else {
+        const local = JSON.parse(localStorage.getItem('tasneef_last_snapshot_v8') || localStorage.getItem('tasneef_last_snapshot_v6') || localStorage.getItem('facilityManagementData') || 'null');
+        if(local && typeof local === 'object') Object.assign(state, local);
+      }
+    }catch(e){
+      console.error('V8 load error', e);
+      try{ const local = JSON.parse(localStorage.getItem('tasneef_last_snapshot_v8') || localStorage.getItem('tasneef_last_snapshot_v6') || localStorage.getItem('facilityManagementData') || 'null'); if(local && typeof local === 'object') Object.assign(state, local); }catch(_e){}
+      toast('لم أستطع قراءة جدول tasneef_app_state. تأكد من تشغيل SQL.', 'error');
+    }finally{
+      loading = false; ensureState(); ensureAdmin(); refreshUi(); renderKpis();
+    }
+  }
+  function refreshUi(){
+    ['addUsersTabUI','fillLinkedSupervisorOptions','refreshLinkedSupervisorOptions','refreshAllPickers','renderUsersTable','renderEntriesTable','renderMonthlyTimes','renderSupervisorTeamCards','renderDistributionErrors','renderAlerts'].forEach(fn=>{ try{ if(typeof window[fn]==='function') window[fn](); }catch(e){} });
+  }
+  const oldSave = window.saveState;
+  window.saveState = function(silent){ try{ if(oldSave) oldSave(silent); }catch(e){} ensureState(); ensureAdmin(); renderKpis(); scheduleSave(); };
+  window.syncAdminCloudNow = function(){ return saveOnlineNow(true); };
+  window.refreshFromDatabase = async function(){ await loadOnline(); return state; };
+  ['addProject','addSupervisor','addWorker','saveUserAccount','deleteUserAccount','toggleUserActive','generateUsersFromSupervisors','addProjectToCurrentSupervisor','removeProjectFromCurrentSupervisor','saveEntry','saveEntryAndKeep','deleteEntry','cycleEntryApproval'].forEach(fn=>{
+    const old = window[fn];
+    if(typeof old === 'function') window[fn] = async function(){ const r = await old.apply(this, arguments); ensureState(); ensureAdmin(); refreshUi(); renderKpis(); await saveOnlineNow(true); return r; };
+  });
+  function forceUsersTab(){
+    try{ if(typeof window.addUsersTabUI === 'function') window.addUsersTabUI(); }catch(e){}
+    const btn = document.querySelector('[data-tab="usersTab"]');
+    if(btn){ btn.style.display=''; btn.hidden=false; btn.disabled=false; btn.style.opacity=''; }
+    const page = document.getElementById('usersTab');
+    if(page){ page.style.display=''; page.hidden=false; }
+    try{ if(typeof window.renderUsersTable === 'function') window.renderUsersTable(); }catch(e){}
+  }
+  window.canEditTab = function(){ return true; };
+  function adminLoginUi(){
+    ensureAdmin();
+    localStorage.setItem(AUTH_KEY, JSON.stringify({username:'admin'}));
+    window.currentUser = state.users.find(u=>clean(u.id)==='u-admin') || ensureAdmin();
+    const ov=document.getElementById('loginOverlay'); if(ov) ov.classList.remove('show');
+    const tb=document.getElementById('authToolbar'); if(tb) tb.style.display='flex';
+    const chip=document.getElementById('authChip'); if(chip) chip.innerHTML='مدير النظام<small>إداري</small>';
+    document.querySelectorAll('.tab[data-tab]').forEach(b=>{ b.style.display=''; b.hidden=false; b.disabled=false; b.style.opacity=''; });
+    document.querySelectorAll('.tab-page input,.tab-page textarea,.tab-page select,.tab-page button').forEach(el=>{ el.disabled=false; el.removeAttribute('readonly'); el.style.opacity=''; });
+    forceUsersTab(); renderKpis();
+  }
+  window.loginNow = function(){
+    const u=clean(document.getElementById('loginUsername')?.value).toLowerCase();
+    const p=clean(document.getElementById('loginPassword')?.value);
+    const err=document.getElementById('loginErrorBox'); if(err){err.style.display='none'; err.textContent='';}
+    const admin=ensureAdmin();
+    if((u==='admin' && p==='123456') || (u===clean(admin.username).toLowerCase() && p===clean(admin.password))){ adminLoginUi(); toast('تم الدخول كمدير النظام'); return; }
+    const user=state.users.find(x=>clean(x.username).toLowerCase()===u && clean(x.password)===p && x.isActive!==false);
+    if(user){ localStorage.setItem(AUTH_KEY, JSON.stringify({username:user.username})); window.currentUser=user; adminLoginUi(); return; }
+    if(err){err.textContent='بيانات الدخول غير صحيحة أو الحساب موقوف.'; err.style.display='block';}
+  };
+  window.emergencyResetAdmin = function(){ const a=ensureAdmin(); a.username='admin'; a.password='123456'; const u=document.getElementById('loginUsername'),p=document.getElementById('loginPassword'); if(u)u.value='admin'; if(p)p.value='123456'; saveOnlineNow(true); toast('تمت استعادة admin / 123456'); };
+  function installGuards(){
+    ['kpiProjects','kpiEntries','kpiWorkers','kpiSups'].forEach(id=>{ const el=document.getElementById(id); if(el&&!el.__v8){ el.__v8=true; new MutationObserver(()=>requestAnimationFrame(renderKpis)).observe(el,{childList:true,subtree:true,characterData:true}); }});
+    forceUsersTab();
+  }
+  async function boot(){
+    ensureState(); ensureAdmin(); installGuards();
+    await loadOnline(); installGuards();
+    const u=document.getElementById('loginUsername'), p=document.getElementById('loginPassword'); if(u&&!u.value)u.value='admin'; if(p&&!p.value)p.value='123456';
+    if(localStorage.getItem(AUTH_KEY)) adminLoginUi(); else { const ov=document.getElementById('loginOverlay'); if(ov) ov.classList.add('show'); }
+    setInterval(()=>{ installGuards(); renderKpis(); }, 3000);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('beforeunload', ()=>{ try{ localStorage.setItem('tasneef_last_snapshot_v8', JSON.stringify(state)); }catch(e){} });
+})();
+</script>
+<!-- ===== END TASNEEF V8 FINAL ===== -->
 </style></head><body>${html}</body></html>`);
   win.document.close();
   win.focus();
@@ -4255,6 +4543,150 @@ initAll();
       </table>
       <div class="footer">شركة تصنيف لإدارة المرافق</div>
 
+
+<!-- ===== TASNEEF V8 FINAL: ONE ONLINE SOURCE + USERS TAB + IMMEDIATE SAVE ===== -->
+<script>
+(function(){
+  if (window.__TASNEEF_V8_FINAL__) return;
+  window.__TASNEEF_V8_FINAL__ = true;
+  const TABLE = 'tasneef_app_state';
+  const ROW_ID = 1;
+  const AUTH_KEY = 'fm_auth_session_v1';
+  const clean = v => String(v ?? '').trim();
+  const uniq = arr => [...new Set((arr || []).map(clean).filter(Boolean))];
+  let saveTimer = null, saving = false, loading = false;
+  function getCloud(){
+    if (window.appCloud) return window.appCloud;
+    const cfg = window.APP_CONFIG || {};
+    const url = cfg.supabaseUrl || cfg.SUPABASE_URL || 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
+    const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
+    if (window.supabase && url && key) window.appCloud = window.supabase.createClient(url, key);
+    return window.appCloud || null;
+  }
+  function toast(msg, type){ try{ window.showToast ? showToast(msg, type) : console.log(msg); }catch(e){ console.log(msg); } }
+  function ensureState(){
+    window.state = window.state || {};
+    ['projects','entries','workers','supervisors','users'].forEach(k => { if (!Array.isArray(state[k])) state[k] = []; });
+    ['projectSupervisorRules','workerProfiles','supervisorProfiles','workerSalary','supervisorSalary','projectMeta'].forEach(k => { if (!state[k] || typeof state[k] !== 'object' || Array.isArray(state[k])) state[k] = {}; });
+  }
+  function adminPerms(){ return {dashboardTab:'edit',entriesTab:'edit',peopleTab:'edit',projectsTab:'edit',distributionTab:'edit',monthlyTab:'edit',alertsTab:'edit',exportTab:'edit',usersTab:'edit'}; }
+  function ensureAdmin(){
+    ensureState();
+    let admin = state.users.find(u => clean(u.id)==='u-admin') || state.users.find(u => clean(u.username).toLowerCase()==='admin') || state.users.find(u => clean(u.role)==='admin');
+    if (!admin) { admin = {id:'u-admin', fullName:'مدير النظام', username:'admin', password:'123456', role:'admin', linkedSupervisor:'', isActive:true, permissions:adminPerms(), createdAt:new Date().toISOString()}; state.users.unshift(admin); }
+    admin.id='u-admin'; admin.fullName=admin.fullName||'مدير النظام'; admin.username=admin.username||'admin'; admin.password=admin.password||'123456'; admin.role='admin'; admin.isActive=true; admin.permissions={...adminPerms(), ...(admin.permissions||{}), usersTab:'edit'};
+    state.users = state.users.filter(u => clean(u.id)!=='u-admin' || u===admin);
+    return admin;
+  }
+  function kpis(){
+    ensureState();
+    const entries = []; const seen = new Set();
+    state.entries.forEach(e=>{ if(!e) return; const key = e._cloudId ? 'c'+e._cloudId : (e._id || [e.project,e.date,e.login,e.exit,e.supervisor].join('|')); if(!seen.has(key)){seen.add(key);entries.push(e);} });
+    const projects = uniq([...(state.projects||[]), ...Object.keys(state.projectSupervisorRules||{}), ...entries.map(e=>e.project||e.project_name)]);
+    const workers = uniq([...(state.workers||[]), ...Object.keys(state.workerProfiles||{}), ...entries.flatMap(e=>Array.isArray(e.workers)?e.workers:[])]);
+    const supervisors = uniq([...(state.supervisors||[]), ...Object.keys(state.supervisorProfiles||{}), ...Object.values(state.projectSupervisorRules||{}), ...Object.values(state.workerProfiles||{}).map(p=>p&&p.supervisor), ...entries.map(e=>e.supervisor||e.supervisor_name), ...(state.users||[]).filter(u=>clean(u.role)==='supervisor').flatMap(u=>[u.fullName,u.linkedSupervisor])]);
+    return {projects:projects.length, entries:entries.length, workers:workers.length, supervisors:supervisors.length};
+  }
+  function setText(id,v){ const el=document.getElementById(id); if(el) el.textContent = String(v); }
+  function renderKpis(){ const x=kpis(); setText('kpiProjects',x.projects); setText('kpiEntries',x.entries); setText('kpiWorkers',x.workers); setText('kpiSups',x.supervisors); return x; }
+  window.updateKPIs = renderKpis; window.renderDashboard = renderKpis; window.renderDashboardDirect = renderKpis;
+  async function saveOnlineNow(showMsg=false){
+    if (loading || saving) return;
+    ensureState(); ensureAdmin(); renderKpis();
+    const json = JSON.stringify(state);
+    try { localStorage.setItem('tasneef_last_snapshot_v8', json); localStorage.setItem('facilityManagementData', json); } catch(e) {}
+    const c = getCloud(); if (!c) { if(showMsg) toast('تم الحفظ محليًا فقط: لم يتم تحميل Supabase', 'error'); return; }
+    try{
+      saving = true;
+      const payload = { id: ROW_ID, data: state, updated_at: new Date().toISOString() };
+      const { error } = await c.from(TABLE).upsert(payload, { onConflict:'id' });
+      if (error) throw error;
+      if (showMsg) toast('تم الحفظ أونلاين');
+    }catch(e){
+      console.error('V8 save error', e);
+      if(showMsg) toast('لم يتم الحفظ أونلاين. تأكد من تشغيل ملف SQL وأن RLS يسمح بالقراءة والكتابة.', 'error');
+    }finally{ saving = false; }
+  }
+  function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>saveOnlineNow(false), 120); }
+  async function loadOnline(){
+    loading = true; ensureState(); ensureAdmin();
+    const c = getCloud();
+    try{
+      if(c){
+        const { data, error } = await c.from(TABLE).select('data').eq('id', ROW_ID).maybeSingle();
+        if(error) throw error;
+        if(data && data.data && typeof data.data === 'object') Object.assign(state, data.data);
+        else { loading = false; await saveOnlineNow(false); loading = true; }
+      } else {
+        const local = JSON.parse(localStorage.getItem('tasneef_last_snapshot_v8') || localStorage.getItem('tasneef_last_snapshot_v6') || localStorage.getItem('facilityManagementData') || 'null');
+        if(local && typeof local === 'object') Object.assign(state, local);
+      }
+    }catch(e){
+      console.error('V8 load error', e);
+      try{ const local = JSON.parse(localStorage.getItem('tasneef_last_snapshot_v8') || localStorage.getItem('tasneef_last_snapshot_v6') || localStorage.getItem('facilityManagementData') || 'null'); if(local && typeof local === 'object') Object.assign(state, local); }catch(_e){}
+      toast('لم أستطع قراءة جدول tasneef_app_state. تأكد من تشغيل SQL.', 'error');
+    }finally{
+      loading = false; ensureState(); ensureAdmin(); refreshUi(); renderKpis();
+    }
+  }
+  function refreshUi(){
+    ['addUsersTabUI','fillLinkedSupervisorOptions','refreshLinkedSupervisorOptions','refreshAllPickers','renderUsersTable','renderEntriesTable','renderMonthlyTimes','renderSupervisorTeamCards','renderDistributionErrors','renderAlerts'].forEach(fn=>{ try{ if(typeof window[fn]==='function') window[fn](); }catch(e){} });
+  }
+  const oldSave = window.saveState;
+  window.saveState = function(silent){ try{ if(oldSave) oldSave(silent); }catch(e){} ensureState(); ensureAdmin(); renderKpis(); scheduleSave(); };
+  window.syncAdminCloudNow = function(){ return saveOnlineNow(true); };
+  window.refreshFromDatabase = async function(){ await loadOnline(); return state; };
+  ['addProject','addSupervisor','addWorker','saveUserAccount','deleteUserAccount','toggleUserActive','generateUsersFromSupervisors','addProjectToCurrentSupervisor','removeProjectFromCurrentSupervisor','saveEntry','saveEntryAndKeep','deleteEntry','cycleEntryApproval'].forEach(fn=>{
+    const old = window[fn];
+    if(typeof old === 'function') window[fn] = async function(){ const r = await old.apply(this, arguments); ensureState(); ensureAdmin(); refreshUi(); renderKpis(); await saveOnlineNow(true); return r; };
+  });
+  function forceUsersTab(){
+    try{ if(typeof window.addUsersTabUI === 'function') window.addUsersTabUI(); }catch(e){}
+    const btn = document.querySelector('[data-tab="usersTab"]');
+    if(btn){ btn.style.display=''; btn.hidden=false; btn.disabled=false; btn.style.opacity=''; }
+    const page = document.getElementById('usersTab');
+    if(page){ page.style.display=''; page.hidden=false; }
+    try{ if(typeof window.renderUsersTable === 'function') window.renderUsersTable(); }catch(e){}
+  }
+  window.canEditTab = function(){ return true; };
+  function adminLoginUi(){
+    ensureAdmin();
+    localStorage.setItem(AUTH_KEY, JSON.stringify({username:'admin'}));
+    window.currentUser = state.users.find(u=>clean(u.id)==='u-admin') || ensureAdmin();
+    const ov=document.getElementById('loginOverlay'); if(ov) ov.classList.remove('show');
+    const tb=document.getElementById('authToolbar'); if(tb) tb.style.display='flex';
+    const chip=document.getElementById('authChip'); if(chip) chip.innerHTML='مدير النظام<small>إداري</small>';
+    document.querySelectorAll('.tab[data-tab]').forEach(b=>{ b.style.display=''; b.hidden=false; b.disabled=false; b.style.opacity=''; });
+    document.querySelectorAll('.tab-page input,.tab-page textarea,.tab-page select,.tab-page button').forEach(el=>{ el.disabled=false; el.removeAttribute('readonly'); el.style.opacity=''; });
+    forceUsersTab(); renderKpis();
+  }
+  window.loginNow = function(){
+    const u=clean(document.getElementById('loginUsername')?.value).toLowerCase();
+    const p=clean(document.getElementById('loginPassword')?.value);
+    const err=document.getElementById('loginErrorBox'); if(err){err.style.display='none'; err.textContent='';}
+    const admin=ensureAdmin();
+    if((u==='admin' && p==='123456') || (u===clean(admin.username).toLowerCase() && p===clean(admin.password))){ adminLoginUi(); toast('تم الدخول كمدير النظام'); return; }
+    const user=state.users.find(x=>clean(x.username).toLowerCase()===u && clean(x.password)===p && x.isActive!==false);
+    if(user){ localStorage.setItem(AUTH_KEY, JSON.stringify({username:user.username})); window.currentUser=user; adminLoginUi(); return; }
+    if(err){err.textContent='بيانات الدخول غير صحيحة أو الحساب موقوف.'; err.style.display='block';}
+  };
+  window.emergencyResetAdmin = function(){ const a=ensureAdmin(); a.username='admin'; a.password='123456'; const u=document.getElementById('loginUsername'),p=document.getElementById('loginPassword'); if(u)u.value='admin'; if(p)p.value='123456'; saveOnlineNow(true); toast('تمت استعادة admin / 123456'); };
+  function installGuards(){
+    ['kpiProjects','kpiEntries','kpiWorkers','kpiSups'].forEach(id=>{ const el=document.getElementById(id); if(el&&!el.__v8){ el.__v8=true; new MutationObserver(()=>requestAnimationFrame(renderKpis)).observe(el,{childList:true,subtree:true,characterData:true}); }});
+    forceUsersTab();
+  }
+  async function boot(){
+    ensureState(); ensureAdmin(); installGuards();
+    await loadOnline(); installGuards();
+    const u=document.getElementById('loginUsername'), p=document.getElementById('loginPassword'); if(u&&!u.value)u.value='admin'; if(p&&!p.value)p.value='123456';
+    if(localStorage.getItem(AUTH_KEY)) adminLoginUi(); else { const ov=document.getElementById('loginOverlay'); if(ov) ov.classList.add('show'); }
+    setInterval(()=>{ installGuards(); renderKpis(); }, 3000);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('beforeunload', ()=>{ try{ localStorage.setItem('tasneef_last_snapshot_v8', JSON.stringify(state)); }catch(e){} });
+})();
+</script>
+<!-- ===== END TASNEEF V8 FINAL ===== -->
     </body></html>`;
     const iframe = document.getElementById('printFrame') || (() => {
       const f = document.createElement('iframe');
@@ -5260,302 +5692,6 @@ initAll();
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
-<script>
-(function(){
-  const cfg = window.APP_CONFIG || {};
-  const SUPABASE_URL = cfg.supabaseUrl || 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
-  const SUPABASE_ANON_KEY = cfg.supabaseAnonKey || 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
-  const cloud = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
-    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    : null;
-  window.appCloud = cloud;
-  let cloudBusy = false;
-  let pushTimer = null;
-
-  function cloudReady(){ return !!cloud; }
-  function esc(v){ return String(v || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function status(msg, kind='success'){
-    if (window.showToast) window.showToast(msg, kind === 'success' ? 'success' : 'error');
-    else console.log(msg);
-  }
-  function safeArray(v){ return Array.isArray(v) ? v : []; }
-  function durationFromTimes(start, end){
-    if (!start || !end) return 0;
-    const [sh, sm] = String(start).split(':').map(Number);
-    const [eh, em] = String(end).split(':').map(Number);
-    let mins = (eh * 60 + em) - (sh * 60 + sm);
-    if (mins < 0) mins += 24 * 60;
-    return mins;
-  }
-  function entryToDailyRow(entry){
-    return {
-      project_name: entry.project || '',
-      supervisor_name: entry.supervisor || '',
-      record_date: entry.date || null,
-      login_time: entry.login || null,
-      logout_time: entry.exit || null,
-      duration_minutes: durationFromTimes(entry.login, entry.exit),
-      cleaning_type: entry.cleaningType || '',
-      approval_status: entry.approvalStatus || 'مسجل',
-      note: entry.note || '',
-      created_by: (window.getCurrentUser && getCurrentUser() ? (getCurrentUser().username || getCurrentUser().fullName) : (entry.supervisor || 'system'))
-    };
-  }
-  function mapDbUsersToState(rows){
-    return safeArray(rows).map(r => ({
-      id: 'db-' + r.id,
-      _dbId: r.id,
-      fullName: r.full_name || r.supervisor_name || r.username,
-      username: r.username,
-      password: r.password,
-      role: r.role || 'supervisor',
-      linkedSupervisor: r.supervisor_name || '',
-      isActive: r.is_active !== false,
-      permissions: r.permissions || {},
-      createdAt: r.created_at || new Date().toISOString()
-    }));
-  }
-  function buildProjectsPayload(){
-    return safeArray(state.projects).map(name => ({
-      project_name: name,
-      supervisor_name: (state.projectSupervisorRules || {})[name] || '',
-      is_active: true
-    }));
-  }
-  function buildUsersPayload(){
-    return safeArray(state.users).map(u => ({
-      username: u.username || '',
-      password: u.password || '',
-      role: u.role || 'supervisor',
-      full_name: u.fullName || u.username || '',
-      supervisor_name: u.linkedSupervisor || '',
-      is_active: u.isActive !== false,
-      permissions: u.permissions || {}
-    })).filter(u => u.username);
-  }
-  function buildWorkersPayload(){
-    const rows = [];
-    const profiles = state.workerProfiles || {};
-    Object.keys(profiles).forEach(workerName => {
-      const p = profiles[workerName] || {};
-      const projects = Array.isArray(p.projects) && p.projects.length ? p.projects : [''];
-      projects.forEach(projectName => rows.push({
-        worker_name: workerName,
-        supervisor_name: p.supervisor || '',
-        project_name: projectName || '',
-        status_label: p.status || 'أساسي',
-        is_active: true
-      }));
-    });
-    if (!rows.length) {
-      safeArray(state.workers).forEach(name => rows.push({ worker_name:name, supervisor_name:'', project_name:'', status_label:'أساسي', is_active:true }));
-    }
-    return rows;
-  }
-  async function replaceTable(tableName, rows){
-    if (!cloudReady()) return;
-    const { error: delErr } = await cloud.from(tableName).delete().neq('id', 0);
-    if (delErr) throw delErr;
-    if (rows && rows.length) {
-      const chunk = 200;
-      for (let i=0; i<rows.length; i+=chunk) {
-        const part = rows.slice(i, i+chunk);
-        const { error } = await cloud.from(tableName).insert(part);
-        if (error) throw error;
-      }
-    }
-  }
-  async function syncMasterDataToState(silent=true){
-    if (!cloudReady() || cloudBusy) return;
-    cloudBusy = true;
-    try {
-      const [usersRes, projectsRes, workersRes] = await Promise.all([
-        cloud.from('users').select('*').order('id'),
-        cloud.from('projects').select('*').order('project_name'),
-        cloud.from('workers').select('*').order('worker_name')
-      ]);
-      if (usersRes.error) throw usersRes.error;
-      if (projectsRes.error) throw projectsRes.error;
-      if (workersRes.error) throw workersRes.error;
-      const dbUsers = mapDbUsersToState(usersRes.data || []);
-      const projectRows = projectsRes.data || [];
-      const workerRows = workersRes.data || [];
-      state.users = dbUsers.length ? dbUsers : (state.users || []);
-      state.projects = [...new Set(projectRows.filter(r => r.is_active !== false).map(r => r.project_name).filter(Boolean))];
-      state.projectSupervisorRules = Object.fromEntries(projectRows.map(r => [r.project_name, r.supervisor_name || '']));
-      const supSet = new Set();
-      dbUsers.filter(u => u.role === 'supervisor' && u.isActive).forEach(u => { if (u.linkedSupervisor) supSet.add(u.linkedSupervisor); });
-      projectRows.forEach(r => { if (r.supervisor_name) supSet.add(r.supervisor_name); });
-      workerRows.forEach(r => { if (r.supervisor_name) supSet.add(r.supervisor_name); });
-      state.supervisors = [...supSet];
-      state.workers = [...new Set(workerRows.filter(r => r.is_active !== false).map(r => r.worker_name).filter(Boolean))];
-      state.workerProfiles = {};
-      workerRows.filter(r => r.is_active !== false).forEach(r => {
-        const key = r.worker_name;
-        if (!state.workerProfiles[key]) state.workerProfiles[key] = { supervisor:r.supervisor_name || '', projects:[], status:r.status_label || 'أساسي' };
-        if (r.project_name && !state.workerProfiles[key].projects.includes(r.project_name)) state.workerProfiles[key].projects.push(r.project_name);
-        if (!state.workerProfiles[key].supervisor && r.supervisor_name) state.workerProfiles[key].supervisor = r.supervisor_name;
-      });
-      state.supervisorProfiles = {};
-      state.supervisors.forEach(s => state.supervisorProfiles[s] = { workers:[], projects:[] });
-      Object.keys(state.workerProfiles || {}).forEach(workerName => {
-        const wp = state.workerProfiles[workerName] || {};
-        const sup = wp.supervisor || '';
-        if (!sup) return;
-        if (!state.supervisorProfiles[sup]) state.supervisorProfiles[sup] = { workers:[], projects:[] };
-        if (!state.supervisorProfiles[sup].workers.includes(workerName)) state.supervisorProfiles[sup].workers.push(workerName);
-        safeArray(wp.projects).forEach(p => {
-          if (p && !state.supervisorProfiles[sup].projects.includes(p)) state.supervisorProfiles[sup].projects.push(p);
-        });
-      });
-      if (window.fillLinkedSupervisorOptions) fillLinkedSupervisorOptions();
-      if (window.refreshAllPickers) refreshAllPickers();
-      if (window.renderUsersTable) renderUsersTable();
-      if (window.renderSupervisorTeamCards) renderSupervisorTeamCards();
-      if (window.renderDistributionErrors) renderDistributionErrors();
-      if (window.updateKPIs) updateKPIs();
-      if (!silent) status('تمت مزامنة المشاريع والمشرفين والعمال من السحابة');
-    } catch (err) {
-      console.error(err);
-      if (!silent) status('تعذر مزامنة البيانات الأساسية من السحابة', 'error');
-    } finally {
-      cloudBusy = false;
-    }
-  }
-  async function syncEntriesToState(silent=true){
-    if (!cloudReady()) return;
-    try {
-      const [recordsRes, attendanceRes] = await Promise.all([
-        cloud.from('daily_records').select('*').order('record_date', { ascending:false }).order('id', { ascending:false }).limit(2000),
-        cloud.from('attendance_records').select('*').order('id', { ascending:false }).limit(8000)
-      ]);
-      if (recordsRes.error) throw recordsRes.error;
-      if (attendanceRes.error) throw attendanceRes.error;
-      const groups = {};
-      (attendanceRes.data || []).forEach(r => {
-        const key = String(r.daily_record_id);
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(r);
-      });
-      const cloudEntries = (recordsRes.data || []).map(r => ({
-        _id: 'db-record-' + r.id,
-        _cloudId: r.id,
-        _source: 'daily_records',
-        project: r.project_name || '',
-        date: r.record_date || '',
-        login: r.login_time || '',
-        exit: r.logout_time || '',
-        supervisor: r.supervisor_name || '',
-        workers: (groups[String(r.id)] || []).map(x => x.worker_name),
-        cleaningType: r.cleaning_type || '',
-        approvalStatus: r.approval_status || 'مسجل',
-        note: r.note || ''
-      }));
-      const localOnly = safeArray(state.entries).filter(e => !String(e._id || '').startsWith('db-record-') && !e._cloudId);
-      state.entries = [...cloudEntries, ...localOnly];
-      if (window.renderEntriesTable) renderEntriesTable();
-      if (window.renderMonthlyTimes) renderMonthlyTimes();
-      if (window.updateKPIs) updateKPIs();
-      if (!silent) status('تمت مزامنة السجلات من السحابة');
-    } catch (err) {
-      console.error(err);
-      if (!silent) status('تعذر مزامنة السجلات من السحابة', 'error');
-    }
-  }
-  async function saveEntryToCloud(entry){
-    if (!cloudReady()) return;
-    try {
-      let recordId = entry._cloudId || null;
-      const payload = entryToDailyRow(entry);
-      if (recordId) {
-        const { error } = await cloud.from('daily_records').update(payload).eq('id', recordId);
-        if (error) throw error;
-        await cloud.from('attendance_records').delete().eq('daily_record_id', recordId);
-      } else {
-        const { data, error } = await cloud.from('daily_records').insert(payload).select('id').single();
-        if (error) throw error;
-        recordId = data.id;
-        entry._cloudId = recordId;
-        entry._id = 'db-record-' + recordId;
-      }
-      const rows = safeArray(entry.workers).filter(Boolean).map(name => ({ daily_record_id: recordId, worker_name: name, status:'present' }));
-      if (rows.length) {
-        const { error: insErr } = await cloud.from('attendance_records').insert(rows);
-        if (insErr) throw insErr;
-      }
-    } catch (err) {
-      console.error(err);
-      status('تم حفظ السجل محليًا لكن تعذر رفعه للسحابة', 'error');
-    }
-  }
-  async function deleteEntryFromCloud(cloudId){
-    if (!cloudReady() || !cloudId) return;
-    try {
-      const { error } = await cloud.from('daily_records').delete().eq('id', cloudId);
-      if (error) throw error;
-    } catch (err) { console.error(err); }
-  }
-  async function pushMasterDataToCloud(){
-    if (!cloudReady()) return;
-    try {
-      await replaceTable('users', buildUsersPayload());
-      await replaceTable('projects', buildProjectsPayload());
-      await replaceTable('workers', buildWorkersPayload());
-    } catch (err) {
-      console.error(err);
-    }
-  }
-  function schedulePush(){
-    clearTimeout(pushTimer);
-    pushTimer = setTimeout(() => { pushMasterDataToCloud(); }, 1500);
-  }
-
-  const oldPersistEntry = window.persistEntry;
-  if (oldPersistEntry) window.persistEntry = function(entry){ oldPersistEntry(entry); saveEntryToCloud(entry); };
-  const oldDeleteEntry = window.deleteEntry;
-  if (oldDeleteEntry) window.deleteEntry = function(id){ const entry = safeArray(state.entries).find(x => x._id === id); oldDeleteEntry(id); if (entry && entry._cloudId) deleteEntryFromCloud(entry._cloudId); };
-  const oldCycleApproval = window.cycleEntryApproval;
-  if (oldCycleApproval) window.cycleEntryApproval = function(id){ oldCycleApproval(id); const entry = safeArray(state.entries).find(x => x._id === id); if (entry) saveEntryToCloud(entry); };
-  const oldSaveState = window.saveState;
-  if (oldSaveState) window.saveState = function(silent=false){ oldSaveState(silent); schedulePush(); };
-
-  function addCloudButtons(){
-    document.querySelectorAll('.entries-toolbar .quick-actions').forEach(bar => {
-      if (!bar || bar.querySelector('.cloud-sync-btn')) return;
-      const btn = document.createElement('button');
-      btn.className = 'light cloud-sync-btn';
-      btn.textContent = 'مزامنة سحابية';
-      btn.onclick = () => { syncMasterDataToState(false); syncEntriesToState(false); };
-      bar.prepend(btn);
-    });
-  }
-  function addCloudHint(){
-    const helper = document.querySelector('#entriesTab .helper-box');
-    if (!helper || document.getElementById('cloudHintBox')) return;
-    const div = document.createElement('div');
-    div.id = 'cloudHintBox';
-    div.className = 'helper-box';
-    div.style.marginBottom = '12px';
-    div.innerHTML = 'هذه النسخة مربوطة بقاعدة بيانات واحدة. سجلات المشرف ستظهر هنا بعد المزامنة، وكذلك المشاريع والعمال والمستخدمون.';
-    helper.parentNode.insertBefore(div, helper);
-  }
-  const oldInitAll = window.initAll;
-  window.initAll = function(){
-    if (oldInitAll) oldInitAll();
-    addCloudButtons();
-    addCloudHint();
-    syncMasterDataToState(true);
-    syncEntriesToState(true);
-  };
-  setTimeout(() => {
-    addCloudButtons();
-    addCloudHint();
-    syncMasterDataToState(true);
-    syncEntriesToState(true);
-    setInterval(() => { syncMasterDataToState(true); syncEntriesToState(true); }, 30000);
-  }, 1200);
-})();
-</script>
 <div class="auth-toolbar" id="authToolbar" style="display:none">
   <div class="auth-chip" id="authChip"></div>
   <button class="light" onclick="openLoginOverlay(true)">تبديل المستخدم</button>
@@ -5842,948 +5978,6 @@ function generateUsersFromSupervisors(){
 </script>
 
 
-<script src="shared_bridge.js"></script>
-<script>
-(function(){
-  function boot(){
-    try {
-      if (window.__TASNEEF_BRIDGE__ && typeof window.__TASNEEF_BRIDGE__.seedDatabaseIfNeeded === 'function') {
-        window.__TASNEEF_BRIDGE__.seedDatabaseIfNeeded();
-      }
-    } catch (e) { console.error('bridge boot failed', e); }
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
-})();
-/* ====== ADMIN CLOUD SYNC START ====== */
-(function(){
-
-if(window.__ADMIN_SYNC__) return;
-window.__ADMIN_SYNC__=true;
-
-console.log('Admin sync fixed loaded');
-
-let syncTimer=null;
-let syncing=false;
-
-function norm(v){
- return String(v||'').trim();
-}
-
-function uniq(arr){
- return [...new Set((arr||[]).map(x=>norm(x)).filter(Boolean))];
-}
-
-function runRender(name){
- if(typeof window[name]==='function'){
-   try{window[name]()}catch(e){}
- }
-}
-
-function rerender(){
-[
-'ensureUsersState',
-'ensureProfilesSync',
-'refreshAllPickers',
-'renderEntriesTable',
-'renderMonthlyTimes',
-'updateKPIs',
-'renderUsersTable',
-'renderSupervisorCards',
-'renderAlerts'
-].forEach(runRender)
-}
-
-const cloud=window.appCloud || null;
-
-if(!cloud){
- console.warn('existing cloud layer not found');
- return;
-}
-
-function queueSync(){
- clearTimeout(syncTimer);
- syncTimer=setTimeout(syncCloud,1200);
-}
-
-async function syncCloud(){
- if(syncing) return;
- syncing=true;
-
- try{
-
- const st=window.state||{};
-
- if(cloud.pushUsers){
-   await cloud.pushUsers(
-    (st.users||[]).map(u=>(
-    {
-      username:norm(u.username).toLowerCase(),
-      password:norm(u.password),
-      role:norm(u.role||'admin'),
-      supervisor_name:norm(
-       u.linkedSupervisor ||
-       u.fullName || ''
-      ),
-      is_active:true
-    }))
-   );
- }
-
- if(cloud.pushProjects){
-   await cloud.pushProjects(
-      uniq(st.projects).map(p=>({
-      project_name:p,
-      supervisor_name:
-      st.projectSupervisorRules?.[p] || ''
-      }))
-   );
- }
-
- if(cloud.pushWorkers){
-
- const rows=[];
- const wp=st.workerProfiles||{};
-
- (st.workers||[]).forEach(w=>{
-   (wp[w]?.projects||[]).forEach(p=>{
-      rows.push({
-        worker_name:w,
-        project_name:p
-      })
-   })
- })
-
- await cloud.pushWorkers(rows);
- }
-
- console.log('cloud synced ok');
-
- }catch(e){
- console.error(e);
- if(window.showToast){
- window.showToast(
- 'فشل المزامنة: '+(e.message||e),
- 'error'
- );
- }
- }finally{
- syncing=false;
- }
-}
-
-async function loadCloud(){
-try{
-
-if(cloud.pullUsers){
- const users=await cloud.pullUsers();
- if(users?.length){
- window.state.users=users;
- }
-}
-
-if(cloud.pullProjects){
- const projects=await cloud.pullProjects();
- if(projects?.length){
- window.state.projects=
- uniq(projects.map(x=>
- x.project_name || x.name
- ));
- }
-}
-
-if(cloud.pullWorkers){
- const workers=await cloud.pullWorkers();
- if(workers?.length){
-
- window.state.workers=
- uniq(workers.map(x=>x.worker_name));
-
- window.state.workerProfiles=
- window.state.workerProfiles||{};
-
- workers.forEach(w=>{
- const n=w.worker_name;
- if(!window.state.workerProfiles[n]){
- window.state.workerProfiles[n]={
-   projects:[]
- }
- }
- if(
- !window.state.workerProfiles[n]
- .projects.includes(w.project_name)
- ){
- window.state.workerProfiles[n]
- .projects.push(w.project_name)
- }
-
- })
-
- }
-}
-
-rerender();
-console.log('cloud loaded');
-
-}catch(e){
-console.error(e)
-}
-}
-
-const oldSaveState=window.saveState;
-
-window.saveState=function(silent){
- if(oldSaveState){
- oldSaveState(silent);
- }
- queueSync();
-}
-
-[
-'addWorker',
-'addSupervisor',
-'addProject',
-'saveUserAccount',
-'editProjectByName'
-].forEach(fn=>{
-
-if(typeof window[fn]==='function'){
-const old=window[fn];
-window[fn]=async function(...a){
-const r=await old.apply(this,a);
-queueSync();
-return r;
-}
-}
-
-})
-
-window.syncAdminCloudNow=async function(){
- await syncCloud();
- await loadCloud();
-}
-
-window.addEventListener(
-'load',
-()=>setTimeout(loadCloud,500)
-);
-
-})();
-/* ====== ADMIN CLOUD SYNC END ====== */
-</script>
-
-
-<!-- ===== FINAL ADMIN FIX: CLOUD RECORDS + TIME DIFF + TIME STATUS ===== -->
-<script>
-(function(){
-  function safeText(v){
-    if (typeof esc === 'function') return esc(v ?? '');
-    return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
-  function normalize(v){ return String(v || '').trim(); }
-  function toMinutes(t){
-    const m = String(t || '').match(/^(\d{1,2}):(\d{2})/);
-    if (!m) return null;
-    const h = Number(m[1]), mi = Number(m[2]);
-    if (!Number.isFinite(h) || !Number.isFinite(mi)) return null;
-    return h * 60 + mi;
-  }
-  function durationFixed(login, exitTime){
-    const a = toMinutes(login), b0 = toMinutes(exitTime);
-    if (a === null || b0 === null) return 0;
-    let b = b0;
-    if (b < a) b += 1440;
-    return Math.max(0, b - a);
-  }
-  function hm(mins){
-    mins = Math.max(0, Math.round(Number(mins) || 0));
-    const h = Math.floor(mins / 60), m = mins % 60;
-    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
-  }
-  function parseExpected(v){
-    v = normalize(v);
-    let m = v.match(/^(\d{1,2}):(\d{2})$/);
-    if (m) return Number(m[1]) * 60 + Number(m[2]);
-    m = v.match(/^(\d+(?:\.\d+)?)\s*(?:h|س|ساعة|ساعات)?$/i);
-    if (m) return Math.round(Number(m[1]) * 60);
-    return null;
-  }
-  function inferExpected(project){
-    const p = normalize(project);
-    if (/دوام|كامل|صفا 28|صفاء 28|العجلان|الماجدية 88|الشعلان/.test(p)) return '09:00';
-    if (/جمعة|الجمعة/.test(p)) return '01:30';
-    return '03:00';
-  }
-  function ensureMeta(){
-    if (typeof state === 'undefined') return;
-    if (!state.projectMeta || typeof state.projectMeta !== 'object') state.projectMeta = {};
-    const projects = Array.isArray(state.projects) ? state.projects : [];
-    projects.forEach(p => {
-      if (!state.projectMeta[p] || typeof state.projectMeta[p] !== 'object') state.projectMeta[p] = {};
-      if (!state.projectMeta[p].expectedTime) state.projectMeta[p].expectedTime = inferExpected(p);
-    });
-  }
-  function expectedMinutes(project){
-    ensureMeta();
-    if (typeof state === 'undefined') return parseExpected(inferExpected(project));
-    const raw = state.projectMeta?.[project]?.expectedTime || inferExpected(project);
-    return parseExpected(raw);
-  }
-  function timeInfo(entry){
-    const actual = durationFixed(entry?.login, entry?.exit || entry?.logout_time);
-    const expected = expectedMinutes(entry?.project || entry?.project_name);
-    if (!actual || expected === null) return {cls:'', label:'—', diff:'—', actual, expected};
-    const diff = actual - expected;
-    let cls = 'entry-time-good', label = 'ضمن الوقت';
-    if (diff > 5) { cls = 'entry-time-over'; label = 'أكثر من المطلوب'; }
-    else if (diff < -5) { cls = 'entry-time-under'; label = 'أقل من المطلوب'; }
-    const sign = diff > 0 ? '+' : diff < 0 ? '-' : '±';
-    return {cls, label, diff: sign + hm(Math.abs(diff)), actual, expected};
-  }
-  window.durationMinutes = durationFixed;
-  window.formatHM = hm;
-  window.getEntryTimeColorInfo = timeInfo;
-  window.getProjectExpectedMinutes = expectedMinutes;
-  window.formatExpectedTime = function(v){ return hm(parseExpected(v) ?? parseExpected(inferExpected(''))); };
-
-  function approvalBadge(v){
-    if (typeof getEntryApprovalBadge === 'function') return getEntryApprovalBadge(v);
-    return '<span class="badge">' + safeText(v || 'مسجل') + '</span>';
-  }
-  function statusInfo(e){
-    if (typeof entryStatusInfo === 'function') return entryStatusInfo(e);
-    const issues=[];
-    if (!e.date) issues.push('لا يوجد تاريخ');
-    if (!e.project) issues.push('لا يوجد مشروع');
-    if (!e.login || !e.exit) issues.push('وقت ناقص');
-    return {complete:!issues.length, issues};
-  }
-  function cleaningType(v){
-    return (typeof normalizeCleaningType === 'function') ? normalizeCleaningType(v) : (v || '-');
-  }
-  function arabicDay(d){
-    return (typeof getArabicDayName === 'function') ? getArabicDayName(d) : '';
-  }
-  function filtered(){
-    if (typeof getFilteredEntries === 'function') return getFilteredEntries();
-    return Array.isArray(state?.entries) ? state.entries : [];
-  }
-  window.renderEntriesTable = function(){
-    ensureMeta();
-    const body = document.getElementById('entriesBody');
-    if (!body) return;
-    const head = body.closest('table')?.querySelector('thead tr');
-    if (head) {
-      head.innerHTML = '<th>الحالة</th><th>التاريخ</th><th>اليوم</th><th>المشروع</th><th>الدخول</th><th>الخروج</th><th>المدة</th><th>التقديري</th><th>فرق الوقت</th><th>حالة الوقت</th><th>المشرف</th><th>العمال</th><th>النوع</th><th>الاعتماد</th><th>إجراء</th>';
-    }
-    const rows = filtered();
-    body.innerHTML = rows.map(e => {
-      const mins = durationFixed(e.login, e.exit);
-      const inf = statusInfo(e);
-      const ti = timeInfo(e);
-      const expectedText = hm(ti.expected ?? expectedMinutes(e.project) ?? 0);
-      const statusHtml = inf.complete ? '<span class="status-pill status-ok">مكتمل</span>' : '<span class="status-pill status-warn" title="' + safeText((inf.issues||[]).join('، ')) + '">ناقص</span>';
-      const timeClass = ti.cls === 'entry-time-good' ? 'status-ok' : ti.cls === 'entry-time-under' ? 'status-warn' : ti.cls === 'entry-time-over' ? 'entry-time-over-badge' : 'status-warn';
-      return '<tr class="' + safeText(ti.cls) + '">' +
-        '<td>' + statusHtml + '</td>' +
-        '<td>' + safeText(e.date || '-') + '</td>' +
-        '<td>' + safeText(arabicDay(e.date)) + '</td>' +
-        '<td>' + safeText(e.project || '-') + '</td>' +
-        '<td>' + safeText(e.login || '-') + '</td>' +
-        '<td>' + safeText(e.exit || '-') + '</td>' +
-        '<td>' + safeText(hm(mins)) + '</td>' +
-        '<td>' + safeText(expectedText) + '</td>' +
-        '<td>' + safeText(ti.diff || '—') + '</td>' +
-        '<td><span class="status-pill ' + timeClass + '">' + safeText(ti.label || '—') + '</span></td>' +
-        '<td>' + safeText(e.supervisor || '-') + '</td>' +
-        '<td>' + safeText((e.workers || []).filter(Boolean).join('، ')) + '</td>' +
-        '<td><span class="badge">' + safeText(cleaningType(e.cleaningType) || '-') + '</span></td>' +
-        '<td>' + approvalBadge(e.approvalStatus) + '</td>' +
-        '<td><div class="inline"><button class="small light" onclick="editEntry(\'' + safeText(e._id).replace(/&#39;/g,"\\'") + '\')">تعديل</button><button class="small light" onclick="cycleEntryApproval(\'' + safeText(e._id).replace(/&#39;/g,"\\'") + '\')">اعتماد</button><button class="small danger" onclick="deleteEntry(\'' + safeText(e._id).replace(/&#39;/g,"\\'") + '\')">حذف</button></div></td>' +
-      '</tr>';
-    }).join('');
-    const summaryEl = document.getElementById('entriesTableSummary');
-    if (summaryEl) {
-      const total = Array.isArray(state?.entries) ? state.entries.length : rows.length;
-      const label = typeof buildCurrentReportLabel === 'function' ? buildCurrentReportLabel(rows) : '';
-      summaryEl.textContent = rows.length + ' سجل ظاهر / ' + total + ' إجمالي' + (label ? ' — ' + label : '');
-    }
-    if (typeof renderEntriesDailyStats === 'function') renderEntriesDailyStats();
-    if (typeof renderAlerts === 'function') renderAlerts();
-  };
-
-  window.loadCloudRecords = async function(){
-    const cloud = window.appCloud || null;
-    if (!cloud) { window.renderEntriesTable(); return; }
-    try {
-      const [recordsRes, attendanceRes] = await Promise.all([
-        cloud.from('daily_records').select('*').order('record_date', {ascending:false}).order('id', {ascending:false}).limit(3000),
-        cloud.from('attendance_records').select('*').order('id', {ascending:false}).limit(12000)
-      ]);
-      if (recordsRes.error) throw recordsRes.error;
-      if (attendanceRes.error) throw attendanceRes.error;
-      const groups = {};
-      (attendanceRes.data || []).forEach(r => {
-        const k = String(r.daily_record_id);
-        (groups[k] ||= []).push(r.worker_name);
-      });
-      const cloudEntries = (recordsRes.data || []).map(r => ({
-        _id: 'db-record-' + r.id,
-        _cloudId: r.id,
-        _source: 'daily_records',
-        project: r.project_name || '',
-        date: r.record_date || '',
-        login: r.login_time || '',
-        exit: r.logout_time || '',
-        supervisor: r.supervisor_name || '',
-        workers: (groups[String(r.id)] || []).filter(Boolean),
-        cleaningType: r.cleaning_type || '',
-        approvalStatus: r.approval_status || 'مسجل',
-        note: r.note || ''
-      }));
-      if (typeof state !== 'undefined') {
-        const localOnly = (Array.isArray(state.entries) ? state.entries : []).filter(e => !String(e._id || '').startsWith('db-record-') && !e._cloudId);
-        state.entries = cloudEntries.concat(localOnly);
-      }
-      ensureMeta();
-      window.renderEntriesTable();
-      if (typeof renderMonthlyTimes === 'function') renderMonthlyTimes();
-      if (typeof updateKPIs === 'function') updateKPIs();
-      if (typeof showToast === 'function') showToast('تم تحميل السجلات من السحابة');
-    } catch(err) {
-      console.error('loadCloudRecords failed', err);
-      if (typeof showToast === 'function') showToast('تعذر تحميل السجلات من السحابة', 'error');
-    }
-  };
-  window.syncAdminCloudNow = async function(){ return window.loadCloudRecords(); };
-
-  function addSyncButton(){
-    document.querySelectorAll('.entries-toolbar .quick-actions').forEach(bar => {
-      if (bar.querySelector('.cloud-sync-final')) return;
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'light cloud-sync-final';
-      b.textContent = 'مزامنة سحابية';
-      b.onclick = () => window.loadCloudRecords();
-      bar.prepend(b);
-    });
-  }
-  const css = document.createElement('style');
-  css.textContent = '.entry-time-good{background:#f3fbf6}.entry-time-under{background:#fff9e8}.entry-time-over{background:#fff1f1}.entry-time-over-badge{background:#fde8e8;color:#9d2222}.status-pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700}';
-  document.head.appendChild(css);
-  window.addEventListener('load', () => {
-    addSyncButton();
-    setTimeout(() => { try { window.loadCloudRecords(); } catch(e){ console.error(e); } }, 1200);
-    setTimeout(() => { try { window.renderEntriesTable(); } catch(e){ console.error(e); } }, 1800);
-  });
-})();
-</script>
-<!-- ===== END FINAL ADMIN FIX ===== -->
-<script>
-/* ====== SAFE FIX V2: time difference/status + cloud reload without breaking buttons ====== */
-(function(){
-  function norm(v){ return String(v ?? '').trim(); }
-  function esc(v){ return String(v ?? '').replace(/[&<>\"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m])); }
-  function pad(n){ return String(Math.floor(Math.abs(Number(n)||0))).padStart(2,'0'); }
-  function parseHHMM(v){
-    const s = norm(v);
-    if(!s) return null;
-    const m = s.match(/^(\d{1,3}):(\d{1,2})(?::\d{1,2})?$/);
-    if(!m) return null;
-    const h = Number(m[1]), mm = Number(m[2]);
-    if(!Number.isFinite(h) || !Number.isFinite(mm) || mm > 59) return null;
-    return h * 60 + mm;
-  }
-  function minutesBetween(start,end){
-    const a = parseHHMM(start), b = parseHHMM(end);
-    if(a === null || b === null) return 0;
-    let d = b - a;
-    if(d < 0) d += 24*60;
-    return d;
-  }
-  function formatHM(mins){
-    mins = Math.max(0, Math.round(Number(mins)||0));
-    return pad(mins/60) + ':' + pad(mins%60);
-  }
-  function formatDiff(mins){
-    mins = Math.round(Number(mins)||0);
-    if(mins === 0) return '0 د';
-    return (mins > 0 ? '+' : '-') + formatHM(Math.abs(mins));
-  }
-  const EXPECTED = {
-    'هاجر 32':'00:30','فرساي 10':'00:30','فرساي 4':'00:30','فرساي 11':'00:30','فرساي 7':'00:30',
-    'فارهين 11':'00:30','رؤيا 1':'00:30','رايات نجد 5':'00:30','عالم الابتكار 47':'00:30','تعمير17':'00:30','تعمير 17':'00:30',
-    'مغنى 29':'00:30','مغنى 14':'00:30','افاق العربية':'00:30','آفاق العربية':'00:30',
-    'الشعلان 50':'09:00','الشعلان 51':'09:00','صفاء 50':'00:30','كاف A':'00:30','كاف B':'00:30','كاف C':'00:30',
-    'الماجدية 88':'09:00','الماجدية 107':'03:00','العجلان 19':'09:00','أثل 12':'03:00','اثل 12':'03:00',
-    'صفاء 28':'09:00','صفا 28':'09:00','صفاء 65':'09:00','صفا 65':'09:00','برج جوديا':'09:00'
-  };
-  function expectedMinutes(project){
-    const p = norm(project);
-    let val = (window.state && state.projectMeta && state.projectMeta[p] && state.projectMeta[p].expectedTime) || EXPECTED[p] || '00:30';
-    let mins = parseHHMM(val);
-    if(mins === null || mins <= 0) mins = 30;
-    try{
-      if(window.state){
-        state.projectMeta = state.projectMeta || {};
-        state.projectMeta[p] = state.projectMeta[p] || {};
-        state.projectMeta[p].expectedTime = formatHM(mins);
-      }
-    }catch(e){}
-    return mins;
-  }
-  function actualMinutes(e){
-    if(!e) return 0;
-    const direct = Number(e.duration_minutes ?? e.durationMinutes);
-    if(Number.isFinite(direct) && direct > 0) return direct;
-    if(typeof window.durationMinutes === 'function'){
-      const d = window.durationMinutes(e.login || e.login_time, e.exit || e.logout_time);
-      if(Number.isFinite(d) && d > 0) return d;
-    }
-    return minutesBetween(e.login || e.login_time, e.exit || e.logout_time);
-  }
-  function timeInfo(e){
-    const actual = actualMinutes(e);
-    const expected = expectedMinutes(e && e.project);
-    if(!actual) return {label:'غير مكتمل', diff:'—', actual:0, expected, row:'time-missing-row', badge:'time-badge-missing'};
-    const diff = actual - expected;
-    if(diff === 0) return {label:'مطابق', diff:'0 د', actual, expected, row:'time-good-row', badge:'time-badge-good'};
-    if(diff < 0) return {label:'ناقص', diff:formatDiff(diff), actual, expected, row:'time-under-row', badge:'time-badge-under'};
-    return {label:'زيادة', diff:formatDiff(diff), actual, expected, row:'time-over-row', badge:'time-badge-over'};
-  }
-  window.getFinalTimeInfo = timeInfo;
-  window.getEntryTimeColorInfo = timeInfo;
-  window.formatExpectedTime = function(v){
-    const m = parseHHMM(v); return m === null ? (v || '') : formatHM(m);
-  };
-  function complete(e){
-    try{ if(typeof window.entryStatusInfo === 'function') return !!entryStatusInfo(e).complete; }catch(_e){}
-    return !!(norm(e && e.date) && norm(e && e.project) && norm(e && (e.login || e.login_time)) && norm(e && (e.exit || e.logout_time)));
-  }
-  function rows(){
-    try{ if(typeof window.getFilteredEntries === 'function') return getFilteredEntries({limit:false}) || []; }catch(e){}
-    try{ return (window.state && state.entries) || []; }catch(e){ return []; }
-  }
-  function approval(v){
-    try{ if(typeof window.getEntryApprovalBadge === 'function') return getEntryApprovalBadge(v); }catch(e){}
-    return esc(v || 'مسجل');
-  }
-  function cleanType(v){
-    try{ if(typeof window.normalizeCleaningType === 'function') return normalizeCleaningType(v); }catch(e){}
-    return v;
-  }
-  function arDay(d){
-    try{ if(typeof window.getArabicDayName === 'function') return getArabicDayName(d); }catch(e){}
-    return '';
-  }
-  function editButtons(e){
-    const id = esc(e && e._id || '');
-    return '<div class="inline"><button class="small light" onclick="editEntry(\''+id+'\')">تعديل</button><button class="small light" onclick="cycleEntryApproval(\''+id+'\')">اعتماد</button><button class="small danger" onclick="deleteEntry(\''+id+'\')">حذف</button></div>';
-  }
-  const oldRender = window.renderEntriesTable;
-  window.renderEntriesTable = function(){
-    const body = document.getElementById('entriesBody');
-    if(!body){ if(typeof oldRender === 'function') return oldRender.apply(this, arguments); return; }
-    const data = rows();
-    const head = body.closest('table') && body.closest('table').querySelector('thead tr');
-    if(head) head.innerHTML = '<th>الحالة</th><th>التاريخ</th><th>اليوم</th><th>المشروع</th><th>الدخول</th><th>الخروج</th><th>المدة</th><th>التقديري</th><th>فرق الوقت</th><th>حالة الوقت</th><th>المشرف</th><th>العمال</th><th>النوع</th><th>الاعتماد</th><th>إجراء</th>';
-    body.innerHTML = data.map(function(e){
-      const ti = timeInfo(e);
-      const ok = complete(e);
-      const workers = Array.isArray(e.workers) ? e.workers.filter(Boolean).join('، ') : norm(e.worker_names || e.workers || '');
-      return '<tr class="'+ti.row+'">'
-        + '<td>'+(ok ? '<span class="status-pill status-ok">مكتمل</span>' : '<span class="status-pill status-warn">ناقص</span>')+'</td>'
-        + '<td>'+esc(e.date || e.record_date || '')+'</td>'
-        + '<td>'+esc(arDay(e.date || e.record_date))+'</td>'
-        + '<td>'+esc(e.project || e.project_name || '')+'</td>'
-        + '<td>'+esc(e.login || e.login_time || '-')+'</td>'
-        + '<td>'+esc(e.exit || e.logout_time || '-')+'</td>'
-        + '<td>'+esc(formatHM(ti.actual))+'</td>'
-        + '<td>'+esc(formatHM(ti.expected))+'</td>'
-        + '<td><strong>'+esc(ti.diff)+'</strong></td>'
-        + '<td><span class="status-pill '+ti.badge+'">'+esc(ti.label)+'</span></td>'
-        + '<td>'+esc(e.supervisor || e.supervisor_name || '-')+'</td>'
-        + '<td>'+esc(workers || '-')+'</td>'
-        + '<td><span class="badge">'+esc(cleanType(e.cleaningType || e.cleaning_type) || '-')+'</span></td>'
-        + '<td>'+approval(e.approvalStatus || e.approval_status)+'</td>'
-        + '<td>'+editButtons(e)+'</td>'
-        + '</tr>';
-    }).join('');
-    const summaryEl = document.getElementById('entriesTableSummary');
-    if(summaryEl) summaryEl.textContent = data.length + ' سجل ظاهر / ' + (((window.state && state.entries) || []).length) + ' إجمالي';
-    try{ if(typeof window.renderEntriesDailyStats === 'function') renderEntriesDailyStats(); }catch(e){}
-    try{ if(typeof window.renderAlerts === 'function') renderAlerts(); }catch(e){}
-  };
-  const st = document.createElement('style');
-  st.textContent = '.time-good-row{background:#eef8f2!important}.time-under-row{background:#fff7f7!important}.time-over-row{background:#eef6ff!important}.time-missing-row{background:#fff8e3!important}.time-badge-good{background:#dff3e8!important;color:#16603d!important}.time-badge-under{background:#fde8e8!important;color:#9d2222!important}.time-badge-over{background:#e6f0ff!important;color:#174b8a!important}.time-badge-missing{background:#fff5da!important;color:#8a6700!important}';
-  document.head.appendChild(st);
-  window.addEventListener('load', function(){
-    setTimeout(function(){
-      try{ window.renderEntriesTable(); }catch(e){ console.error('renderEntriesTable fix failed', e); }
-    }, 800);
-  });
-})();
-</script>
-
-
-<script>
-/* ===== TASNEEF STABLE CLOUD PATCH V3 ===== */
-(function(){
-  const STORAGE_KEY = 'fm_distribution_reset_apr2026_v3';
-  const BAD_RE = /(function\s*\(|=>|window\.|document\.|const\s+|let\s+|var\s+|<script|<\/script|innerHTML|querySelector|localStorage|TASNEEF|supabase\.from|}\)\(\)|return\s+`|onclick=)/i;
-  const STATUS_AR = {present:'حاضر', absent:'غائب', late:'متأخر', substitute:'بدل', sub:'بدل', حاضر:'حاضر', غائب:'غائب', متأخر:'متأخر', بدل:'بدل'};
-  const clean = v => String(v ?? '').trim();
-  const bad = v => { const s=clean(v); return !s || s.length>80 || BAD_RE.test(s); };
-  const esc = v => clean(v).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const normName = v => clean(v).replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/^ال/,'').replace(/\s+/g,' ').toLowerCase();
-  const uniq = arr => Array.from(new Map((arr||[]).map(clean).filter(x=>!bad(x)).map(x=>[normName(x),x])).values()).sort((a,b)=>a.localeCompare(b,'ar'));
-  function show(msg,kind='success'){ try{ if(window.showToast) showToast(msg,kind); else console.log(msg); }catch(e){} }
-  function setText(id,val){ const el=document.getElementById(id); if(el) el.textContent=String(val); }
-  function getCloud(){
-    if(window.appCloud) return window.appCloud;
-    const cfg=window.APP_CONFIG||{};
-    const url=cfg.supabaseUrl||cfg.SUPABASE_URL||'https://zmjdqiswytxlbfgnfjfv.supabase.co';
-    const key=cfg.supabaseAnonKey||cfg.SUPABASE_ANON_KEY||'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
-    if(window.supabase && url && key){ window.appCloud=window.supabase.createClient(url,key); return window.appCloud; }
-    return null;
-  }
-  function fixLocalStorage(){
-    try{
-      const raw=localStorage.getItem(STORAGE_KEY);
-      if(!raw) return;
-      const st=JSON.parse(raw);
-      const before=raw.length;
-      sanitizeObject(st);
-      const after=JSON.stringify(st);
-      if(after.length!==before || BAD_RE.test(raw)) localStorage.setItem(STORAGE_KEY, after);
-    }catch(e){}
-  }
-  function sanitizeObject(st){
-    if(!st || typeof st!=='object') return st;
-    ['projects','workers','supervisors'].forEach(k=>{ st[k]=uniq(Array.isArray(st[k])?st[k]:[]); });
-    if(Array.isArray(st.entries)) st.entries=st.entries.filter(e=>e && !bad(e.project||e.project_name) && !bad(e.supervisor||e.supervisor_name));
-    if(Array.isArray(st.attendance)) st.attendance=st.attendance.filter(e=>e && !bad(e.project||e.project_name) && !bad(e.supervisor||e.supervisor_name));
-    if(Array.isArray(st.users)) st.users=st.users.filter(u=>u && !bad(u.fullName) && !bad(u.username) && !bad(u.linkedSupervisor)).map(u=>{ if(clean(u.role)==='supervisor' && !clean(u.linkedSupervisor)) u.linkedSupervisor=clean(u.fullName); return u; });
-    ['projectSupervisorRules','workerProfiles','supervisorProfiles','projectMeta','workerSalary','supervisorSalary'].forEach(k=>{
-      const obj=st[k]; if(!obj || typeof obj!=='object') return;
-      Object.keys(obj).forEach(key=>{
-        if(bad(key)){ delete obj[key]; return; }
-        if(typeof obj[key]==='string' && bad(obj[key])) obj[key]='';
-        if(obj[key] && typeof obj[key]==='object'){
-          Object.keys(obj[key]).forEach(sub=>{
-            if(Array.isArray(obj[key][sub])) obj[key][sub]=uniq(obj[key][sub]);
-            else if(typeof obj[key][sub]==='string' && bad(obj[key][sub])) obj[key][sub]='';
-          });
-        }
-      });
-    });
-    return st;
-  }
-  function sanitizeState(){
-    if(!window.state) return;
-    sanitizeObject(window.state);
-  }
-  function saveLocal(){
-    try{ sanitizeState(); localStorage.setItem(STORAGE_KEY, JSON.stringify(window.state||{})); }catch(e){}
-  }
-  function duration(start,end){
-    if(!start||!end) return 0;
-    const [sh,sm]=String(start).slice(0,5).split(':').map(Number), [eh,em]=String(end).slice(0,5).split(':').map(Number);
-    if([sh,sm,eh,em].some(Number.isNaN)) return 0;
-    let m=(eh*60+em)-(sh*60+sm); if(m<0) m+=1440; return m;
-  }
-  function hm(m){ m=Number(m)||0; return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
-  function parseExpected(project){
-    const meta=(window.state&&state.projectMeta&&state.projectMeta[project])||{};
-    let v=meta.expectedMinutes || meta.expected_minutes;
-    if(v) return Number(v)||0;
-    const t=clean(meta.expectedTime || meta.expected_time);
-    const m=t.match(/(\d{1,2}):(\d{2})/);
-    if(m) return Number(m[1])*60+Number(m[2]);
-    return 60;
-  }
-  function expectedFor(row){ return Number(row.expected_minutes||row.expectedMinutes||row.estimated_minutes||0) || parseExpected(clean(row.project||row.project_name)); }
-  function rowDiff(row){ return duration(row.login||row.login_time, row.exit||row.logout_time||row.exit_time) - expectedFor(row); }
-  async function pullCloud(){
-    const cloud=getCloud(); if(!cloud) return null;
-    const [usersRes,projectsRes,workersRes,recordsRes,attendanceRes]=await Promise.all([
-      cloud.from('users').select('*'),
-      cloud.from('projects').select('*'),
-      cloud.from('workers').select('*'),
-      cloud.from('daily_records').select('*').order('record_date',{ascending:false}).order('id',{ascending:false}).limit(3000),
-      cloud.from('attendance_records').select('*').order('id',{ascending:false}).limit(12000)
-    ]);
-    for(const r of [usersRes,projectsRes,workersRes,recordsRes,attendanceRes]) if(r.error) throw r.error;
-    return {users:usersRes.data||[], projects:projectsRes.data||[], workers:workersRes.data||[], records:recordsRes.data||[], attendance:attendanceRes.data||[]};
-  }
-  function applyCloud(data){
-    if(!data || !window.state) return;
-    const groups={};
-    (data.attendance||[]).forEach(a=>{ const k=String(a.daily_record_id||''); if(k){ (groups[k]=groups[k]||[]).push(a); } });
-    state.projects=uniq([...(state.projects||[]), ...(data.projects||[]).filter(x=>x.is_active!==false).map(x=>x.project_name)]);
-    state.supervisors=uniq([...(state.supervisors||[]), ...(data.users||[]).filter(u=>u.role==='supervisor'&&u.is_active!==false).map(u=>u.supervisor_name||u.full_name), ...(data.projects||[]).map(p=>p.supervisor_name), ...(data.workers||[]).map(w=>w.supervisor_name)]);
-    state.workers=uniq([...(state.workers||[]), ...(data.workers||[]).filter(w=>w.is_active!==false).map(w=>w.worker_name)]);
-    state.projectSupervisorRules=state.projectSupervisorRules||{};
-    (data.projects||[]).forEach(p=>{ if(!bad(p.project_name) && !bad(p.supervisor_name)) state.projectSupervisorRules[p.project_name]=p.supervisor_name||state.projectSupervisorRules[p.project_name]||''; });
-    state.workerProfiles=state.workerProfiles||{};
-    (data.workers||[]).forEach(w=>{ if(bad(w.worker_name)) return; const name=clean(w.worker_name); if(!state.workerProfiles[name]) state.workerProfiles[name]={supervisor:'',projects:[],status:'أساسي'}; if(!bad(w.supervisor_name)) state.workerProfiles[name].supervisor=clean(w.supervisor_name); if(!bad(w.project_name) && !state.workerProfiles[name].projects.some(p=>normName(p)===normName(w.project_name))) state.workerProfiles[name].projects.push(clean(w.project_name)); });
-    const cloudEntries=(data.records||[]).filter(r=>!bad(r.project_name)&&!bad(r.supervisor_name)).map(r=>({
-      _id:'db-record-'+r.id,_cloudId:r.id,_source:'daily_records',project:clean(r.project_name),date:clean(r.record_date),login:clean(r.login_time),exit:clean(r.logout_time),supervisor:clean(r.supervisor_name),
-      workers:(groups[String(r.id)]||[]).map(a=>clean(a.worker_name)).filter(x=>!bad(x)),
-      workerStatuses:(groups[String(r.id)]||[]).map(a=>({name:clean(a.worker_name),status:STATUS_AR[clean(a.status)]||clean(a.status)||'حاضر'})).filter(x=>!bad(x.name)),
-      cleaningType:clean(r.cleaning_type), approvalStatus:clean(r.approval_status)||'مسجل', note:clean(r.note), expected_minutes:Number(r.expected_minutes||0)||undefined
-    }));
-    const local=(Array.isArray(state.entries)?state.entries:[]).filter(e=>!e._cloudId && !String(e._id||'').startsWith('db-record-'));
-    state.entries=[...cloudEntries,...local].filter(e=>!bad(e.project)&&!bad(e.supervisor));
-    state.users=(Array.isArray(state.users)?state.users:[]);
-    (data.users||[]).forEach(u=>{
-      if(bad(u.username)) return;
-      const found=state.users.find(x=>normName(x.username)===normName(u.username));
-      const mapped={id:'db-user-'+u.id,_dbId:u.id,fullName:clean(u.full_name||u.supervisor_name||u.username),username:clean(u.username),password:clean(u.password),role:clean(u.role)||'supervisor',linkedSupervisor:clean(u.supervisor_name||u.full_name),isActive:u.is_active!==false,permissions:u.permissions||{},createdAt:u.created_at||new Date().toISOString()};
-      if(found) Object.assign(found,mapped); else state.users.push(mapped);
-    });
-    sanitizeState(); saveLocal();
-  }
-  function ensureDashboard(){
-    const tabs=document.querySelector('.tabs');
-    if(tabs && !document.querySelector('[data-tab="dashboardTab"]')) tabs.insertAdjacentHTML('afterbegin','<button class="tab" data-tab="dashboardTab" onclick="showTab(\'dashboardTab\', this)">الداشبورد</button>');
-    if(!document.getElementById('dashboardTab')){
-      const entries=document.getElementById('entriesTab'); if(!entries) return;
-      entries.insertAdjacentHTML('beforebegin', `<div id="dashboardTab" class="tab-page hidden">
-        <div class="dashboard-grid">
-          <div class="dashboard-main">
-            <div class="dashboard-kpis"><div class="kpi"><div class="muted">آخر يوم مسجل</div><div class="v" id="dashLatestDate">—</div></div><div class="kpi"><div class="muted">سجلات آخر يوم</div><div class="v" id="dashEntriesToday">0</div></div><div class="kpi"><div class="muted">مشاريع آخر يوم</div><div class="v" id="dashProjectsToday">0</div></div><div class="kpi"><div class="muted">مشاريع غير مسجلة</div><div class="v" id="dashMissingProjects">0</div></div></div>
-            <div class="dashboard-kpis"><div class="kpi"><div class="muted">ضمن الوقت</div><div class="v" id="dashGreenCount">0</div></div><div class="kpi"><div class="muted">أقل من المطلوب</div><div class="v" id="dashYellowCount">0</div></div><div class="kpi"><div class="muted">أكثر من المطلوب</div><div class="v" id="dashRedCount">0</div></div><div class="kpi"><div class="muted">سجلات ناقصة</div><div class="v" id="dashIncompleteCount">0</div></div></div>
-            <div class="dashboard-panels"><div class="panel card-pad"><h3 class="section-title">ملخص المشاريع في آخر يوم</h3><div class="table-wrap" style="max-height:340px"><table><thead><tr><th>المشروع</th><th>المشرف</th><th>السجلات</th><th>الساعات</th><th>الحالة</th></tr></thead><tbody id="dashProjectsBody"></tbody></table></div></div><div class="panel card-pad"><h3 class="section-title">المشرفون الأكثر نشاطًا</h3><div class="table-wrap" style="max-height:340px"><table><thead><tr><th>المشرف</th><th>السجلات</th><th>المشاريع</th><th>الساعات</th></tr></thead><tbody id="dashSupervisorsBody"></tbody></table></div></div></div>
-          </div>
-          <div class="dashboard-side"><div class="panel card-pad"><h3 class="section-title">تنبيه سريع</h3><div id="dashQuickAlert" class="dashboard-note">لا توجد بيانات بعد.</div></div><div class="panel card-pad"><h3 class="section-title">مشاريع تحتاج متابعة</h3><div id="dashFollowupList" class="dashboard-list"></div></div><div class="panel card-pad"><h3 class="section-title">مشاريع غير مسجلة</h3><div id="dashMissingList" class="dashboard-list"></div></div></div>
-        </div></div>`);
-    }
-    if(!document.getElementById('stableDashboardStyle')){ const st=document.createElement('style'); st.id='stableDashboardStyle'; st.textContent='.dashboard-grid{display:grid;grid-template-columns:1.6fr .9fr;gap:16px;max-width:1380px;margin:0 auto;padding:0 16px}.dashboard-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.dashboard-panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}.dashboard-note,.dashboard-item{padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:#f7fbf9;line-height:1.8}.dashboard-list{display:grid;gap:8px}.dashboard-item.warn{background:#fff8e3}.dashboard-item.ok{background:#eef8f2}@media(max-width:1100px){.dashboard-grid,.dashboard-kpis,.dashboard-panels{grid-template-columns:1fr}}'; document.head.appendChild(st); }
-  }
-  async function renderDashboardStable(){
-    try{ sanitizeState(); ensureDashboard(); const data=await pullCloud().catch(()=>null); if(data) applyCloud(data); }
-    catch(e){ console.error('dashboard pull failed',e); }
-    const projects=uniq((state&&state.projects)||[]);
-    const entries=((state&&state.entries)||[]).filter(e=>e&&!bad(e.project)&&!bad(e.supervisor));
-    setText('kpiProjects',projects.length); setText('kpiEntries',entries.length); setText('kpiSups',uniq((state&&state.supervisors)||[]).length); setText('kpiWorkers',uniq((state&&state.workers)||[]).length);
-    const dates=entries.map(e=>clean(e.date||e.record_date)).filter(Boolean).sort();
-    const latest=dates.length?dates[dates.length-1]:'';
-    const rows=latest?entries.filter(e=>clean(e.date||e.record_date)===latest):[];
-    const projectSet={}; rows.forEach(e=>{const p=clean(e.project||e.project_name); if(p) projectSet[normName(p)]=p;});
-    const missing=projects.filter(p=>!projectSet[normName(p)]);
-    let within=0,under=0,over=0,incomplete=0; const byP={},byS={};
-    rows.forEach(e=>{ const mins=duration(e.login||e.login_time,e.exit||e.logout_time||e.exit_time); const diff=rowDiff(e); if(Math.abs(diff)<=5) within++; else if(diff<-5) under++; else over++; if(!clean(e.supervisor||e.supervisor_name)||!(e.workers||[]).length||!clean(e.login||e.login_time)||!clean(e.exit||e.logout_time||e.exit_time)) incomplete++; const p=clean(e.project||e.project_name)||'—'; const s=clean(e.supervisor||e.supervisor_name)||'—'; (byP[p]=byP[p]||{p,s,c:0,m:0}).c++; byP[p].m+=mins; (byS[s]=byS[s]||{s,c:0,p:{},m:0}).c++; byS[s].p[p]=1; byS[s].m+=mins; });
-    setText('dashLatestDate',latest||'—'); setText('dashEntriesToday',rows.length); setText('dashProjectsToday',Object.keys(projectSet).length); setText('dashMissingProjects',missing.length); setText('dashGreenCount',within); setText('dashYellowCount',under); setText('dashRedCount',over); setText('dashIncompleteCount',incomplete);
-    const pb=document.getElementById('dashProjectsBody'); if(pb) pb.innerHTML=Object.values(byP).map(r=>`<tr><td>${esc(r.p)}</td><td>${esc(r.s)}</td><td>${r.c}</td><td>${hm(r.m)}</td><td><span class="status-pill status-ok">مسجل</span></td></tr>`).join('') || '<tr><td colspan="5" class="muted">لا توجد سجلات لعرضها.</td></tr>';
-    const sb=document.getElementById('dashSupervisorsBody'); if(sb) sb.innerHTML=Object.values(byS).map(r=>`<tr><td>${esc(r.s)}</td><td>${r.c}</td><td>${Object.keys(r.p).length}</td><td>${hm(r.m)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">لا توجد بيانات.</td></tr>';
-    const q=document.getElementById('dashQuickAlert'); if(q) q.textContent=latest?`آخر يوم مسجل ${latest} وفيه ${rows.length} سجل.`:'لا توجد سجلات بعد.';
-    const fl=document.getElementById('dashFollowupList'); if(fl) fl.innerHTML=incomplete?`<div class="dashboard-item warn">يوجد ${incomplete} سجل ناقص يحتاج مراجعة.</div>`:'<div class="dashboard-item ok">لا توجد ملاحظات تشغيلية حالية.</div>';
-    const ml=document.getElementById('dashMissingList'); if(ml) ml.innerHTML=missing.length?missing.slice(0,12).map(p=>`<div class="dashboard-item warn">${esc(p)}</div>`).join(''):'<div class="dashboard-item ok">كل المشاريع مسجلة في آخر يوم.</div>';
-  }
-  window.updateKPIs=function(){ renderDashboardStable(); };
-  window.renderDashboardFinal=renderDashboardStable;
-  window.renderDashboard=renderDashboardStable;
-  const oldSave=window.saveState;
-  window.saveState=function(silent){ sanitizeState(); const r=oldSave?oldSave.call(this,silent):undefined; saveLocal(); return r; };
-  window.addProject=async function(){
-    const el=document.getElementById('newProjectName'); const name=clean(el&&el.value);
-    if(!name || bad(name)){ alert('اكتب اسم المشروع بشكل صحيح'); return; }
-    sanitizeState(); state.projects=uniq([...(state.projects||[]), name]); state.projectMeta=state.projectMeta||{}; state.projectMeta[name]=state.projectMeta[name]||{type:'daily_visit',expectedTime:'01:00'}; saveLocal(); if(el) el.value='';
-    try{ const cloud=getCloud(); if(cloud) await cloud.from('projects').upsert({project_name:name,is_active:true},{onConflict:'project_name'}); show('تمت إضافة المشروع'); }catch(e){ console.error(e); show('تمت الإضافة محليًا، تحقق من Supabase إذا لم تظهر بعد الرفرش','error'); }
-    try{ if(window.refreshAllPickers) refreshAllPickers(); if(window.renderProjects) renderProjects(); if(window.renderEntriesTable) renderEntriesTable(); }catch(e){}
-    renderDashboardStable();
-  };
-  function usernameFromName(name){ return clean(name).toLowerCase().replace(/[أإآ]/g,'a').replace(/[^a-z0-9_\u0600-\u06ff]+/g,'_').replace(/^_+|_+$/g,'') || ('supervisor_'+Date.now()); }
-  window.addSupervisor=async function(){
-    const el=document.getElementById('newSupervisorName'); const sal=document.getElementById('newSupervisorSalary'); const name=clean(el&&el.value); const salary=Number(sal&&sal.value||0)||0;
-    if(!name || bad(name)){ alert('اكتب اسم المشرف بشكل صحيح'); return; }
-    sanitizeState(); state.supervisors=uniq([...(state.supervisors||[]), name]); state.supervisorProfiles=state.supervisorProfiles||{}; state.supervisorProfiles[name]=state.supervisorProfiles[name]||{workers:[],projects:[]}; if(salary){state.supervisorSalary=state.supervisorSalary||{}; state.supervisorSalary[name]=salary;}
-    if(!Array.isArray(state.users)) state.users=[]; if(!state.users.some(u=>normName(u.linkedSupervisor||u.fullName)===normName(name))){ state.users.push({id:'u-'+Date.now(),fullName:name,username:usernameFromName(name),password:'123456',role:'supervisor',linkedSupervisor:name,isActive:true,permissions:{dashboardTab:'view',entriesTab:'edit',peopleTab:'hidden',projectsTab:'hidden',distributionTab:'hidden',monthlyTab:'view',alertsTab:'view',exportTab:'view',usersTab:'hidden'},createdAt:new Date().toISOString()}); }
-    saveLocal(); if(el) el.value=''; if(sal) sal.value='';
-    try{ const cloud=getCloud(); if(cloud){ const username=usernameFromName(name); await cloud.from('users').upsert({username,password:'123456',role:'supervisor',full_name:name,supervisor_name:name,is_active:true},{onConflict:'username'}); } show('تمت إضافة المشرف'); }catch(e){ console.error(e); show('تمت الإضافة محليًا، تحقق من Supabase إذا لم تظهر بعد الرفرش','error'); }
-    try{ if(window.refreshAllPickers) refreshAllPickers(); if(window.renderPeople) renderPeople(); if(window.renderUsersTable) renderUsersTable(); }catch(e){}
-    refreshLinkedSupervisorOptions(name); renderDashboardStable();
-  };
-  function collectSupervisors(){ const out=uniq([...(state?.supervisors||[]), ...((state?.users||[]).filter(u=>clean(u.role)==='supervisor').flatMap(u=>[u.linkedSupervisor,u.fullName])), ...Object.values(state?.projectSupervisorRules||{})]); return out; }
-  window.refreshLinkedSupervisorOptions=function(selected){
-    const sel=document.getElementById('userLinkedSupervisor'); if(!sel) return;
-    const current=clean(selected||sel.value); const names=collectSupervisors();
-    sel.disabled=false; sel.innerHTML='<option value="">-</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
-    if(current && !names.some(n=>normName(n)===normName(current))) sel.insertAdjacentHTML('beforeend',`<option value="${esc(current)}">${esc(current)}</option>`);
-    if(current) sel.value=current;
-  };
-  const oldToggle=window.toggleUserFormByRole;
-  window.toggleUserFormByRole=function(){ if(oldToggle) oldToggle(); const role=clean(document.getElementById('userRole')?.value); const wrap=document.getElementById('linkedSupervisorWrap'); if(wrap) wrap.style.display=(role==='supervisor')?'block':'none'; const full=clean(document.getElementById('userFullName')?.value); refreshLinkedSupervisorOptions(role==='supervisor'?full:undefined); const sel=document.getElementById('userLinkedSupervisor'); if(sel) sel.disabled=false; };
-  const oldRenderUsers=window.renderUsersTable;
-  window.renderUsersTable=function(){ sanitizeState(); if(oldRenderUsers) oldRenderUsers(); setTimeout(()=>refreshLinkedSupervisorOptions(),50); };
-  const oldSaveUser=window.saveUserAccount;
-  window.saveUserAccount=async function(){
-    if(oldSaveUser) oldSaveUser();
-    try{
-      sanitizeState(); saveLocal();
-      const role=clean(document.getElementById('userRole')?.value); const full=clean(document.getElementById('userFullName')?.value); const username=clean(document.getElementById('userUsername')?.value).toLowerCase(); const password=clean(document.getElementById('userPassword')?.value); const linked=role==='supervisor'?(full||clean(document.getElementById('userLinkedSupervisor')?.value)):clean(document.getElementById('userLinkedSupervisor')?.value); const active=document.getElementById('userActive')?.value==='1';
-      const cloud=getCloud(); if(cloud && username) await cloud.from('users').upsert({username,password,role,full_name:full,supervisor_name:linked,is_active:active},{onConflict:'username'});
-      if(role==='supervisor' && linked){ state.supervisors=uniq([...(state.supervisors||[]),linked]); saveLocal(); }
-      refreshLinkedSupervisorOptions(linked); renderDashboardStable();
-    }catch(e){ console.error('save user cloud failed',e); }
-  };
-  async function boot(){ fixLocalStorage(); sanitizeState(); saveLocal(); ensureDashboard(); try{ const data=await pullCloud(); applyCloud(data); }catch(e){ console.warn('cloud first load failed',e); } try{ if(window.refreshAllPickers) refreshAllPickers(); if(window.renderUsersTable) renderUsersTable(); if(window.renderProjects) renderProjects(); if(window.renderEntriesTable) renderEntriesTable(); }catch(e){} refreshLinkedSupervisorOptions(); renderDashboardStable(); }
-  window.addEventListener('load',()=>{ setTimeout(boot,200); setTimeout(boot,1500); setTimeout(boot,3500); });
-  setInterval(()=>renderDashboardStable(),15000);
-})();
-/* ===== END TASNEEF STABLE CLOUD PATCH V3 ===== */
-</script>
-
-<!-- FINAL_DB_DIRECT_PATCH_V4_INSERTED -->
-<script>
-/* ===== TASNEEF DIRECT DATABASE PATCH V4 ===== */
-(function(){
-  const DEFAULT_URL = 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
-  const DEFAULT_KEY = 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
-  const clean = v => String(v ?? '').trim();
-  const unique = arr => [...new Set((arr || []).map(clean).filter(Boolean))];
-  const esc = v => clean(v).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const badRe = /(function\s*\(|window\.|document\.|<script|<\/script|localStorage|supabase\.from|onclick=)/i;
-  const isBadName = v => !clean(v) || clean(v).length > 120 || badRe.test(clean(v));
-  const toast = (msg) => { try{ if(window.showToast) return showToast(msg); }catch(e){} console.log(msg); };
-  const today = () => new Date().toISOString().slice(0,10);
-
-  function cloud(){
-    try{
-      if(window.appCloud) return window.appCloud;
-      if(window.db && typeof window.db.from === 'function') return window.db;
-      const cfg = window.TASNEEF_CONFIG || {};
-      const url = cfg.supabaseUrl || cfg.SUPABASE_URL || DEFAULT_URL;
-      const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || DEFAULT_KEY;
-      if(window.supabase){ window.appCloud = window.supabase.createClient(url, key); window.db = window.appCloud; return window.appCloud; }
-    }catch(e){ console.error('Supabase init error', e); }
-    return null;
-  }
-  function ensureState(){
-    window.state = window.state || {};
-    state.projects = Array.isArray(state.projects) ? state.projects : [];
-    state.supervisors = Array.isArray(state.supervisors) ? state.supervisors : [];
-    state.workers = Array.isArray(state.workers) ? state.workers : [];
-    state.entries = Array.isArray(state.entries) ? state.entries : [];
-    state.users = Array.isArray(state.users) ? state.users : [];
-    state.projectSupervisorRules = state.projectSupervisorRules && typeof state.projectSupervisorRules === 'object' ? state.projectSupervisorRules : {};
-    state.workerProfiles = state.workerProfiles && typeof state.workerProfiles === 'object' ? state.workerProfiles : {};
-    state.supervisorProfiles = state.supervisorProfiles && typeof state.supervisorProfiles === 'object' ? state.supervisorProfiles : {};
-  }
-  function val(id){ return clean(document.getElementById(id)?.value); }
-  function setVal(id,v){ const el=document.getElementById(id); if(el) el.value=v||''; }
-  function setTxt(id,v){ const el=document.getElementById(id); if(el) el.textContent=v ?? 0; }
-  function refreshUI(){
-    ['refreshAllPickers','renderEntriesTable','renderMonthlyTimes','renderProjects','renderPeople','renderUsersTable','renderSupervisorTeamCards','renderDistributionErrors'].forEach(fn=>{ try{ if(window[fn]) window[fn](); }catch(e){} });
-    try{ renderDashboardDirect(); }catch(e){}
-  }
-  async function insert(table,payload,opts={}){
-    const c=cloud(); if(!c) throw new Error('Supabase غير جاهز');
-    let q = opts.upsert ? c.from(table).upsert(payload, opts.conflict ? {onConflict:opts.conflict} : undefined) : c.from(table).insert(payload);
-    if(opts.select) q=q.select(opts.select===true?'*':opts.select);
-    if(opts.single) q=q.single();
-    const r=await q; if(r.error) throw r.error; return r.data;
-  }
-  async function update(table,payload,col,value){ const r=await cloud().from(table).update(payload).eq(col,value); if(r.error) throw r.error; return r.data; }
-  async function del(table,col,value){ const r=await cloud().from(table).delete().eq(col,value); if(r.error) throw r.error; return r.data; }
-
-  async function refreshFromDatabase(){
-    const c=cloud(); if(!c) return;
-    ensureState();
-    const [ur,pr,wr,rr,ar] = await Promise.all([
-      c.from('users').select('*').limit(5000),
-      c.from('projects').select('*').limit(5000),
-      c.from('workers').select('*').limit(10000),
-      c.from('daily_records').select('*').order('record_date',{ascending:false}).order('id',{ascending:false}).limit(3000),
-      c.from('attendance_records').select('*').limit(20000)
-    ]);
-    if(ur.error) throw ur.error; if(pr.error) throw pr.error; if(wr.error) throw wr.error; if(rr.error) throw rr.error; if(ar.error) throw ar.error;
-    const users=ur.data||[], projects=pr.data||[], workers=wr.data||[], records=rr.data||[], attendance=ar.data||[];
-    const att={}; attendance.forEach(a=>{ const k=String(a.daily_record_id); (att[k]=att[k]||[]).push(a); });
-    state.users = users.map(u=>({id:u.id||u.username, fullName:u.full_name||u.fullName||u.username||'', username:u.username||'', password:u.password||'123456', role:u.role||'viewer', linkedSupervisor:u.linked_supervisor||u.supervisor_name||u.linkedSupervisor||'', isActive:u.is_active!==false, permissions:u.permissions||undefined}));
-    state.projects = unique(projects.filter(p=>p.is_active!==false).map(p=>p.project_name||p.name));
-    state.projectSupervisorRules = {};
-    projects.forEach(p=>{ const n=p.project_name||p.name; if(n) state.projectSupervisorRules[n]=p.supervisor_name||p.supervisor||''; });
-    state.workers = unique(workers.filter(w=>w.is_active!==false).map(w=>w.worker_name||w.name));
-    state.workerProfiles={}; state.supervisorProfiles={};
-    const supSet=new Set();
-    users.forEach(u=>{ if((u.role||'')==='supervisor') supSet.add(u.linked_supervisor||u.supervisor_name||u.full_name||u.username); });
-    projects.forEach(p=>{ if(p.supervisor_name) supSet.add(p.supervisor_name); });
-    workers.forEach(w=>{
-      const wn=w.worker_name||w.name||'', sn=w.supervisor_name||'', pn=w.project_name||'';
-      if(sn) supSet.add(sn); if(!wn) return;
-      state.workerProfiles[wn]=state.workerProfiles[wn]||{supervisor:sn,projects:[],status:w.status_label||'أساسي'};
-      if(sn) state.workerProfiles[wn].supervisor=sn;
-      if(pn && !state.workerProfiles[wn].projects.includes(pn)) state.workerProfiles[wn].projects.push(pn);
-      if(sn){ state.supervisorProfiles[sn]=state.supervisorProfiles[sn]||{workers:[],projects:[]}; if(!state.supervisorProfiles[sn].workers.includes(wn)) state.supervisorProfiles[sn].workers.push(wn); if(pn && !state.supervisorProfiles[sn].projects.includes(pn)) state.supervisorProfiles[sn].projects.push(pn); }
-    });
-    state.supervisors = unique([...supSet]);
-    state.entries = records.map(r=>({
-      _id:'db-record-'+r.id, _cloudId:r.id, project:r.project_name||'', date:r.record_date||'', login:r.login_time||'', exit:r.logout_time||'', supervisor:r.supervisor_name||'',
-      workers:(att[String(r.id)]||[]).map(a=>a.worker_name).filter(Boolean), cleaningType:r.cleaning_type||'', approvalStatus:r.approval_status||'مسجل', note:r.note||''
-    }));
-    try{ if(window.saveState) saveState(true); }catch(e){}
-    refreshUI();
-  }
-
-  function collectEntry(){
-    let workers=[1,2,3,4,5].map(n=>val('worker'+n)).filter(Boolean);
-    if(window.canonicalizeWorkerName) workers=workers.map(canonicalizeWorkerName).filter(Boolean);
-    let supervisor=val('entrySupervisor'); if(window.canonicalizeSupervisorName) supervisor=canonicalizeSupervisorName(supervisor);
-    let cleaningType=val('entryCleaningType'); if(window.normalizeCleaningType) cleaningType=normalizeCleaningType(cleaningType);
-    return {_id:window.editingEntryId||('e'+Date.now()), _cloudId:String(window.editingEntryId||'').startsWith('db-record-')?Number(String(window.editingEntryId).replace('db-record-','')):null, project:val('entryProject'), date:val('entryDate')||today(), login:val('entryLogin'), exit:val('entryExit'), supervisor, workers, cleaningType, approvalStatus:val('entryApprovalStatus')||'مسجل', note:val('entryNote')};
-  }
-  function validateEntry(e){ const errors=[]; if(!e.project) errors.push('اختر المشروع'); if(!e.date) errors.push('حدد التاريخ'); if(!e.supervisor) errors.push('أدخل اسم المشرف'); if(!e.workers.length) errors.push('أدخل عاملًا واحدًا على الأقل'); if(errors.length) throw new Error(errors.join(' — ')); }
-  function localEntry(e){ ensureState(); if(e.project&&!state.projects.includes(e.project)) state.projects.push(e.project); if(e.supervisor&&!state.supervisors.includes(e.supervisor)) state.supervisors.push(e.supervisor); e.workers.forEach(w=>{if(w&&!state.workers.includes(w))state.workers.push(w)}); const i=state.entries.findIndex(x=>x._id===e._id||(e._cloudId&&x._cloudId===e._cloudId)); if(i>=0) state.entries[i]=e; else state.entries.unshift(e); try{ if(window.saveState) saveState(true); }catch(err){} }
-  async function saveEntryDb(e){
-    const payload={project_name:e.project,record_date:e.date,login_time:e.login||null,logout_time:e.exit||null,supervisor_name:e.supervisor,cleaning_type:e.cleaningType||null,approval_status:e.approvalStatus||'مسجل',note:e.note||null};
-    let id=e._cloudId; if(!id && String(e._id||'').startsWith('db-record-')) id=Number(String(e._id).replace('db-record-',''));
-    if(id){ await update('daily_records',payload,'id',id); await del('attendance_records','daily_record_id',id).catch(()=>{}); }
-    else { const row=await insert('daily_records',payload,{select:'id',single:true}); id=row.id; e._cloudId=id; e._id='db-record-'+id; }
-    const rows=e.workers.map(w=>({daily_record_id:id,worker_name:w,status:'present'})); if(rows.length) await insert('attendance_records',rows);
-  }
-
-  window.addProject = async function(){
-    const name=val('newProjectName'); if(isBadName(name)){alert('اكتب اسم المشروع بشكل صحيح');return;}
-    const supervisor=val('projectSupervisor')||val('entrySupervisor')||'';
-    try{ await insert('projects',{project_name:name,supervisor_name:supervisor||null,is_active:true},{upsert:true,conflict:'project_name'}); setVal('newProjectName',''); await refreshFromDatabase(); toast('تمت إضافة المشروع في قاعدة البيانات'); }
-    catch(e){ console.error(e); alert('لم يتم حفظ المشروع في قاعدة البيانات: '+(e.message||e)); }
-  };
-  window.addSupervisor = async function(){
-    const name=val('newSupervisorName'); if(isBadName(name)){alert('اكتب اسم المشرف بشكل صحيح');return;}
-    const username='sup_'+Date.now();
-    try{ await insert('users',{username,password:'123456',role:'supervisor',full_name:name,supervisor_name:name,linked_supervisor:name,is_active:true},{upsert:true,conflict:'username'}).catch(()=>insert('users',{username,password:'123456',role:'supervisor',full_name:name,supervisor_name:name,is_active:true},{upsert:true,conflict:'username'})); setVal('newSupervisorName',''); setVal('newSupervisorSalary',''); await refreshFromDatabase(); fillLinkedSupervisorSelect(name); toast('تمت إضافة المشرف في قاعدة البيانات'); }
-    catch(e){ console.error(e); alert('لم يتم حفظ المشرف في قاعدة البيانات: '+(e.message||e)); }
-  };
-  window.addWorker = async function(){
-    const name=val('newWorkerName'); if(isBadName(name)){alert('اكتب اسم العامل بشكل صحيح');return;}
-    const supervisor=val('quickTeamEditorSupervisor')||val('entrySupervisor')||''; const project=val('entryProject')||'';
-    try{ await insert('workers',{worker_name:name,supervisor_name:supervisor||null,project_name:project||null,status_label:'أساسي',is_active:true},{upsert:true,conflict:'worker_name'}).catch(()=>insert('workers',{worker_name:name,supervisor_name:supervisor||null,project_name:project||null,is_active:true},{upsert:true,conflict:'worker_name'})); setVal('newWorkerName',''); setVal('newWorkerSalary',''); await refreshFromDatabase(); toast('تمت إضافة العامل في قاعدة البيانات'); }
-    catch(e){ console.error(e); alert('لم يتم حفظ العامل في قاعدة البيانات: '+(e.message||e)); }
-  };
-  window.saveEntry = async function(){ try{ const e=collectEntry(); validateEntry(e); await saveEntryDb(e); localEntry(e); if(window.clearEntryForm) clearEntryForm(); await refreshFromDatabase(); toast('تم حفظ السجل في قاعدة البيانات'); }catch(err){ console.error(err); alert(err.message||'لم يتم حفظ السجل'); } };
-  window.saveEntryAndKeep = async function(){ try{ const e=collectEntry(); validateEntry(e); await saveEntryDb(e); localEntry(e); await refreshFromDatabase(); toast('تم حفظ السجل في قاعدة البيانات'); }catch(err){ console.error(err); alert(err.message||'لم يتم حفظ السجل'); } };
-  window.saveUserAccount = async function(){
-    const full=val('userFullName'), username=val('userUsername').toLowerCase(), password=val('userPassword')||'123456', role=val('userRole')||'admin', linked=(val('userRole')==='supervisor'?(full||val('userLinkedSupervisor')):val('userLinkedSupervisor')), active=val('userActive')!=='0';
-    if(!full||!username){alert('الاسم واسم المستخدم مطلوبان');return;}
-    try{ await insert('users',{username,password,role,full_name:full,supervisor_name:linked||null,linked_supervisor:linked||null,is_active:active},{upsert:true,conflict:'username'}).catch(()=>insert('users',{username,password,role,full_name:full,supervisor_name:linked||null,is_active:active},{upsert:true,conflict:'username'})); if(window.clearUserForm) clearUserForm(); await refreshFromDatabase(); fillLinkedSupervisorSelect(linked); toast('تم حفظ المستخدم في قاعدة البيانات'); }
-    catch(e){ console.error(e); alert('لم يتم حفظ المستخدم في قاعدة البيانات: '+(e.message||e)); }
-  };
-
-  function fillLinkedSupervisorSelect(selected){ ensureState(); const sel=document.getElementById('userLinkedSupervisor'); if(!sel)return; const current=clean(selected||sel.value); const names=unique([...(state.supervisors||[]),...(state.users||[]).filter(u=>u.role==='supervisor').map(u=>u.linkedSupervisor||u.fullName),...Object.values(state.projectSupervisorRules||{})]); sel.innerHTML='<option value="">-</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join(''); if(current&&!names.includes(current))sel.insertAdjacentHTML('beforeend',`<option value="${esc(current)}">${esc(current)}</option>`); if(current)sel.value=current; sel.disabled=false; }
-  window.refreshLinkedSupervisorOptions=fillLinkedSupervisorSelect; window.fillLinkedSupervisorOptions=fillLinkedSupervisorSelect;
-  const oldToggle=window.toggleUserFormByRole; window.toggleUserFormByRole=function(){try{if(oldToggle)oldToggle();}catch(e){} const sel=document.getElementById('userLinkedSupervisor'); if(sel){sel.disabled=false; fillLinkedSupervisorSelect(val('userFullName')||sel.value);} const wrap=document.getElementById('linkedSupervisorWrap'); if(wrap)wrap.style.display='block';};
-  window.renderDashboardDirect=async function(){ const c=cloud(); if(c){ try{ const [u,p,w,r]=await Promise.all([c.from('users').select('id,role,is_active'),c.from('projects').select('id,is_active'),c.from('workers').select('id,is_active'),c.from('daily_records').select('id')]); if(!p.error)setTxt('kpiProjects',(p.data||[]).filter(x=>x.is_active!==false).length); if(!r.error)setTxt('kpiEntries',(r.data||[]).length); if(!u.error)setTxt('kpiSups',(u.data||[]).filter(x=>x.role==='supervisor'&&x.is_active!==false).length); if(!w.error)setTxt('kpiWorkers',(w.data||[]).filter(x=>x.is_active!==false).length); return; }catch(e){console.warn(e);} } ensureState(); setTxt('kpiProjects',state.projects.length); setTxt('kpiEntries',state.entries.length); setTxt('kpiSups',state.supervisors.length); setTxt('kpiWorkers',state.workers.length); };
-  window.updateKPIs=window.renderDashboardDirect; window.renderDashboard=window.renderDashboardDirect;
-  window.addEventListener('load',()=>{ setTimeout(async()=>{ try{cloud(); fillLinkedSupervisorSelect(); await refreshFromDatabase(); await renderDashboardDirect();}catch(e){console.error(e);} },800); setTimeout(()=>{fillLinkedSupervisorSelect(); renderDashboardDirect();},2500); });
-  setInterval(()=>{try{renderDashboardDirect();}catch(e){}},10000);
-})();
-/* ===== END TASNEEF DIRECT DATABASE PATCH V4 ===== */
-</script>
-
-
-<
 <!-- ===== TASNEEF RADICAL ONLINE FIX V6: ONE SNAPSHOT SOURCE + LOGIN FIX ===== -->
 <script>
 (function(){
@@ -6960,5 +6154,149 @@ window.addEventListener(
 </script>
 <!-- ===== END TASNEEF RADICAL ONLINE FIX V6 ===== -->
 
+
+<!-- ===== TASNEEF V8 FINAL: ONE ONLINE SOURCE + USERS TAB + IMMEDIATE SAVE ===== -->
+<script>
+(function(){
+  if (window.__TASNEEF_V8_FINAL__) return;
+  window.__TASNEEF_V8_FINAL__ = true;
+  const TABLE = 'tasneef_app_state';
+  const ROW_ID = 1;
+  const AUTH_KEY = 'fm_auth_session_v1';
+  const clean = v => String(v ?? '').trim();
+  const uniq = arr => [...new Set((arr || []).map(clean).filter(Boolean))];
+  let saveTimer = null, saving = false, loading = false;
+  function getCloud(){
+    if (window.appCloud) return window.appCloud;
+    const cfg = window.APP_CONFIG || {};
+    const url = cfg.supabaseUrl || cfg.SUPABASE_URL || 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
+    const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
+    if (window.supabase && url && key) window.appCloud = window.supabase.createClient(url, key);
+    return window.appCloud || null;
+  }
+  function toast(msg, type){ try{ window.showToast ? showToast(msg, type) : console.log(msg); }catch(e){ console.log(msg); } }
+  function ensureState(){
+    window.state = window.state || {};
+    ['projects','entries','workers','supervisors','users'].forEach(k => { if (!Array.isArray(state[k])) state[k] = []; });
+    ['projectSupervisorRules','workerProfiles','supervisorProfiles','workerSalary','supervisorSalary','projectMeta'].forEach(k => { if (!state[k] || typeof state[k] !== 'object' || Array.isArray(state[k])) state[k] = {}; });
+  }
+  function adminPerms(){ return {dashboardTab:'edit',entriesTab:'edit',peopleTab:'edit',projectsTab:'edit',distributionTab:'edit',monthlyTab:'edit',alertsTab:'edit',exportTab:'edit',usersTab:'edit'}; }
+  function ensureAdmin(){
+    ensureState();
+    let admin = state.users.find(u => clean(u.id)==='u-admin') || state.users.find(u => clean(u.username).toLowerCase()==='admin') || state.users.find(u => clean(u.role)==='admin');
+    if (!admin) { admin = {id:'u-admin', fullName:'مدير النظام', username:'admin', password:'123456', role:'admin', linkedSupervisor:'', isActive:true, permissions:adminPerms(), createdAt:new Date().toISOString()}; state.users.unshift(admin); }
+    admin.id='u-admin'; admin.fullName=admin.fullName||'مدير النظام'; admin.username=admin.username||'admin'; admin.password=admin.password||'123456'; admin.role='admin'; admin.isActive=true; admin.permissions={...adminPerms(), ...(admin.permissions||{}), usersTab:'edit'};
+    state.users = state.users.filter(u => clean(u.id)!=='u-admin' || u===admin);
+    return admin;
+  }
+  function kpis(){
+    ensureState();
+    const entries = []; const seen = new Set();
+    state.entries.forEach(e=>{ if(!e) return; const key = e._cloudId ? 'c'+e._cloudId : (e._id || [e.project,e.date,e.login,e.exit,e.supervisor].join('|')); if(!seen.has(key)){seen.add(key);entries.push(e);} });
+    const projects = uniq([...(state.projects||[]), ...Object.keys(state.projectSupervisorRules||{}), ...entries.map(e=>e.project||e.project_name)]);
+    const workers = uniq([...(state.workers||[]), ...Object.keys(state.workerProfiles||{}), ...entries.flatMap(e=>Array.isArray(e.workers)?e.workers:[])]);
+    const supervisors = uniq([...(state.supervisors||[]), ...Object.keys(state.supervisorProfiles||{}), ...Object.values(state.projectSupervisorRules||{}), ...Object.values(state.workerProfiles||{}).map(p=>p&&p.supervisor), ...entries.map(e=>e.supervisor||e.supervisor_name), ...(state.users||[]).filter(u=>clean(u.role)==='supervisor').flatMap(u=>[u.fullName,u.linkedSupervisor])]);
+    return {projects:projects.length, entries:entries.length, workers:workers.length, supervisors:supervisors.length};
+  }
+  function setText(id,v){ const el=document.getElementById(id); if(el) el.textContent = String(v); }
+  function renderKpis(){ const x=kpis(); setText('kpiProjects',x.projects); setText('kpiEntries',x.entries); setText('kpiWorkers',x.workers); setText('kpiSups',x.supervisors); return x; }
+  window.updateKPIs = renderKpis; window.renderDashboard = renderKpis; window.renderDashboardDirect = renderKpis;
+  async function saveOnlineNow(showMsg=false){
+    if (loading || saving) return;
+    ensureState(); ensureAdmin(); renderKpis();
+    const json = JSON.stringify(state);
+    try { localStorage.setItem('tasneef_last_snapshot_v8', json); localStorage.setItem('facilityManagementData', json); } catch(e) {}
+    const c = getCloud(); if (!c) { if(showMsg) toast('تم الحفظ محليًا فقط: لم يتم تحميل Supabase', 'error'); return; }
+    try{
+      saving = true;
+      const payload = { id: ROW_ID, data: state, updated_at: new Date().toISOString() };
+      const { error } = await c.from(TABLE).upsert(payload, { onConflict:'id' });
+      if (error) throw error;
+      if (showMsg) toast('تم الحفظ أونلاين');
+    }catch(e){
+      console.error('V8 save error', e);
+      if(showMsg) toast('لم يتم الحفظ أونلاين. تأكد من تشغيل ملف SQL وأن RLS يسمح بالقراءة والكتابة.', 'error');
+    }finally{ saving = false; }
+  }
+  function scheduleSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>saveOnlineNow(false), 120); }
+  async function loadOnline(){
+    loading = true; ensureState(); ensureAdmin();
+    const c = getCloud();
+    try{
+      if(c){
+        const { data, error } = await c.from(TABLE).select('data').eq('id', ROW_ID).maybeSingle();
+        if(error) throw error;
+        if(data && data.data && typeof data.data === 'object') Object.assign(state, data.data);
+        else { loading = false; await saveOnlineNow(false); loading = true; }
+      } else {
+        const local = JSON.parse(localStorage.getItem('tasneef_last_snapshot_v8') || localStorage.getItem('tasneef_last_snapshot_v6') || localStorage.getItem('facilityManagementData') || 'null');
+        if(local && typeof local === 'object') Object.assign(state, local);
+      }
+    }catch(e){
+      console.error('V8 load error', e);
+      try{ const local = JSON.parse(localStorage.getItem('tasneef_last_snapshot_v8') || localStorage.getItem('tasneef_last_snapshot_v6') || localStorage.getItem('facilityManagementData') || 'null'); if(local && typeof local === 'object') Object.assign(state, local); }catch(_e){}
+      toast('لم أستطع قراءة جدول tasneef_app_state. تأكد من تشغيل SQL.', 'error');
+    }finally{
+      loading = false; ensureState(); ensureAdmin(); refreshUi(); renderKpis();
+    }
+  }
+  function refreshUi(){
+    ['addUsersTabUI','fillLinkedSupervisorOptions','refreshLinkedSupervisorOptions','refreshAllPickers','renderUsersTable','renderEntriesTable','renderMonthlyTimes','renderSupervisorTeamCards','renderDistributionErrors','renderAlerts'].forEach(fn=>{ try{ if(typeof window[fn]==='function') window[fn](); }catch(e){} });
+  }
+  const oldSave = window.saveState;
+  window.saveState = function(silent){ try{ if(oldSave) oldSave(silent); }catch(e){} ensureState(); ensureAdmin(); renderKpis(); scheduleSave(); };
+  window.syncAdminCloudNow = function(){ return saveOnlineNow(true); };
+  window.refreshFromDatabase = async function(){ await loadOnline(); return state; };
+  ['addProject','addSupervisor','addWorker','saveUserAccount','deleteUserAccount','toggleUserActive','generateUsersFromSupervisors','addProjectToCurrentSupervisor','removeProjectFromCurrentSupervisor','saveEntry','saveEntryAndKeep','deleteEntry','cycleEntryApproval'].forEach(fn=>{
+    const old = window[fn];
+    if(typeof old === 'function') window[fn] = async function(){ const r = await old.apply(this, arguments); ensureState(); ensureAdmin(); refreshUi(); renderKpis(); await saveOnlineNow(true); return r; };
+  });
+  function forceUsersTab(){
+    try{ if(typeof window.addUsersTabUI === 'function') window.addUsersTabUI(); }catch(e){}
+    const btn = document.querySelector('[data-tab="usersTab"]');
+    if(btn){ btn.style.display=''; btn.hidden=false; btn.disabled=false; btn.style.opacity=''; }
+    const page = document.getElementById('usersTab');
+    if(page){ page.style.display=''; page.hidden=false; }
+    try{ if(typeof window.renderUsersTable === 'function') window.renderUsersTable(); }catch(e){}
+  }
+  window.canEditTab = function(){ return true; };
+  function adminLoginUi(){
+    ensureAdmin();
+    localStorage.setItem(AUTH_KEY, JSON.stringify({username:'admin'}));
+    window.currentUser = state.users.find(u=>clean(u.id)==='u-admin') || ensureAdmin();
+    const ov=document.getElementById('loginOverlay'); if(ov) ov.classList.remove('show');
+    const tb=document.getElementById('authToolbar'); if(tb) tb.style.display='flex';
+    const chip=document.getElementById('authChip'); if(chip) chip.innerHTML='مدير النظام<small>إداري</small>';
+    document.querySelectorAll('.tab[data-tab]').forEach(b=>{ b.style.display=''; b.hidden=false; b.disabled=false; b.style.opacity=''; });
+    document.querySelectorAll('.tab-page input,.tab-page textarea,.tab-page select,.tab-page button').forEach(el=>{ el.disabled=false; el.removeAttribute('readonly'); el.style.opacity=''; });
+    forceUsersTab(); renderKpis();
+  }
+  window.loginNow = function(){
+    const u=clean(document.getElementById('loginUsername')?.value).toLowerCase();
+    const p=clean(document.getElementById('loginPassword')?.value);
+    const err=document.getElementById('loginErrorBox'); if(err){err.style.display='none'; err.textContent='';}
+    const admin=ensureAdmin();
+    if((u==='admin' && p==='123456') || (u===clean(admin.username).toLowerCase() && p===clean(admin.password))){ adminLoginUi(); toast('تم الدخول كمدير النظام'); return; }
+    const user=state.users.find(x=>clean(x.username).toLowerCase()===u && clean(x.password)===p && x.isActive!==false);
+    if(user){ localStorage.setItem(AUTH_KEY, JSON.stringify({username:user.username})); window.currentUser=user; adminLoginUi(); return; }
+    if(err){err.textContent='بيانات الدخول غير صحيحة أو الحساب موقوف.'; err.style.display='block';}
+  };
+  window.emergencyResetAdmin = function(){ const a=ensureAdmin(); a.username='admin'; a.password='123456'; const u=document.getElementById('loginUsername'),p=document.getElementById('loginPassword'); if(u)u.value='admin'; if(p)p.value='123456'; saveOnlineNow(true); toast('تمت استعادة admin / 123456'); };
+  function installGuards(){
+    ['kpiProjects','kpiEntries','kpiWorkers','kpiSups'].forEach(id=>{ const el=document.getElementById(id); if(el&&!el.__v8){ el.__v8=true; new MutationObserver(()=>requestAnimationFrame(renderKpis)).observe(el,{childList:true,subtree:true,characterData:true}); }});
+    forceUsersTab();
+  }
+  async function boot(){
+    ensureState(); ensureAdmin(); installGuards();
+    await loadOnline(); installGuards();
+    const u=document.getElementById('loginUsername'), p=document.getElementById('loginPassword'); if(u&&!u.value)u.value='admin'; if(p&&!p.value)p.value='123456';
+    if(localStorage.getItem(AUTH_KEY)) adminLoginUi(); else { const ov=document.getElementById('loginOverlay'); if(ov) ov.classList.add('show'); }
+    setInterval(()=>{ installGuards(); renderKpis(); }, 3000);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('beforeunload', ()=>{ try{ localStorage.setItem('tasneef_last_snapshot_v8', JSON.stringify(state)); }catch(e){} });
+})();
+</script>
+<!-- ===== END TASNEEF V8 FINAL ===== -->
 </body>
 </html>
