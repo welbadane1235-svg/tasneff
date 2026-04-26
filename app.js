@@ -632,3 +632,101 @@ async function saveSupervisorAttendance(){ const u=session(); const date=$('atte
     renderTickets();
   };
 })();
+
+/* ===== V12: Supervisor windows + daily summary + mobile sound unlock ===== */
+(function(){
+  window.showSupervisorWindow = function(id, btn){
+    document.querySelectorAll('.sup-page').forEach(p=>p.classList.remove('active'));
+    const page=document.getElementById(id); if(page) page.classList.add('active');
+    document.querySelectorAll('.sup-tab').forEach(b=>b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+    if(id==='supSummary' && typeof renderSupervisorDailySummary==='function') renderSupervisorDailySummary();
+    if(id==='supTickets' && typeof renderTickets==='function') renderTickets();
+    if(id==='supLogs' && typeof renderTimeLogs==='function') renderTimeLogs();
+  };
+
+  window.enableSupervisorSounds = async function(){
+    try{
+      const a=new Audio('sounds/checkin.wav');
+      a.volume=0.15;
+      await a.play();
+      a.pause();
+      a.currentTime=0;
+      window.__tasneefSoundsEnabled=true;
+      msg('تم تفعيل الأصوات على هذا الجهاز');
+    }catch(e){
+      window.__tasneefSoundsEnabled=true;
+      msg('تم طلب تفعيل الأصوات. جرّب تسجيل دخول أو تكت الآن');
+    }
+  };
+
+  function startEndForSummary(){
+    const range=$('summaryRange')?.value || 'today';
+    const base=$('summaryDate')?.value || today();
+    const d=new Date(base+'T00:00:00');
+    if(range==='yesterday'){
+      const y=new Date(); y.setDate(y.getDate()-1);
+      const s=y.toISOString().slice(0,10); return {start:s,end:s,label:'أمس'};
+    }
+    if(range==='week'){
+      const now=new Date();
+      const day=now.getDay();
+      const diff=(day+6)%7; // start Saturday-ish? Actually Monday. Good enough for operational week.
+      const s=new Date(now); s.setDate(now.getDate()-diff);
+      const e=new Date(now);
+      return {start:s.toISOString().slice(0,10),end:e.toISOString().slice(0,10),label:'هذا الأسبوع'};
+    }
+    if(range==='custom') return {start:base,end:base,label:base};
+    const t=today(); return {start:t,end:t,label:'اليوم'};
+  }
+
+  function inDateRange(date,start,end){
+    const d=String(date||'').slice(0,10);
+    return d>=start && d<=end;
+  }
+
+  window.renderSupervisorDailySummary = function(){
+    const cards=$('supervisorSummaryCards'), body=$('supervisorSummaryBody');
+    if(!cards || !body) return;
+    const {start,end,label}=startEndForSummary();
+    const logs=(data.logs||[]).filter(l=>inDateRange(l.log_date || l.check_in, start, end));
+    const attendance=(data.attendance||[]).filter(a=>inDateRange(a.attendance_date, start, end));
+    const tickets=(data.tickets||[]).filter(t=>inDateRange(t.created_at, start, end));
+    const minutes=logs.reduce((s,l)=>s+Number(l.duration_minutes||minutesBetween(l.check_in,l.check_out)||0),0);
+    const travel=logs.reduce((s,l)=>s+Number(l.travel_minutes||0),0);
+    const present=attendance.filter(a=>a.status==='present').length;
+    const absent=attendance.filter(a=>a.status==='absent').length;
+    const open=tickets.filter(t=>t.status!=='closed').length;
+    const closed=tickets.filter(t=>t.status==='closed').length;
+    cards.innerHTML=`
+      <div class="summary-card-mini"><small>الفترة</small><b style="font-size:18px">${esc(label)}</b></div>
+      <div class="summary-card-mini"><small>تسجيلات الدخول والخروج</small><b>${logs.length}</b></div>
+      <div class="summary-card-mini"><small>إجمالي ساعات العمل</small><b>${minsToText(minutes)}</b></div>
+      <div class="summary-card-mini"><small>وقت التنقل</small><b>${travel} د</b></div>
+      <div class="summary-card-mini"><small>الحضور</small><b>${present}</b></div>
+      <div class="summary-card-mini"><small>الغياب</small><b>${absent}</b></div>
+      <div class="summary-card-mini"><small>التكتات المفتوحة</small><b>${open}</b></div>
+      <div class="summary-card-mini"><small>التكتات المغلقة</small><b>${closed}</b></div>
+      <div class="summary-card-mini"><small>إجمالي التكتات</small><b>${tickets.length}</b></div>`;
+    body.innerHTML=`
+      <tr><td>عدد المشاريع التي تم تسجيل زيارة لها</td><td>${new Set(logs.map(l=>String(l.project_id))).size}</td></tr>
+      <tr><td>إجمالي ساعات العمل داخل المشاريع</td><td>${minsToText(minutes)}</td></tr>
+      <tr><td>إجمالي وقت التنقل / الضائع</td><td>${travel} دقيقة</td></tr>
+      <tr><td>عدد الحضور</td><td>${present}</td></tr>
+      <tr><td>عدد الغياب</td><td>${absent}</td></tr>
+      <tr><td>التكتات المفتوحة / تحت المعالجة</td><td>${open}</td></tr>
+      <tr><td>التكتات المغلقة</td><td>${closed}</td></tr>`;
+  };
+
+  const oldInitSupervisorV12 = window.initSupervisor;
+  window.initSupervisor = async function(){
+    await oldInitSupervisorV12();
+    if($('summaryDate') && !$('summaryDate').value) $('summaryDate').value=today();
+    if(typeof renderSupervisorDailySummary==='function') renderSupervisorDailySummary();
+    const active=document.querySelector('.sup-tab.active');
+    if(active){
+      const page=document.querySelector('.sup-page.active');
+      if(!page) showSupervisorWindow('supLogs', active);
+    }
+  };
+})();
