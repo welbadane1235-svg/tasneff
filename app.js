@@ -390,3 +390,119 @@ async function saveSupervisorAttendance(){ const u=session(); const date=$('atte
     try{ window.renderAttendanceMonthly(); }catch(e){ console.error('renderAttendanceMonthly failed',e); }
   };
 })();
+
+/* ===== V10.1: Fix attendance monthly filters and empty results ===== */
+(function(){
+  function daysInMonthFixed(monthStr){
+    if(!monthStr || !monthStr.includes('-')) monthStr = today().slice(0,7);
+    const [y,m] = monthStr.split('-').map(Number);
+    return new Date(y, m, 0).getDate();
+  }
+  function monthDateFixed(monthStr, day){ return `${monthStr}-${String(day).padStart(2,'0')}`; }
+  function monthOfAttendance(a){ return String(a.attendance_date || '').slice(0,7); }
+  function safeOptionText(v){ return esc(v || '-'); }
+  function setOptionsKeepValue(id, rows, labelFn, allLabel){
+    const el = $(id); if(!el) return '';
+    const old = el.value || '';
+    const seen = new Set();
+    const opts = [];
+    (rows||[]).forEach(r=>{
+      if(!r || r.id===undefined || r.id===null) return;
+      const val = String(r.id);
+      if(seen.has(val)) return;
+      seen.add(val);
+      opts.push(`<option value="${esc(val)}">${safeOptionText(labelFn(r))}</option>`);
+    });
+    el.innerHTML = `<option value="">${allLabel || 'الكل'}</option>` + opts.join('');
+    if([...el.options].some(o=>o.value===old)) el.value = old;
+    else el.value = '';
+    return el.value;
+  }
+  function projectMatchesSupervisorForAttendance(project, sid, month){
+    if(!sid) return true;
+    if(String(project.supervisor_id||'') === String(sid)) return true;
+    const hasWorker = (data.workers||[]).some(w => String(workerProjectId(w)||'')===String(project.id) && String(workerSupId(w)||'')===String(sid));
+    if(hasWorker) return true;
+    return (data.attendance||[]).some(a => monthOfAttendance(a)===month && String(a.project_id||'')===String(project.id) && String(a.supervisor_id||'')===String(sid));
+  }
+  function workerMatchesAttendanceMatrixFixed(w, sid, pid, q, month){
+    const wid = String(w.id);
+    const wsid = String(workerSupId(w)||'');
+    const wpid = String(workerProjectId(w)||'');
+    const workerAttend = (data.attendance||[]).filter(a=>monthOfAttendance(a)===month && String(a.worker_id)===wid);
+    if(sid){
+      const projectSupervisorMatch = wpid && String((data.projects||[]).find(p=>String(p.id)===wpid)?.supervisor_id||'')===String(sid);
+      const attendanceSupervisorMatch = workerAttend.some(a=>String(a.supervisor_id||'')===String(sid));
+      if(wsid!==String(sid) && !projectSupervisorMatch && !attendanceSupervisorMatch) return false;
+    }
+    if(pid){
+      const attendanceProjectMatch = workerAttend.some(a=>String(a.project_id||'')===String(pid));
+      if(wpid!==String(pid) && !attendanceProjectMatch) return false;
+    }
+    if(q && !String(w.name||'').includes(q)) return false;
+    return true;
+  }
+  function recordForDay(w, ds, sid, pid){
+    const rows = (data.attendance||[]).filter(a=>String(a.worker_id)===String(w.id) && a.attendance_date===ds);
+    return rows.find(a=>(!sid || String(a.supervisor_id||workerSupId(w)||'')===String(sid)) && (!pid || String(a.project_id||workerProjectId(w)||'')===String(pid))) || null;
+  }
+  window.renderAttendanceMonthly = function(){
+    const body = $('attendanceMatrixBody');
+    if(!body) return;
+
+    const monthEl = $('attendanceMatrixMonth');
+    if(monthEl && !monthEl.value) monthEl.value = today().slice(0,7);
+    const month = monthEl?.value || today().slice(0,7);
+
+    const supervisorRows = (data.supervisors && data.supervisors.length ? data.supervisors : (data.users||[]).filter(u=>u.role==='supervisor'));
+    const sid = setOptionsKeepValue('attendanceMatrixSupervisor', supervisorRows, s=>s.full_name || s.username, 'كل المشرفين');
+
+    const projectRows = (data.projects||[]).filter(p=>projectMatchesSupervisorForAttendance(p, sid, month));
+    const pid = setOptionsKeepValue('attendanceMatrixProject', projectRows, p=>p.name, 'كل المشاريع');
+
+    const q = ($('attendanceMatrixSearch')?.value || '').trim();
+    const days = daysInMonthFixed(month);
+    const workers = (data.workers||[]).filter(w=>workerMatchesAttendanceMatrixFixed(w, sid, pid, q, month));
+
+    const head = $('attendanceMatrixHead');
+    if(head){
+      const dayHeads = Array.from({length:days},(_,i)=>`<th>${i+1}</th>`).join('');
+      head.innerHTML = `<tr><th>العامل</th><th>المشرف</th><th>المشروع</th>${dayHeads}<th>حضور</th><th>غياب</th><th>النسبة</th></tr>`;
+    }
+
+    let totalPresent=0, totalAbsent=0;
+    body.innerHTML = workers.map(w=>{
+      let present=0, absent=0;
+      const cells=[];
+      for(let d=1; d<=days; d++){
+        const ds = monthDateFixed(month,d);
+        const rec = recordForDay(w, ds, sid, pid);
+        if(rec && rec.status==='present'){
+          present++; cells.push(`<td title="حاضر"><span class="att-cell att-present">ح</span></td>`);
+        } else if(rec && rec.status==='absent'){
+          absent++; cells.push(`<td title="غائب"><span class="att-cell att-absent">غ</span></td>`);
+        } else {
+          cells.push(`<td title="لم يسجل"><span class="att-cell att-empty">-</span></td>`);
+        }
+      }
+      totalPresent += present; totalAbsent += absent;
+      const pct = (present+absent) ? (present/(present+absent))*100 : 0;
+      const cls = pct>=90 ? 'green' : (pct>=70 ? 'amber' : 'red');
+      const projectId = pid || workerProjectId(w);
+      const supervisorId = sid || workerSupId(w) || (projectId ? (data.projects||[]).find(p=>String(p.id)===String(projectId))?.supervisor_id : '');
+      return `<tr><td><b>${esc(w.name)}</b><div class="att-summary">${esc(workerTypeText(w.worker_type||'primary'))}</div></td><td>${esc(supervisorName(supervisorId))}</td><td>${esc(projectName(projectId))}</td>${cells.join('')}<td><span class="badge green">${present}</span></td><td><span class="badge red">${absent}</span></td><td><span class="badge ${cls}">${pct.toFixed(1)}%</span></td></tr>`;
+    }).join('') || `<tr><td colspan="${days+6}">لا يوجد عمال حسب الفلاتر المختارة</td></tr>`;
+
+    const recorded = totalPresent + totalAbsent;
+    const pct = recorded ? (totalPresent/recorded)*100 : 0;
+    if($('attendanceMatrixSummary')){
+      $('attendanceMatrixSummary').innerHTML = `<div class="kpi"><small>عدد العمال</small><b>${workers.length}</b></div><div class="kpi"><small>إجمالي الحضور</small><b>${totalPresent}</b></div><div class="kpi"><small>إجمالي الغياب</small><b>${totalAbsent}</b></div><div class="kpi"><small>نسبة الحضور</small><b>${pct.toFixed(1)}%</b></div>`;
+    }
+  };
+
+  const oldShowPageV101 = window.showPage;
+  window.showPage = function(id, btn){
+    if(typeof oldShowPageV101 === 'function') oldShowPageV101(id, btn);
+    if(id === 'attendance') setTimeout(()=>window.renderAttendanceMonthly && window.renderAttendanceMonthly(), 0);
+  };
+})();
