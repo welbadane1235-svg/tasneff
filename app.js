@@ -1,7 +1,9 @@
 // Tasneef HTML App - Vanilla JS + Supabase
 // ضع بيانات Supabase هنا
 const SUPABASE_URL = "https://zmjdqiswytxlbfgnfjfv.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb";let sb;
+const SUPABASE_ANON_KEY = "sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb";
+
+let sb;
 try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch(e) { console.error(e); }
 
 const $ = (id)=>document.getElementById(id);
@@ -71,7 +73,7 @@ async function loadAdminData(){
     adminState.attendance = await selectAll('attendance');
     adminState.logs = await selectAll('time_logs');
     adminState.tickets = await selectAll('tickets');
-    fillAdminSelects(); renderDashboard(); renderUsers(); renderProjects(); renderWorkers(); renderAttendance(); renderLogs(); renderTickets();
+    fillAdminSelects(); renderDashboard(); renderUsers(); renderProjects(); renderWorkers(); renderAttendance(); renderDailyLogs(); renderLogs(); renderTickets();
   }catch(e){ alert('خطأ تحميل البيانات: '+ e.message); }
 }
 function supName(id){ return (adminState.supervisors.find(x=>x.id===id)||{}).full_name || '-'; }
@@ -82,7 +84,7 @@ function fillSelect(el, arr, label='name', empty='اختر'){
   el.innerHTML = `<option value="">${empty}</option>` + arr.map(x=>`<option value="${x.id}">${x[label]||x.full_name}</option>`).join('');
 }
 function fillAdminSelects(){
-  ['userLinkedSupervisor','projectSupervisor','workerSupervisor','filterSupervisor','attendanceSupervisor','ticketSupervisor'].forEach(id=>fillSelect($(id),adminState.supervisors,'full_name','الكل / اختر'));
+  ['userLinkedSupervisor','projectSupervisor','workerSupervisor','filterSupervisor','attendanceSupervisor','dailySupervisor','ticketSupervisor'].forEach(id=>fillSelect($(id),adminState.supervisors,'full_name','الكل / اختر'));
   ['attendanceProject','ticketProject'].forEach(id=>fillSelect($(id),adminState.projects,'name','الكل / اختر'));
   fillSelect($('attendanceWorker'),adminState.workers,'name','اختر العامل');
 }
@@ -108,6 +110,24 @@ function renderWorkers(){
 function renderAttendance(){
   $('attendanceBody').innerHTML = adminState.attendance.slice(0,200).map(a=>`<tr><td>${a.attendance_date}</td><td>${workerName(a.worker_id)}</td><td>${supName(a.supervisor_id)}</td><td>${projectName(a.project_id)}</td><td>${a.status==='present'?'<span class="pill green">حاضر</span>':'<span class="pill red">غائب</span>'}</td><td>${a.notes||'-'}</td></tr>`).join('');
 }
+function renderDailyLogs(){
+  const date = $('dailyDate')?.value || today();
+  const sup = $('dailySupervisor')?.value || '';
+  const sameDay = (v)=> (v ? new Date(v).toISOString().slice(0,10) : '') === date;
+  const logRows = adminState.logs.filter(l=>(l.log_date===date || sameDay(l.check_in) || sameDay(l.created_at)) && (!sup || String(l.supervisor_id)===String(sup)));
+  const attRows = adminState.attendance.filter(a=>a.attendance_date===date && (!sup || String(a.supervisor_id)===String(sup)));
+  const ticketRows = adminState.tickets.filter(t=>sameDay(t.created_at) && (!sup || String(t.supervisor_id)===String(sup)));
+  const rows = [];
+  logRows.forEach(l=>rows.push({type:'وقت', date:l.log_date||date, sup:supName(l.supervisor_id), project:projectName(l.project_id), detail:'دخول / خروج', status:l.check_out?'مكتمل':'مفتوح', time:`${fmt(l.check_in)} - ${fmt(l.check_out)}`, notes:l.notes||'-'}));
+  attRows.forEach(a=>rows.push({type:'حضور', date:a.attendance_date, sup:supName(a.supervisor_id), project:projectName(a.project_id), detail:workerName(a.worker_id), status:a.status==='present'?'حاضر':'غائب', time:'-', notes:a.notes||'-'}));
+  ticketRows.forEach(t=>rows.push({type:'تكت', date:new Date(t.created_at).toISOString().slice(0,10), sup:supName(t.supervisor_id), project:projectName(t.project_id), detail:t.title, status:t.status==='closed'?'مقفل':'مفتوح', time:fmt(t.created_at), notes:t.description||'-'}));
+  if($('dailyTimeCount')) $('dailyTimeCount').textContent = logRows.length;
+  if($('dailyPresentCount')) $('dailyPresentCount').textContent = attRows.filter(a=>a.status==='present').length;
+  if($('dailyAbsentCount')) $('dailyAbsentCount').textContent = attRows.filter(a=>a.status==='absent').length;
+  if($('dailyTicketsCount')) $('dailyTicketsCount').textContent = ticketRows.length;
+  if($('dailyBody')) $('dailyBody').innerHTML = rows.slice(0,300).map(r=>`<tr><td>${r.type}</td><td>${r.date}</td><td>${r.sup}</td><td>${r.project}</td><td>${r.detail}</td><td>${r.status}</td><td>${r.time}</td><td>${r.notes}</td></tr>`).join('') || `<tr><td colspan="8">لا توجد تسجيلات لهذا اليوم</td></tr>`;
+}
+
 function renderLogs(){
   $('logsBody').innerHTML = adminState.logs.slice(0,200).map(l=>`<tr><td>${l.log_date}</td><td>${supName(l.supervisor_id)}</td><td>${projectName(l.project_id)}</td><td>${fmt(l.check_in)}</td><td>${fmt(l.check_out)}</td><td>${Math.round((l.duration_minutes||0)/60*10)/10}</td><td>${l.travel_minutes||0}</td></tr>`).join('');
 }
@@ -117,6 +137,8 @@ function renderTickets(){
 function ticketStatus(s){ return s==='closed'?'<span class="pill green">مقفل</span>':s==='in_progress'?'<span class="pill orange">جاري</span>':'<span class="pill blue">مفتوح</span>'; }
 function bindAdminForms(){
   $('filterSupervisor')?.addEventListener('change',()=>{renderProjects(); renderWorkers();});
+  $('dailyDate')?.addEventListener('change',renderDailyLogs);
+  $('dailySupervisor')?.addEventListener('change',renderDailyLogs);
   $('addUserBtn')?.addEventListener('click', async()=>{
     const payload={full_name:$('userFullName').value.trim(), username:$('userName').value.trim(), password:$('userPassword').value.trim()||'123456', role:$('userRole').value, linked_supervisor_id:$('userLinkedSupervisor').value||null, is_active:true};
     if(!payload.full_name || !payload.username) return alert('اكتب الاسم واسم المستخدم');
@@ -211,4 +233,4 @@ function setLang(lang){
   supState.lang=lang; qa('.langbar button').forEach(b=>b.classList.toggle('active',b.dataset.lang===lang));
   qa('[data-i18n]').forEach(el=>{ const key=el.dataset.i18n; el.textContent=(dict[lang]&&dict[lang][key])||dict.ar[key]||el.textContent; });
 }
-window.login=login; window.logout=logout; window.initAdmin=initAdmin; window.initSupervisor=initSupervisor; window.toggleUser=toggleUser; window.removeRow=removeRow; window.closeTicket=closeTicket; window.exportTable=exportTable; window.printPage=printPage; window.quickAttendance=quickAttendance; window.setLang=setLang;
+window.login=login; window.logout=logout; window.initAdmin=initAdmin; window.initSupervisor=initSupervisor; window.toggleUser=toggleUser; window.removeRow=removeRow; window.closeTicket=closeTicket; window.exportTable=exportTable; window.printPage=printPage; window.renderDailyLogs=renderDailyLogs; window.quickAttendance=quickAttendance; window.setLang=setLang;
