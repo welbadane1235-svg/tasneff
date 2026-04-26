@@ -1724,6 +1724,25 @@ function printDailyEntriesReport() {
   <table><thead><tr><th>التاريخ</th><th>اليوم</th><th>المشروع</th><th>المشرف</th><th>العمال</th><th>الدخول</th><th>الخروج</th><th>المدة</th><th>التقديري</th><th>حالة المدة</th><th>الحالة</th><th>الاعتماد</th><th>الملاحظة</th></tr></thead><tbody>
   ${rows.map(e=>{ const mins = durationMinutes(e.login,e.exit); const timeInfo = (window.getEntryTimeColorInfo ? getEntryTimeColorInfo(e) : {label:'—'}); const expectedText = (window.formatExpectedTime ? formatExpectedTime(state.projectMeta?.[e.project]?.expectedTime || '') : '') || '—'; return `<tr><td>${esc(e.date)}</td><td>${esc(getArabicDayName(e.date))}</td><td>${esc(e.project)}</td><td>${esc(e.supervisor||'-')}</td><td>${esc((e.workers||[]).join('، '))}</td><td>${esc(e.login||'-')}</td><td>${esc(e.exit||'-')}</td><td>${esc(formatHM(mins))}</td><td>${esc(expectedText)}</td><td>${esc(timeInfo.label || '—')}</td><td>${entryStatusInfo(e).complete ? 'مكتمل' : 'ناقص'}</td><td>${esc(e.approvalStatus||'مسجل')}</td><td>${esc(e.note||'')}</td></tr>`; }).join('')}
   </tbody></table><div class="footer">شركة تصنيف لإدارة المرافق</div>
+
+<script>
+// TASNEEF DASHBOARD STABILITY GUARD V2
+(function(){
+  function clean(v){return String(v??'').trim();}
+  function unique(a){return [...new Set((a||[]).map(clean).filter(Boolean))];}
+  function set(id,v){const el=document.getElementById(id); if(el) el.textContent=String(v);}
+  window.tasneefStableKpis=function(){
+    const st=window.state||{};
+    set('kpiProjects', unique(st.projects).length);
+    set('kpiEntries', Array.isArray(st.entries)?st.entries.length:0);
+    set('kpiSups', unique(st.supervisors).length);
+    set('kpiWorkers', unique(st.workers).length);
+  };
+  window.renderDashboardDirect=window.tasneefStableKpis;
+  window.renderDashboard=window.tasneefStableKpis;
+  window.updateKPIs=window.tasneefStableKpis;
+})();
+</script>
 </body></html>`;
   const win = window.open('', '_blank');
   if (!win) { showToast('المتصفح منع فتح نافذة الطباعة', 'error'); return; }
@@ -6634,155 +6653,12 @@ window.addEventListener(
 
 <!-- FINAL_DB_DIRECT_PATCH_V4_INSERTED -->
 <script>
-/* ===== TASNEEF DIRECT DATABASE PATCH V4 ===== */
-(function(){
-  const DEFAULT_URL = 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
-  const DEFAULT_KEY = 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
-  const clean = v => String(v ?? '').trim();
-  const unique = arr => [...new Set((arr || []).map(clean).filter(Boolean))];
-  const esc = v => clean(v).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const badRe = /(function\s*\(|window\.|document\.|<script|<\/script|localStorage|supabase\.from|onclick=)/i;
-  const isBadName = v => !clean(v) || clean(v).length > 120 || badRe.test(clean(v));
-  const toast = (msg) => { try{ if(window.showToast) return showToast(msg); }catch(e){} console.log(msg); };
-  const today = () => new Date().toISOString().slice(0,10);
-
-  function cloud(){
-    try{
-      if(window.appCloud) return window.appCloud;
-      if(window.db && typeof window.db.from === 'function') return window.db;
-      const cfg = window.TASNEEF_CONFIG || {};
-      const url = cfg.supabaseUrl || cfg.SUPABASE_URL || DEFAULT_URL;
-      const key = cfg.supabaseAnonKey || cfg.SUPABASE_ANON_KEY || DEFAULT_KEY;
-      if(window.supabase){ window.appCloud = window.supabase.createClient(url, key); window.db = window.appCloud; return window.appCloud; }
-    }catch(e){ console.error('Supabase init error', e); }
-    return null;
-  }
-  function ensureState(){
-    window.state = window.state || {};
-    state.projects = Array.isArray(state.projects) ? state.projects : [];
-    state.supervisors = Array.isArray(state.supervisors) ? state.supervisors : [];
-    state.workers = Array.isArray(state.workers) ? state.workers : [];
-    state.entries = Array.isArray(state.entries) ? state.entries : [];
-    state.users = Array.isArray(state.users) ? state.users : [];
-    state.projectSupervisorRules = state.projectSupervisorRules && typeof state.projectSupervisorRules === 'object' ? state.projectSupervisorRules : {};
-    state.workerProfiles = state.workerProfiles && typeof state.workerProfiles === 'object' ? state.workerProfiles : {};
-    state.supervisorProfiles = state.supervisorProfiles && typeof state.supervisorProfiles === 'object' ? state.supervisorProfiles : {};
-  }
-  function val(id){ return clean(document.getElementById(id)?.value); }
-  function setVal(id,v){ const el=document.getElementById(id); if(el) el.value=v||''; }
-  function setTxt(id,v){ const el=document.getElementById(id); if(el) el.textContent=v ?? 0; }
-  function refreshUI(){
-    ['refreshAllPickers','renderEntriesTable','renderMonthlyTimes','renderProjects','renderPeople','renderUsersTable','renderSupervisorTeamCards','renderDistributionErrors'].forEach(fn=>{ try{ if(window[fn]) window[fn](); }catch(e){} });
-    try{ renderDashboardDirect(); }catch(e){}
-  }
-  async function insert(table,payload,opts={}){
-    const c=cloud(); if(!c) throw new Error('Supabase غير جاهز');
-    let q = opts.upsert ? c.from(table).upsert(payload, opts.conflict ? {onConflict:opts.conflict} : undefined) : c.from(table).insert(payload);
-    if(opts.select) q=q.select(opts.select===true?'*':opts.select);
-    if(opts.single) q=q.single();
-    const r=await q; if(r.error) throw r.error; return r.data;
-  }
-  async function update(table,payload,col,value){ const r=await cloud().from(table).update(payload).eq(col,value); if(r.error) throw r.error; return r.data; }
-  async function del(table,col,value){ const r=await cloud().from(table).delete().eq(col,value); if(r.error) throw r.error; return r.data; }
-
-  async function refreshFromDatabase(){
-    const c=cloud(); if(!c) return;
-    ensureState();
-    const [ur,pr,wr,rr,ar] = await Promise.all([
-      c.from('users').select('*').limit(5000),
-      c.from('projects').select('*').limit(5000),
-      c.from('workers').select('*').limit(10000),
-      c.from('daily_records').select('*').order('record_date',{ascending:false}).order('id',{ascending:false}).limit(3000),
-      c.from('attendance_records').select('*').limit(20000)
-    ]);
-    if(ur.error) throw ur.error; if(pr.error) throw pr.error; if(wr.error) throw wr.error; if(rr.error) throw rr.error; if(ar.error) throw ar.error;
-    const users=ur.data||[], projects=pr.data||[], workers=wr.data||[], records=rr.data||[], attendance=ar.data||[];
-    const att={}; attendance.forEach(a=>{ const k=String(a.daily_record_id); (att[k]=att[k]||[]).push(a); });
-    state.users = users.map(u=>({id:u.id||u.username, fullName:u.full_name||u.fullName||u.username||'', username:u.username||'', password:u.password||'123456', role:u.role||'viewer', linkedSupervisor:u.linked_supervisor||u.supervisor_name||u.linkedSupervisor||'', isActive:u.is_active!==false, permissions:u.permissions||undefined}));
-    state.projects = unique(projects.filter(p=>p.is_active!==false).map(p=>p.project_name||p.name));
-    state.projectSupervisorRules = {};
-    projects.forEach(p=>{ const n=p.project_name||p.name; if(n) state.projectSupervisorRules[n]=p.supervisor_name||p.supervisor||''; });
-    state.workers = unique(workers.filter(w=>w.is_active!==false).map(w=>w.worker_name||w.name));
-    state.workerProfiles={}; state.supervisorProfiles={};
-    const supSet=new Set();
-    users.forEach(u=>{ if((u.role||'')==='supervisor') supSet.add(u.linked_supervisor||u.supervisor_name||u.full_name||u.username); });
-    projects.forEach(p=>{ if(p.supervisor_name) supSet.add(p.supervisor_name); });
-    workers.forEach(w=>{
-      const wn=w.worker_name||w.name||'', sn=w.supervisor_name||'', pn=w.project_name||'';
-      if(sn) supSet.add(sn); if(!wn) return;
-      state.workerProfiles[wn]=state.workerProfiles[wn]||{supervisor:sn,projects:[],status:w.status_label||'أساسي'};
-      if(sn) state.workerProfiles[wn].supervisor=sn;
-      if(pn && !state.workerProfiles[wn].projects.includes(pn)) state.workerProfiles[wn].projects.push(pn);
-      if(sn){ state.supervisorProfiles[sn]=state.supervisorProfiles[sn]||{workers:[],projects:[]}; if(!state.supervisorProfiles[sn].workers.includes(wn)) state.supervisorProfiles[sn].workers.push(wn); if(pn && !state.supervisorProfiles[sn].projects.includes(pn)) state.supervisorProfiles[sn].projects.push(pn); }
-    });
-    state.supervisors = unique([...supSet]);
-    state.entries = records.map(r=>({
-      _id:'db-record-'+r.id, _cloudId:r.id, project:r.project_name||'', date:r.record_date||'', login:r.login_time||'', exit:r.logout_time||'', supervisor:r.supervisor_name||'',
-      workers:(att[String(r.id)]||[]).map(a=>a.worker_name).filter(Boolean), cleaningType:r.cleaning_type||'', approvalStatus:r.approval_status||'مسجل', note:r.note||''
-    }));
-    try{ if(window.saveState) saveState(true); }catch(e){}
-    refreshUI();
-  }
-
-  function collectEntry(){
-    let workers=[1,2,3,4,5].map(n=>val('worker'+n)).filter(Boolean);
-    if(window.canonicalizeWorkerName) workers=workers.map(canonicalizeWorkerName).filter(Boolean);
-    let supervisor=val('entrySupervisor'); if(window.canonicalizeSupervisorName) supervisor=canonicalizeSupervisorName(supervisor);
-    let cleaningType=val('entryCleaningType'); if(window.normalizeCleaningType) cleaningType=normalizeCleaningType(cleaningType);
-    return {_id:window.editingEntryId||('e'+Date.now()), _cloudId:String(window.editingEntryId||'').startsWith('db-record-')?Number(String(window.editingEntryId).replace('db-record-','')):null, project:val('entryProject'), date:val('entryDate')||today(), login:val('entryLogin'), exit:val('entryExit'), supervisor, workers, cleaningType, approvalStatus:val('entryApprovalStatus')||'مسجل', note:val('entryNote')};
-  }
-  function validateEntry(e){ const errors=[]; if(!e.project) errors.push('اختر المشروع'); if(!e.date) errors.push('حدد التاريخ'); if(!e.supervisor) errors.push('أدخل اسم المشرف'); if(!e.workers.length) errors.push('أدخل عاملًا واحدًا على الأقل'); if(errors.length) throw new Error(errors.join(' — ')); }
-  function localEntry(e){ ensureState(); if(e.project&&!state.projects.includes(e.project)) state.projects.push(e.project); if(e.supervisor&&!state.supervisors.includes(e.supervisor)) state.supervisors.push(e.supervisor); e.workers.forEach(w=>{if(w&&!state.workers.includes(w))state.workers.push(w)}); const i=state.entries.findIndex(x=>x._id===e._id||(e._cloudId&&x._cloudId===e._cloudId)); if(i>=0) state.entries[i]=e; else state.entries.unshift(e); try{ if(window.saveState) saveState(true); }catch(err){} }
-  async function saveEntryDb(e){
-    const payload={project_name:e.project,record_date:e.date,login_time:e.login||null,logout_time:e.exit||null,supervisor_name:e.supervisor,cleaning_type:e.cleaningType||null,approval_status:e.approvalStatus||'مسجل',note:e.note||null};
-    let id=e._cloudId; if(!id && String(e._id||'').startsWith('db-record-')) id=Number(String(e._id).replace('db-record-',''));
-    if(id){ await update('daily_records',payload,'id',id); await del('attendance_records','daily_record_id',id).catch(()=>{}); }
-    else { const row=await insert('daily_records',payload,{select:'id',single:true}); id=row.id; e._cloudId=id; e._id='db-record-'+id; }
-    const rows=e.workers.map(w=>({daily_record_id:id,worker_name:w,status:'present'})); if(rows.length) await insert('attendance_records',rows);
-  }
-
-  window.addProject = async function(){
-    const name=val('newProjectName'); if(isBadName(name)){alert('اكتب اسم المشروع بشكل صحيح');return;}
-    const supervisor=val('projectSupervisor')||val('entrySupervisor')||'';
-    try{ await insert('projects',{project_name:name,supervisor_name:supervisor||null,is_active:true},{upsert:true,conflict:'project_name'}); setVal('newProjectName',''); await refreshFromDatabase(); toast('تمت إضافة المشروع في قاعدة البيانات'); }
-    catch(e){ console.error(e); alert('لم يتم حفظ المشروع في قاعدة البيانات: '+(e.message||e)); }
-  };
-  window.addSupervisor = async function(){
-    const name=val('newSupervisorName'); if(isBadName(name)){alert('اكتب اسم المشرف بشكل صحيح');return;}
-    const username='sup_'+Date.now();
-    try{ await insert('users',{username,password:'123456',role:'supervisor',full_name:name,supervisor_name:name,linked_supervisor:name,is_active:true},{upsert:true,conflict:'username'}).catch(()=>insert('users',{username,password:'123456',role:'supervisor',full_name:name,supervisor_name:name,is_active:true},{upsert:true,conflict:'username'})); setVal('newSupervisorName',''); setVal('newSupervisorSalary',''); await refreshFromDatabase(); fillLinkedSupervisorSelect(name); toast('تمت إضافة المشرف في قاعدة البيانات'); }
-    catch(e){ console.error(e); alert('لم يتم حفظ المشرف في قاعدة البيانات: '+(e.message||e)); }
-  };
-  window.addWorker = async function(){
-    const name=val('newWorkerName'); if(isBadName(name)){alert('اكتب اسم العامل بشكل صحيح');return;}
-    const supervisor=val('quickTeamEditorSupervisor')||val('entrySupervisor')||''; const project=val('entryProject')||'';
-    try{ await insert('workers',{worker_name:name,supervisor_name:supervisor||null,project_name:project||null,status_label:'أساسي',is_active:true},{upsert:true,conflict:'worker_name'}).catch(()=>insert('workers',{worker_name:name,supervisor_name:supervisor||null,project_name:project||null,is_active:true},{upsert:true,conflict:'worker_name'})); setVal('newWorkerName',''); setVal('newWorkerSalary',''); await refreshFromDatabase(); toast('تمت إضافة العامل في قاعدة البيانات'); }
-    catch(e){ console.error(e); alert('لم يتم حفظ العامل في قاعدة البيانات: '+(e.message||e)); }
-  };
-  window.saveEntry = async function(){ try{ const e=collectEntry(); validateEntry(e); await saveEntryDb(e); localEntry(e); if(window.clearEntryForm) clearEntryForm(); await refreshFromDatabase(); toast('تم حفظ السجل في قاعدة البيانات'); }catch(err){ console.error(err); alert(err.message||'لم يتم حفظ السجل'); } };
-  window.saveEntryAndKeep = async function(){ try{ const e=collectEntry(); validateEntry(e); await saveEntryDb(e); localEntry(e); await refreshFromDatabase(); toast('تم حفظ السجل في قاعدة البيانات'); }catch(err){ console.error(err); alert(err.message||'لم يتم حفظ السجل'); } };
-  window.saveUserAccount = async function(){
-    const full=val('userFullName'), username=val('userUsername').toLowerCase(), password=val('userPassword')||'123456', role=val('userRole')||'admin', linked=(val('userRole')==='supervisor'?(full||val('userLinkedSupervisor')):val('userLinkedSupervisor')), active=val('userActive')!=='0';
-    if(!full||!username){alert('الاسم واسم المستخدم مطلوبان');return;}
-    try{ await insert('users',{username,password,role,full_name:full,supervisor_name:linked||null,linked_supervisor:linked||null,is_active:active},{upsert:true,conflict:'username'}).catch(()=>insert('users',{username,password,role,full_name:full,supervisor_name:linked||null,is_active:active},{upsert:true,conflict:'username'})); if(window.clearUserForm) clearUserForm(); await refreshFromDatabase(); fillLinkedSupervisorSelect(linked); toast('تم حفظ المستخدم في قاعدة البيانات'); }
-    catch(e){ console.error(e); alert('لم يتم حفظ المستخدم في قاعدة البيانات: '+(e.message||e)); }
-  };
-
-  function fillLinkedSupervisorSelect(selected){ ensureState(); const sel=document.getElementById('userLinkedSupervisor'); if(!sel)return; const current=clean(selected||sel.value); const names=unique([...(state.supervisors||[]),...(state.users||[]).filter(u=>u.role==='supervisor').map(u=>u.linkedSupervisor||u.fullName),...Object.values(state.projectSupervisorRules||{})]); sel.innerHTML='<option value="">-</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join(''); if(current&&!names.includes(current))sel.insertAdjacentHTML('beforeend',`<option value="${esc(current)}">${esc(current)}</option>`); if(current)sel.value=current; sel.disabled=false; }
-  window.refreshLinkedSupervisorOptions=fillLinkedSupervisorSelect; window.fillLinkedSupervisorOptions=fillLinkedSupervisorSelect;
-  const oldToggle=window.toggleUserFormByRole; window.toggleUserFormByRole=function(){try{if(oldToggle)oldToggle();}catch(e){} const sel=document.getElementById('userLinkedSupervisor'); if(sel){sel.disabled=false; fillLinkedSupervisorSelect(val('userFullName')||sel.value);} const wrap=document.getElementById('linkedSupervisorWrap'); if(wrap)wrap.style.display='block';};
-  window.renderDashboardDirect=async function(){ const c=cloud(); if(c){ try{ const [u,p,w,r]=await Promise.all([c.from('users').select('id,role,is_active'),c.from('projects').select('id,is_active'),c.from('workers').select('id,is_active'),c.from('daily_records').select('id')]); if(!p.error)setTxt('kpiProjects',(p.data||[]).filter(x=>x.is_active!==false).length); if(!r.error)setTxt('kpiEntries',(r.data||[]).length); if(!u.error)setTxt('kpiSups',(u.data||[]).filter(x=>x.role==='supervisor'&&x.is_active!==false).length); if(!w.error)setTxt('kpiWorkers',(w.data||[]).filter(x=>x.is_active!==false).length); return; }catch(e){console.warn(e);} } ensureState(); setTxt('kpiProjects',state.projects.length); setTxt('kpiEntries',state.entries.length); setTxt('kpiSups',state.supervisors.length); setTxt('kpiWorkers',state.workers.length); };
-  window.updateKPIs=window.renderDashboardDirect; window.renderDashboard=window.renderDashboardDirect;
-  window.addEventListener('load',()=>{ setTimeout(async()=>{ try{cloud(); fillLinkedSupervisorSelect(); await refreshFromDatabase(); await renderDashboardDirect();}catch(e){console.error(e);} },800); setTimeout(()=>{fillLinkedSupervisorSelect(); renderDashboardDirect();},2500); });
-  setInterval(()=>{try{renderDashboardDirect();}catch(e){}},10000);
-})();
-/* ===== END TASNEEF DIRECT DATABASE PATCH V4 ===== */
-</script>
+/* تم حذف باتش الجداول المتعددة لأنه كان يسبب تذبذب أرقام الداش بورد */
 
 
-<!-- TASNEEF_ONE_TABLE_ONLINE_SAVE_FINAL_V1 -->
+<!-- TASNEEF_ONE_TABLE_ONLINE_SAVE_STABLE_V2 -->
 <script>
-/* ===== TASNEEF ONE-TABLE ONLINE SAVE FINAL V1 =====
+/* ===== TASNEEF ONE-TABLE ONLINE SAVE STABLE V2 =====
    هذا الباتش يجعل الحفظ أونلاين مباشرة في جدول واحد:
    public.tasneef_app_state
 */
@@ -6802,6 +6678,8 @@ window.addEventListener(
   let onlineSaving = false;
   let onlinePending = false;
   let loadedFromOnline = false;
+  let firstOnlineLoadFinished = false;
+  let suppressDashboardUntilOnline = true;
 
   function toast(msg){
     try { if (window.showToast) return window.showToast(msg); } catch(e){}
@@ -6840,6 +6718,17 @@ window.addEventListener(
     state.workerProfiles = state.workerProfiles && typeof state.workerProfiles === 'object' ? state.workerProfiles : {};
     state.supervisorProfiles = state.supervisorProfiles && typeof state.supervisorProfiles === 'object' ? state.supervisorProfiles : {};
     state.projectMeta = state.projectMeta && typeof state.projectMeta === 'object' ? state.projectMeta : {};
+    state.projects = unique(state.projects);
+    state.supervisors = unique(state.supervisors);
+    state.workers = unique(state.workers);
+    const seen = new Set();
+    state.entries = (state.entries || []).filter(e => {
+      if (!e || typeof e !== 'object') return false;
+      const id = e._id || e.id || [e.project, e.date, e.login, e.exit, e.supervisor, (e.workers||[]).join('|')].join('::');
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
   }
 
   function snapshot(){
@@ -6916,13 +6805,23 @@ window.addEventListener(
         Object.keys(d).forEach(k => { state[k] = d[k]; });
         localPersist();
         loadedFromOnline = true;
+        firstOnlineLoadFinished = true;
+        suppressDashboardUntilOnline = false;
         refreshUI();
+        renderDashboardLocal(true);
         setOnlineStatus('متصل — تم تحميل آخر بيانات ✅');
       } else {
         await pushOnline();
+        firstOnlineLoadFinished = true;
+        suppressDashboardUntilOnline = false;
+        refreshUI();
+        renderDashboardLocal(true);
         setOnlineStatus('متصل — تم إنشاء أول نسخة أونلاين ✅');
       }
     }catch(e){
+      firstOnlineLoadFinished = true;
+      suppressDashboardUntilOnline = false;
+      renderDashboardLocal(true);
       setOnlineStatus('خطأ في تحميل البيانات ❌');
       console.error('ONLINE_LOAD_ERROR:', e);
       alertBox('لم يتم تحميل البيانات أونلاين. شغّل ملف SQL المرفق داخل Supabase أولًا.');
@@ -7116,13 +7015,17 @@ window.addEventListener(
     refreshUI();
   };
 
-  window.renderDashboardLocal = function(){
+  window.renderDashboardLocal = function(force=false){
     ensureState();
     const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent = String(v); };
-    set('kpiProjects', state.projects.length);
-    set('kpiEntries', state.entries.length);
-    set('kpiSups', state.supervisors.length);
-    set('kpiWorkers', state.workers.length);
+    if (suppressDashboardUntilOnline && !firstOnlineLoadFinished && !force) {
+      ['kpiProjects','kpiEntries','kpiSups','kpiWorkers'].forEach(id => set(id, '...'));
+      return;
+    }
+    set('kpiProjects', unique(state.projects).length);
+    set('kpiEntries', (state.entries || []).length);
+    set('kpiSups', unique(state.supervisors).length);
+    set('kpiWorkers', unique(state.workers).length);
 
     const latest = (state.entries || []).map(e => e.date || e.record_date).filter(Boolean).sort().pop() || '';
     const rows = latest ? (state.entries || []).filter(e => (e.date || e.record_date) === latest) : [];
@@ -7137,6 +7040,7 @@ window.addEventListener(
     const q=document.getElementById('dashQuickAlert');
     if(q) q.textContent = latest ? `آخر يوم مسجل ${latest} وفيه ${rows.length} سجل.` : 'لا توجد سجلات بعد.';
   };
+  window.renderDashboardDirect = window.renderDashboardLocal;
   window.renderDashboard = window.renderDashboardLocal;
   window.updateKPIs = window.renderDashboardLocal;
 
@@ -7154,19 +7058,21 @@ window.addEventListener(
   window.tasneefForceOnlineSave = pushOnline;
   window.tasneefReloadOnline = pullOnline;
 
+  // تثبيت الداش بورد: مصدر واحد فقط للأرقام وهو جدول tasneef_app_state
+  renderDashboardLocal();
   window.addEventListener('load', function(){
-    setTimeout(function(){
+    setTimeout(async function(){
       ensureState();
       fillLinkedSupervisorSelectStable();
-      pullOnline();
-      renderDashboardLocal();
-    }, 900);
-    setTimeout(function(){ fillLinkedSupervisorSelectStable(); refreshUI(); }, 2200);
+      await pullOnline();
+      refreshUI();
+      renderDashboardLocal(true);
+    }, 300);
   });
 
   setInterval(function(){
-    try{ renderDashboardLocal(); fillLinkedSupervisorSelectStable(); }catch(e){}
-  }, 10000);
+    try{ renderDashboardLocal(firstOnlineLoadFinished); fillLinkedSupervisorSelectStable(); }catch(e){}
+  }, 15000);
 })();
 </script>
 
