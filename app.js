@@ -16,51 +16,17 @@ let data = { users:[], supervisors:[], projects:[], workers:[], attendance:[], l
 function msg(text, type='ok'){ const el=$('globalMsg')||$('loginMsg'); if(!el) return; el.className='msg '+(type==='err'?'err':''); el.textContent=text; el.classList.remove('hidden'); setTimeout(()=>el.classList.add('hidden'),4000); }
 function requireRole(role){ const u=session(); if(!u){ location.href='index.html'; return null; } if(role && u.role!==role){ location.href=u.role==='admin'?'admin.html':'supervisor.html'; return null; } return u; }
 async function login(){
-  const username = document.getElementById('loginUsername').value.trim();
-  const password = document.getElementById('loginPassword').value.trim();
-
-  if(!username || !password){
-    return msg('أدخل اسم المستخدم وكلمة المرور','err');
+  const username=$('loginUsername').value.trim(), password=$('loginPassword').value.trim();
+  if(!username||!password) return msg('أدخل اسم المستخدم وكلمة المرور','err');
+  if(username==='admin' && password==='123456'){
+    setSession({id:1,full_name:'مدير النظام',username:'admin',role:'admin',is_active:true});
+    location.href='admin.html'; return;
   }
-
-  // دخول احتياطي للمدير
-  if(username === 'admin' && password === '123456'){
-    setSession({
-      id: 1,
-      full_name: 'مدير النظام',
-      username: 'admin',
-      role: 'admin',
-      is_active: true
-    });
-    location.href = 'admin.html';
-    return;
-  }
-
-  try {
-    const { data:u, error } = await sb
-      .from('app_users')
-      .select('*')
-      .eq('username', username)
-      .eq('password', password)
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle();
-
-    if(error){
-      return msg(error.message, 'err');
-    }
-
-    if(!u){
-      return msg('بيانات الدخول غير صحيحة', 'err');
-    }
-
-    setSession(u);
-    location.href = u.role === 'admin' ? 'admin.html' : 'supervisor.html';
-
-  } catch(e) {
-    return msg('خطأ في الاتصال بقاعدة البيانات', 'err');
-  }
-} clearSession(); location.href='index.html'; }
+  const {data:u,error}=await sb.from('app_users').select('*').eq('username',username).eq('password',password).eq('is_active',true).maybeSingle();
+  if(error||!u) return msg(error?.message || 'بيانات الدخول غير صحيحة','err');
+  setSession(u); location.href=u.role==='admin'?'admin.html':'supervisor.html';
+}
+function logout(){ clearSession(); location.href='index.html'; }
 async function loadAll(){
   const [users, projects, workers, attendance, logs, tickets] = await Promise.all([
     sb.from('app_users').select('*').order('id'),
@@ -174,7 +140,7 @@ function editWorker(id){
   $('workerFormTitle').textContent='تعديل عامل';
   $('workerSaveBtn')&&($('workerSaveBtn').textContent='تحديث العامل');
   $('workerCancelBtn')&&$('workerCancelBtn').classList.remove('hidden');
-  showPage('workers', document.querySelector(".nav[onclick*="workers"]"));
+  showPage('workers', document.querySelector('.nav[onclick*="workers"]'));
   window.scrollTo({top:0,behavior:'smooth'});
 }
 async function toggleWorkerStatus(id){
