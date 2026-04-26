@@ -4,3 +4,13 @@
 .table-head,.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.section-head p{margin:4px 0 0;color:var(--muted);line-height:1.7}hr{border:0;border-top:1px solid var(--line);margin:16px 0}small{color:var(--muted)}
 
 .attendance-matrix-wrap{max-height:72vh}.attendance-matrix th,.attendance-matrix td{text-align:center;min-width:42px}.attendance-matrix th:first-child,.attendance-matrix td:first-child{position:sticky;right:0;background:#fff;z-index:2;text-align:right;min-width:160px}.att-cell{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:10px;font-weight:900;font-size:12px}.att-present{background:#e8f4ee;color:#137a4b;border:1px solid #b9dfcb}.att-absent{background:#fde8e8;color:#9d2222;border:1px solid #efb4b4}.att-empty{background:#f3f6f5;color:#87938f;border:1px solid #dce6e2}.att-summary{font-size:12px;color:#60706a;line-height:1.7}
+
+/* V14 ticket colors */
+.ticket-row-closed td{background:#eef8f2!important;}
+.ticket-row-processing td{background:#fff8e8!important;}
+.ticket-row-urgent td{background:#fde8e8!important;}
+.ticket-row-normal td{background:#fff0f5!important;}
+.badge.pink{background:#ffe4ef;color:#9d174d;}
+.badge.red{background:#fde8e8;color:#9d2222;}
+.badge.green{background:#e8f5ee;color:#12643f;}
+.badge.amber{background:#fff4d6;color:#8a6700;}

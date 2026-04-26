@@ -508,227 +508,57 @@ async function saveSupervisorAttendance(){ const u=session(); const date=$('atte
 })();
 
 
-/* ===== V11: Tickets management for admin and supervisor ===== */
+/* ===== V14: Ticket receiving, closing details, duration and colors ===== */
 (function(){
   function ticketNo(t){ return t.ticket_number || ('T-' + String(t.id||0).padStart(4,'0')); }
   function ticketStatusLabel(status){ return status==='closed'?'مغلق':(status==='processing'?'تحت المعالجة':'مفتوح'); }
-  function ticketStatusCls(status){ return status==='closed'?'green':(status==='processing'?'amber':'red'); }
   function ticketPriorityLabel(p){ return p==='urgent'?'عاجل':(p==='high'?'مهم':(p==='low'?'منخفض':'عادي')); }
-  function ticketPriorityCls(p){ return p==='urgent'?'red':(p==='high'?'amber':''); }
-  function shortDesc(s){ s=String(s||''); return s.length>80 ? esc(s.slice(0,80))+'…' : esc(s||'-'); }
+  function shortDesc(s){ s=String(s||''); return s.length>90 ? esc(s.slice(0,90))+'…' : esc(s||'-'); }
+  function currentName(){ const u=session(); return (u && (u.full_name || u.username)) || 'غير محدد'; }
+  function parseDate(v){ const d = v ? new Date(v) : null; return d && !isNaN(d) ? d : null; }
+  function minutesBetween(a,b){ const da=parseDate(a), db=parseDate(b); if(!da || !db) return 0; return Math.max(0, Math.round((db-da)/60000)); }
+  function durationLabel(min){ min=Number(min||0); if(!min) return '0د'; const d=Math.floor(min/1440), h=Math.floor((min%1440)/60), m=min%60; const parts=[]; if(d) parts.push(d+'ي'); if(h) parts.push(h+'س'); if(m||!parts.length) parts.push(m+'د'); return parts.join(' '); }
+  function openMinutes(t){ if(t.status==='closed') return Number(t.open_duration_minutes||0) || minutesBetween(t.created_at, t.closed_at); return minutesBetween(t.created_at, new Date().toISOString()); }
+  function ticketRowClass(t){ if(t.status==='closed') return 'ticket-row-closed'; if(t.status==='processing') return 'ticket-row-processing'; if(t.priority==='urgent'||t.priority==='high') return 'ticket-row-urgent'; return 'ticket-row-normal'; }
+  function statusBadge(t){ const cls=t.status==='closed'?'green':(t.status==='processing'?'amber':((t.priority==='urgent'||t.priority==='high')?'red':'pink')); return `<span class="badge ${cls}">${ticketStatusLabel(t.status)}</span>`; }
+  function priorityBadge(t){ const cls=t.priority==='urgent'?'red':(t.priority==='high'?'amber':'pink'); return `<span class="badge ${cls}">${ticketPriorityLabel(t.priority)}</span>`; }
+  function askCloserName(){ const name=prompt('اسم الشخص الذي أغلق التكت\nاكتب اسم الفني أو المشرف', currentName()); return (name||'').trim(); }
+  function askClosureNote(){ const note=prompt('كيف تم إغلاق التكت؟\nاكتب طريقة الحل أو الإجراء المنفذ'); return (note||'').trim(); }
 
-  window.clearTicketForm = function(){
-    ['ticketId','ticketTitle','ticketDescription'].forEach(id=>{ if($(id)) $(id).value=''; });
-    if($('ticketStatus')) $('ticketStatus').value='open';
-    if($('ticketPriority')) $('ticketPriority').value='normal';
-    if($('ticketFormTitle')) $('ticketFormTitle').textContent='إضافة تكت';
-  };
+  window.clearTicketForm = function(){ ['ticketId','ticketTitle','ticketDescription'].forEach(id=>{ if($(id)) $(id).value=''; }); if($('ticketStatus')) $('ticketStatus').value='open'; if($('ticketPriority')) $('ticketPriority').value='normal'; if($('ticketFormTitle')) $('ticketFormTitle').textContent='إضافة تكت'; };
 
   window.saveTicket = async function(){
     const u=session(); if(!u) return msg('سجّل الدخول أولاً','err');
-    const title=($('ticketTitle')?.value||'').trim();
-    if(!title) return msg('عنوان التكت مطلوب','err');
+    const title=($('ticketTitle')?.value||'').trim(); if(!title) return msg('عنوان التكت مطلوب','err');
     const status=$('ticketStatus')?.value || 'open';
-    const row={
-      project_id:Number($('ticketProject')?.value)||null,
-      supervisor_id:Number($('ticketSupervisor')?.value || (u.role==='supervisor'?u.id:''))||null,
-      created_by:u.id,
-      title,
-      description:$('ticketDescription')?.value || '',
-      priority:$('ticketPriority')?.value || 'normal',
-      status,
-      updated_at:new Date().toISOString()
-    };
-    row.closed_at = status==='closed' ? new Date().toISOString() : null;
+    const row={project_id:Number($('ticketProject')?.value)||null, supervisor_id:Number($('ticketSupervisor')?.value || (u.role==='supervisor'?u.id:''))||null, created_by:u.id, title, description:$('ticketDescription')?.value || '', priority:$('ticketPriority')?.value || 'normal', status, updated_at:new Date().toISOString()};
     const id=$('ticketId')?.value;
-    let res;
-    if(id){
-      res=await sb.from('tickets').update(row).eq('id',id).select('*').maybeSingle();
-    }else{
-      res=await sb.from('tickets').insert(row).select('*').single();
-      if(!res.error && res.data && !res.data.ticket_number){
-        const tn='T-'+String(res.data.id).padStart(4,'0');
-        await sb.from('tickets').update({ticket_number:tn}).eq('id',res.data.id);
-      }
-    }
-    if(res.error) return msg(res.error.message,'err');
-    playAppSound('ticket');
-    msg(id?'تم تحديث التكت':'تم حفظ التكت');
-    clearTicketForm();
-    if(u.role==='supervisor') await window.initSupervisor(); else await refreshAll();
+    if(status==='closed'){
+      const existing=id?(data.tickets||[]).find(x=>String(x.id)===String(id)):null;
+      const note=askClosureNote(); if(!note) return msg('لا يمكن إغلاق التكت بدون ذكر كيف تم الإغلاق','err');
+      const closer=askCloserName(); if(!closer) return msg('اكتب اسم من أغلق التكت','err');
+      const now=new Date().toISOString(); row.closed_at=now; row.closed_by=u.id; row.closed_by_name=closer; row.closure_note=note; row.open_duration_minutes=existing?minutesBetween(existing.created_at,now):0; row.processing_duration_minutes=existing?.claimed_at?minutesBetween(existing.claimed_at,now):0;
+    }else{ row.closed_at=null; row.closed_by=null; row.closed_by_name=null; row.closure_note=null; row.open_duration_minutes=null; row.processing_duration_minutes=null; }
+    let res; if(id){ res=await sb.from('tickets').update(row).eq('id',id).select('*').maybeSingle(); }else{ res=await sb.from('tickets').insert(row).select('*').single(); if(!res.error&&res.data&&!res.data.ticket_number){ const tn='T-'+String(res.data.id).padStart(4,'0'); await sb.from('tickets').update({ticket_number:tn}).eq('id',res.data.id); } }
+    if(res.error) return msg(res.error.message,'err'); playAppSound('ticket'); msg(id?'تم تحديث التكت':'تم حفظ التكت'); clearTicketForm(); if(u.role==='supervisor') await window.initSupervisor(); else await refreshAll();
   };
 
   window.renderTickets = function(){
-    const adminBody=$('ticketsBody');
-    const supBody=$('supTicketsBody');
-    if(!adminBody && !supBody) return;
-    let rows=[...(data.tickets||[])];
-
-    if(adminBody){
-      const st=$('ticketFilterStatus')?.value || '';
-      const q=($('ticketSearch')?.value||'').trim().toLowerCase();
-      let list=rows;
-      if(st) list=list.filter(t=>t.status===st);
-      if(q) list=list.filter(t=>[ticketNo(t),t.title,t.description,projectName(t.project_id),supervisorName(t.supervisor_id),ticketStatusLabel(t.status)].join(' ').toLowerCase().includes(q));
-      adminBody.innerHTML=list.map(t=>`<tr>
-        <td><b>${esc(ticketNo(t))}</b></td>
-        <td>${esc(projectName(t.project_id))}</td>
-        <td>${esc(supervisorName(t.supervisor_id))}</td>
-        <td>${esc(t.title)}</td>
-        <td style="white-space:normal;min-width:220px">${shortDesc(t.description)}</td>
-        <td><span class="badge ${ticketPriorityCls(t.priority)}">${ticketPriorityLabel(t.priority)}</span></td>
-        <td><span class="badge ${ticketStatusCls(t.status)}">${ticketStatusLabel(t.status)}</span></td>
-        <td>${fmt(t.created_at)}</td>
-        <td class="row-actions"><button onclick="editTicket(${t.id})">تعديل</button>${t.status==='closed'?`<button class="light" onclick="setTicketStatus(${t.id},'open')">إعادة فتح</button>`:`<button class="light" onclick="setTicketStatus(${t.id},'processing')">معالجة</button><button onclick="setTicketStatus(${t.id},'closed')">إغلاق</button>`}<button class="danger" onclick="deleteRow('tickets',${t.id})">حذف</button></td>
-      </tr>`).join('')||'<tr><td colspan="9">لا توجد تكتات</td></tr>';
-    }
-
-    if(supBody){
-      const st=$('supTicketFilterStatus')?.value || '';
-      const pid=$('supTicketFilterProject')?.value || '';
-      const q=($('supTicketSearch')?.value||'').trim().toLowerCase();
-      let list=rows;
-      if(pid) list=list.filter(t=>String(t.project_id)===String(pid));
-      if(st) list=list.filter(t=>t.status===st);
-      if(q) list=list.filter(t=>[ticketNo(t),t.title,t.description,projectName(t.project_id),ticketStatusLabel(t.status)].join(' ').toLowerCase().includes(q));
-      supBody.innerHTML=list.map(t=>`<tr>
-        <td><b>${esc(ticketNo(t))}</b></td>
-        <td>${esc(projectName(t.project_id))}</td>
-        <td>${esc(t.title)}</td>
-        <td style="white-space:normal;min-width:180px">${shortDesc(t.description)}</td>
-        <td><span class="badge ${ticketPriorityCls(t.priority)}">${ticketPriorityLabel(t.priority)}</span></td>
-        <td><span class="badge ${ticketStatusCls(t.status)}">${ticketStatusLabel(t.status)}</span></td>
-        <td class="row-actions"><button onclick="editTicket(${t.id})">تعديل</button>${t.status==='closed'?`<button class="light" onclick="setTicketStatus(${t.id},'open')">إعادة فتح</button>`:`<button class="light" onclick="setTicketStatus(${t.id},'processing')">معالجة</button><button onclick="setTicketStatus(${t.id},'closed')">إغلاق</button>`}</td>
-      </tr>`).join('')||'<tr><td colspan="7">لا توجد تكتات</td></tr>';
-    }
+    const adminBody=$('ticketsBody'), supBody=$('supTicketsBody'); if(!adminBody&&!supBody) return; let rows=[...(data.tickets||[])];
+    if(adminBody){ const st=$('ticketFilterStatus')?.value||'', q=($('ticketSearch')?.value||'').trim().toLowerCase(); let list=rows; if(st) list=list.filter(t=>t.status===st); if(q) list=list.filter(t=>[ticketNo(t),t.title,t.description,projectName(t.project_id),supervisorName(t.supervisor_id),ticketStatusLabel(t.status),t.claimed_by_name,t.closed_by_name,t.closure_note].join(' ').toLowerCase().includes(q)); adminBody.innerHTML=list.map(t=>`<tr class="${ticketRowClass(t)}"><td><b>${esc(ticketNo(t))}</b></td><td>${esc(projectName(t.project_id))}</td><td>${esc(supervisorName(t.supervisor_id))}</td><td>${esc(t.title)}</td><td style="white-space:normal;min-width:220px">${shortDesc(t.description)}</td><td>${priorityBadge(t)}</td><td>${statusBadge(t)}</td><td>${fmt(t.created_at)}</td><td>${esc(durationLabel(openMinutes(t)))}</td><td>${esc(t.claimed_by_name||'-')}<br><small>${t.claimed_at?fmt(t.claimed_at):''}</small></td><td>${esc(t.closed_by_name||'-')}<br><small>${t.closed_at?fmt(t.closed_at):''}</small></td><td style="white-space:normal;min-width:220px">${shortDesc(t.closure_note)}</td><td class="row-actions"><button onclick="editTicket(${t.id})">تعديل</button>${t.status==='closed'?`<button class="light" onclick="setTicketStatus(${t.id},'open')">إعادة فتح</button>`:`${t.status!=='processing'?`<button class="light" onclick="claimTicket(${t.id})">استلام</button>`:''}<button onclick="closeTicket(${t.id})">إغلاق</button>`}<button class="danger" onclick="deleteRow('tickets',${t.id})">حذف</button></td></tr>`).join('')||'<tr><td colspan="13">لا توجد تكتات</td></tr>'; }
+    if(supBody){ const st=$('supTicketFilterStatus')?.value||'', pid=$('supTicketFilterProject')?.value||'', q=($('supTicketSearch')?.value||'').trim().toLowerCase(); let list=rows; if(pid) list=list.filter(t=>String(t.project_id)===String(pid)); if(st) list=list.filter(t=>t.status===st); if(q) list=list.filter(t=>[ticketNo(t),t.title,t.description,projectName(t.project_id),ticketStatusLabel(t.status),t.claimed_by_name,t.closed_by_name,t.closure_note].join(' ').toLowerCase().includes(q)); supBody.innerHTML=list.map(t=>`<tr class="${ticketRowClass(t)}"><td><b>${esc(ticketNo(t))}</b></td><td>${esc(projectName(t.project_id))}</td><td>${esc(t.title)}</td><td style="white-space:normal;min-width:180px">${shortDesc(t.description)}</td><td>${priorityBadge(t)}</td><td>${statusBadge(t)}</td><td>${esc(durationLabel(openMinutes(t)))}</td><td>${esc(t.claimed_by_name||'-')}</td><td>${esc(t.closed_by_name||'-')}</td><td style="white-space:normal;min-width:180px">${shortDesc(t.closure_note)}</td><td class="row-actions"><button onclick="editTicket(${t.id})">تعديل</button>${t.status==='closed'?`<button class="light" onclick="setTicketStatus(${t.id},'open')">إعادة فتح</button>`:`${t.status!=='processing'?`<button class="light" onclick="claimTicket(${t.id})">استلام</button>`:''}<button onclick="closeTicket(${t.id})">إغلاق</button>`}</td></tr>`).join('')||'<tr><td colspan="11">لا توجد تكتات</td></tr>'; }
   };
 
-  window.editTicket = function(id){
-    const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t) return;
-    if($('ticketId')) $('ticketId').value=t.id;
-    if($('ticketProject')) $('ticketProject').value=t.project_id||'';
-    if($('ticketSupervisor')) $('ticketSupervisor').value=t.supervisor_id||'';
-    if($('ticketTitle')) $('ticketTitle').value=t.title||'';
-    if($('ticketPriority')) $('ticketPriority').value=t.priority||'normal';
-    if($('ticketStatus')) $('ticketStatus').value=t.status||'open';
-    if($('ticketDescription')) $('ticketDescription').value=t.description||'';
-    if($('ticketFormTitle')) $('ticketFormTitle').textContent='تعديل تكت '+ticketNo(t);
-    window.scrollTo({top:0,behavior:'smooth'});
-  };
+  window.editTicket = function(id){ const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t)return; if($('ticketId')) $('ticketId').value=t.id; if($('ticketProject')) $('ticketProject').value=t.project_id||''; if($('ticketSupervisor')) $('ticketSupervisor').value=t.supervisor_id||''; if($('ticketTitle')) $('ticketTitle').value=t.title||''; if($('ticketPriority')) $('ticketPriority').value=t.priority||'normal'; if($('ticketStatus')) $('ticketStatus').value=t.status||'open'; if($('ticketDescription')) $('ticketDescription').value=t.description||''; if($('ticketFormTitle')) $('ticketFormTitle').textContent='تعديل تكت '+ticketNo(t); window.scrollTo({top:0,behavior:'smooth'}); };
 
-  window.setTicketStatus = async function(id,status){
-    const row={status, updated_at:new Date().toISOString(), closed_at: status==='closed'?new Date().toISOString():null};
-    const {error}=await sb.from('tickets').update(row).eq('id',id);
-    if(error) return msg(error.message,'err');
-    msg(status==='closed'?'تم إغلاق التكت':(status==='processing'?'تم تحويل التكت للمعالجة':'تم إعادة فتح التكت'));
-    const u=session();
-    if(u?.role==='supervisor') await window.initSupervisor(); else await refreshAll();
-  };
+  window.claimTicket = async function(id){ const u=session(); if(!u)return msg('سجّل الدخول أولاً','err'); const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t)return msg('التكت غير موجود','err'); if(t.status==='closed')return msg('التكت مغلق','err'); const now=new Date().toISOString(), name=currentName(); const {error}=await sb.from('tickets').update({status:'processing',claimed_by:u.id,claimed_by_name:name,claimed_at:now,updated_at:now}).eq('id',id); if(error)return msg(error.message,'err'); msg('تم استلام التكت بواسطة '+name); if(u?.role==='supervisor') await window.initSupervisor(); else await refreshAll(); };
 
-  const oldInitSupervisorV11 = window.initSupervisor;
-  window.initSupervisor = async function(){
-    await oldInitSupervisorV11();
-    if($('supTicketFilterProject')) fillSelect('supTicketFilterProject', data.projects||[], 'name', 'كل المشاريع');
-    renderTickets();
-  };
-})();
+  window.closeTicket = async function(id){ const u=session(); if(!u)return msg('سجّل الدخول أولاً','err'); const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t)return msg('التكت غير موجود','err'); if(t.status==='closed')return msg('التكت مغلق بالفعل','err'); const note=askClosureNote(); if(!note)return msg('لا يمكن إغلاق التكت بدون ذكر كيف تم الإغلاق','err'); const closer=askCloserName(); if(!closer)return msg('اكتب اسم من أغلق التكت','err'); const now=new Date().toISOString(); const row={status:'closed',closed_at:now,closed_by:u.id,closed_by_name:closer,closure_note:note,open_duration_minutes:minutesBetween(t.created_at,now),processing_duration_minutes:t.claimed_at?minutesBetween(t.claimed_at,now):null,updated_at:now}; if(!t.claimed_at){ row.claimed_by=u.id; row.claimed_by_name=closer; row.claimed_at=now; } const {error}=await sb.from('tickets').update(row).eq('id',id); if(error)return msg(error.message,'err'); playAppSound('ticket'); msg('تم إغلاق التكت وحفظ طريقة الإغلاق'); if(u?.role==='supervisor') await window.initSupervisor(); else await refreshAll(); };
 
-/* ===== V12: Supervisor windows + daily summary + mobile sound unlock ===== */
-(function(){
-  window.showSupervisorWindow = function(id, btn){
-    document.querySelectorAll('.sup-page').forEach(p=>p.classList.remove('active'));
-    const page=document.getElementById(id); if(page) page.classList.add('active');
-    document.querySelectorAll('.sup-tab').forEach(b=>b.classList.remove('active'));
-    if(btn) btn.classList.add('active');
-    if(id==='supSummary' && typeof renderSupervisorDailySummary==='function') renderSupervisorDailySummary();
-    if(id==='supTickets' && typeof renderTickets==='function') renderTickets();
-    if(id==='supLogs' && typeof renderTimeLogs==='function') renderTimeLogs();
-  };
+  window.setTicketStatus = async function(id,status){ if(status==='closed') return closeTicket(id); if(status==='processing') return claimTicket(id); const row={status,updated_at:new Date().toISOString()}; if(status==='open'){ row.closed_at=null; row.closed_by=null; row.closed_by_name=null; row.closure_note=null; row.open_duration_minutes=null; row.processing_duration_minutes=null; } const {error}=await sb.from('tickets').update(row).eq('id',id); if(error)return msg(error.message,'err'); msg(status==='open'?'تم إعادة فتح التكت':'تم تحديث حالة التكت'); const u=session(); if(u?.role==='supervisor') await window.initSupervisor(); else await refreshAll(); };
 
-  window.enableSupervisorSounds = async function(){
-    try{
-      const a=new Audio('sounds/checkin.wav');
-      a.volume=0.15;
-      await a.play();
-      a.pause();
-      a.currentTime=0;
-      window.__tasneefSoundsEnabled=true;
-      msg('تم تفعيل الأصوات على هذا الجهاز');
-    }catch(e){
-      window.__tasneefSoundsEnabled=true;
-      msg('تم طلب تفعيل الأصوات. جرّب تسجيل دخول أو تكت الآن');
-    }
-  };
-
-  function startEndForSummary(){
-    const range=$('summaryRange')?.value || 'today';
-    const base=$('summaryDate')?.value || today();
-    const d=new Date(base+'T00:00:00');
-    if(range==='yesterday'){
-      const y=new Date(); y.setDate(y.getDate()-1);
-      const s=y.toISOString().slice(0,10); return {start:s,end:s,label:'أمس'};
-    }
-    if(range==='week'){
-      const now=new Date();
-      const day=now.getDay();
-      const diff=(day+6)%7; // start Saturday-ish? Actually Monday. Good enough for operational week.
-      const s=new Date(now); s.setDate(now.getDate()-diff);
-      const e=new Date(now);
-      return {start:s.toISOString().slice(0,10),end:e.toISOString().slice(0,10),label:'هذا الأسبوع'};
-    }
-    if(range==='custom') return {start:base,end:base,label:base};
-    const t=today(); return {start:t,end:t,label:'اليوم'};
-  }
-
-  function inDateRange(date,start,end){
-    const d=String(date||'').slice(0,10);
-    return d>=start && d<=end;
-  }
-
-  window.renderSupervisorDailySummary = function(){
-    const cards=$('supervisorSummaryCards'), body=$('supervisorSummaryBody');
-    if(!cards || !body) return;
-    const {start,end,label}=startEndForSummary();
-    const logs=(data.logs||[]).filter(l=>inDateRange(l.log_date || l.check_in, start, end));
-    const attendance=(data.attendance||[]).filter(a=>inDateRange(a.attendance_date, start, end));
-    const tickets=(data.tickets||[]).filter(t=>inDateRange(t.created_at, start, end));
-    const minutes=logs.reduce((s,l)=>s+Number(l.duration_minutes||minutesBetween(l.check_in,l.check_out)||0),0);
-    const travel=logs.reduce((s,l)=>s+Number(l.travel_minutes||0),0);
-    const present=attendance.filter(a=>a.status==='present').length;
-    const absent=attendance.filter(a=>a.status==='absent').length;
-    const open=tickets.filter(t=>t.status!=='closed').length;
-    const closed=tickets.filter(t=>t.status==='closed').length;
-    cards.innerHTML=`
-      <div class="summary-card-mini"><small>الفترة</small><b style="font-size:18px">${esc(label)}</b></div>
-      <div class="summary-card-mini"><small>تسجيلات الدخول والخروج</small><b>${logs.length}</b></div>
-      <div class="summary-card-mini"><small>إجمالي ساعات العمل</small><b>${minsToText(minutes)}</b></div>
-      <div class="summary-card-mini"><small>وقت التنقل</small><b>${travel} د</b></div>
-      <div class="summary-card-mini"><small>الحضور</small><b>${present}</b></div>
-      <div class="summary-card-mini"><small>الغياب</small><b>${absent}</b></div>
-      <div class="summary-card-mini"><small>التكتات المفتوحة</small><b>${open}</b></div>
-      <div class="summary-card-mini"><small>التكتات المغلقة</small><b>${closed}</b></div>
-      <div class="summary-card-mini"><small>إجمالي التكتات</small><b>${tickets.length}</b></div>`;
-    body.innerHTML=`
-      <tr><td>عدد المشاريع التي تم تسجيل زيارة لها</td><td>${new Set(logs.map(l=>String(l.project_id))).size}</td></tr>
-      <tr><td>إجمالي ساعات العمل داخل المشاريع</td><td>${minsToText(minutes)}</td></tr>
-      <tr><td>إجمالي وقت التنقل / الضائع</td><td>${travel} دقيقة</td></tr>
-      <tr><td>عدد الحضور</td><td>${present}</td></tr>
-      <tr><td>عدد الغياب</td><td>${absent}</td></tr>
-      <tr><td>التكتات المفتوحة / تحت المعالجة</td><td>${open}</td></tr>
-      <tr><td>التكتات المغلقة</td><td>${closed}</td></tr>`;
-  };
-
-  const oldInitSupervisorV12 = window.initSupervisor;
-  window.initSupervisor = async function(){
-    await oldInitSupervisorV12();
-    if($('summaryDate') && !$('summaryDate').value) $('summaryDate').value=today();
-    if(typeof renderSupervisorDailySummary==='function') renderSupervisorDailySummary();
-    const active=document.querySelector('.sup-tab.active');
-    if(active){
-      const page=document.querySelector('.sup-page.active');
-      if(!page) showSupervisorWindow('supLogs', active);
-    }
-  };
+  const oldInitSupervisorV14 = window.initSupervisor;
+  window.initSupervisor = async function(){ await oldInitSupervisorV14(); if($('supTicketFilterProject')) fillSelect('supTicketFilterProject', data.projects||[], 'name', 'كل المشاريع'); renderTickets(); };
 })();
 
 /* ===== V13: Supervisor ticket live notifications, badge, and auto refresh ===== */
