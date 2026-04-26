@@ -718,3 +718,14 @@ async function saveSupervisorAttendance(){ const u=session(); const date=$('atte
   window.techClaimTicket = async function(id){ const u=session(); if(!u) return msg('سجل الدخول أولاً','err'); const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t) return msg('التكت غير موجود','err'); if(t.status==='closed') return msg('التكت مغلق','err'); if(t.claimed_by && String(t.claimed_by)!==String(u.id)) return msg('هذا التكت مستلم بواسطة '+(t.claimed_by_name||'شخص آخر'),'err'); const now=new Date().toISOString(); const name=currentTechName(); const {error}=await sb.from('tickets').update({status:'processing',claimed_by:u.id,claimed_by_name:name,claimed_at:t.claimed_at||now,updated_at:now}).eq('id',id); if(error) return msg(error.message,'err'); playAppSound('ticket'); msg('تم استلام التكت بواسطة '+name); await loadAll(); renderTechnicianTickets(); };
   window.techCloseTicket = async function(id){ const u=session(); if(!u) return msg('سجل الدخول أولاً','err'); const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t) return msg('التكت غير موجود','err'); if(t.status==='closed') return msg('التكت مغلق بالفعل','err'); const note=prompt('كيف تم إغلاق التكت؟\nاكتب الإجراء المنفذ بالتفصيل'); if(!note || !note.trim()) return msg('لا يمكن إغلاق التكت بدون ذكر كيف تم الإغلاق','err'); const now=new Date().toISOString(); const name=currentTechName(); const row={status:'closed',closed_at:now,closed_by:u.id,closed_by_name:name,closure_note:note.trim(),open_duration_minutes:between(t.created_at,now),processing_duration_minutes:t.claimed_at?between(t.claimed_at,now):null,updated_at:now}; if(!t.claimed_at){ row.claimed_by=u.id; row.claimed_by_name=name; row.claimed_at=now; } const {error}=await sb.from('tickets').update(row).eq('id',id); if(error) return msg(error.message,'err'); playAppSound('ticket'); msg('تم إغلاق التكت وحفظ طريقة الإغلاق'); await loadAll(); renderTechnicianTickets(); };
 })();
+
+/* ===== V15.1: Supervisor window buttons fix ===== */
+window.showSupervisorWindow = function(id, btn){
+  document.querySelectorAll('.sup-page').forEach(p => p.classList.remove('active'));
+  const page = document.getElementById(id);
+  if(page) page.classList.add('active');
+  document.querySelectorAll('.sup-tab').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(id === 'supTickets' && typeof renderTickets === 'function') renderTickets();
+  if(id === 'supSummary' && typeof renderSupervisorDailySummary === 'function') renderSupervisorDailySummary();
+};
