@@ -14,3 +14,5 @@
 .badge.red{background:#fde8e8;color:#9d2222;}
 .badge.green{background:#e8f5ee;color:#12643f;}
 .badge.amber{background:#fff4d6;color:#8a6700;}
+
+.closure-box{margin-top:12px;padding:12px;border:1px dashed #d8e5df;border-radius:14px;background:#fbfdfc}.closure-box.hidden{display:none!important}.footer-note{margin-top:8px;color:#60706a;font-size:12px;line-height:1.7}

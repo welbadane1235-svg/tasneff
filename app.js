@@ -525,7 +525,14 @@ async function saveSupervisorAttendance(){ const u=session(); const date=$('atte
   function askCloserName(){ const name=prompt('اسم الشخص الذي أغلق التكت\nاكتب اسم الفني أو المشرف', currentName()); return (name||'').trim(); }
   function askClosureNote(){ const note=prompt('كيف تم إغلاق التكت؟\nاكتب طريقة الحل أو الإجراء المنفذ'); return (note||'').trim(); }
 
-  window.clearTicketForm = function(){ ['ticketId','ticketTitle','ticketDescription'].forEach(id=>{ if($(id)) $(id).value=''; }); if($('ticketStatus')) $('ticketStatus').value='open'; if($('ticketPriority')) $('ticketPriority').value='normal'; if($('ticketFormTitle')) $('ticketFormTitle').textContent='إضافة تكت'; };
+  window.toggleTicketClosureBox = function(){
+    const box=$('ticketClosureBox'); if(!box) return;
+    const isClosed=($('ticketStatus')?.value||'')==='closed';
+    box.classList.toggle('hidden', !isClosed);
+    if(isClosed && $('ticketClosedByName') && !$('ticketClosedByName').value) $('ticketClosedByName').value=currentName();
+  };
+
+  window.clearTicketForm = function(){ ['ticketId','ticketTitle','ticketDescription','ticketClosureNote','ticketClosedByName'].forEach(id=>{ if($(id)) $(id).value=''; }); if($('ticketStatus')) $('ticketStatus').value='open'; if($('ticketPriority')) $('ticketPriority').value='normal'; if($('ticketFormTitle')) $('ticketFormTitle').textContent='إضافة تكت'; toggleTicketClosureBox(); };
 
   window.saveTicket = async function(){
     const u=session(); if(!u) return msg('سجّل الدخول أولاً','err');
@@ -535,9 +542,10 @@ async function saveSupervisorAttendance(){ const u=session(); const date=$('atte
     const id=$('ticketId')?.value;
     if(status==='closed'){
       const existing=id?(data.tickets||[]).find(x=>String(x.id)===String(id)):null;
-      const note=askClosureNote(); if(!note) return msg('لا يمكن إغلاق التكت بدون ذكر كيف تم الإغلاق','err');
-      const closer=askCloserName(); if(!closer) return msg('اكتب اسم من أغلق التكت','err');
+      const note=(($('ticketClosureNote')?.value)||'').trim() || askClosureNote(); if(!note) return msg('لا يمكن إغلاق التكت بدون ذكر كيف تم الإغلاق','err');
+      const closer=(($('ticketClosedByName')?.value)||'').trim() || askCloserName(); if(!closer) return msg('اكتب اسم من أغلق التكت','err');
       const now=new Date().toISOString(); row.closed_at=now; row.closed_by=u.id; row.closed_by_name=closer; row.closure_note=note; row.open_duration_minutes=existing?minutesBetween(existing.created_at,now):0; row.processing_duration_minutes=existing?.claimed_at?minutesBetween(existing.claimed_at,now):0;
+      if(existing && !existing.claimed_at){ row.claimed_by=u.id; row.claimed_by_name=closer; row.claimed_at=now; }
     }else{ row.closed_at=null; row.closed_by=null; row.closed_by_name=null; row.closure_note=null; row.open_duration_minutes=null; row.processing_duration_minutes=null; }
     let res; if(id){ res=await sb.from('tickets').update(row).eq('id',id).select('*').maybeSingle(); }else{ res=await sb.from('tickets').insert(row).select('*').single(); if(!res.error&&res.data&&!res.data.ticket_number){ const tn='T-'+String(res.data.id).padStart(4,'0'); await sb.from('tickets').update({ticket_number:tn}).eq('id',res.data.id); } }
     if(res.error) return msg(res.error.message,'err'); playAppSound('ticket'); msg(id?'تم تحديث التكت':'تم حفظ التكت'); clearTicketForm(); if(u.role==='supervisor') await window.initSupervisor(); else await refreshAll();
@@ -549,7 +557,7 @@ async function saveSupervisorAttendance(){ const u=session(); const date=$('atte
     if(supBody){ const st=$('supTicketFilterStatus')?.value||'', pid=$('supTicketFilterProject')?.value||'', q=($('supTicketSearch')?.value||'').trim().toLowerCase(); let list=rows; if(pid) list=list.filter(t=>String(t.project_id)===String(pid)); if(st) list=list.filter(t=>t.status===st); if(q) list=list.filter(t=>[ticketNo(t),t.title,t.description,projectName(t.project_id),ticketStatusLabel(t.status),t.claimed_by_name,t.closed_by_name,t.closure_note].join(' ').toLowerCase().includes(q)); supBody.innerHTML=list.map(t=>`<tr class="${ticketRowClass(t)}"><td><b>${esc(ticketNo(t))}</b></td><td>${esc(projectName(t.project_id))}</td><td>${esc(t.title)}</td><td style="white-space:normal;min-width:180px">${shortDesc(t.description)}</td><td>${priorityBadge(t)}</td><td>${statusBadge(t)}</td><td>${esc(durationLabel(openMinutes(t)))}</td><td>${esc(t.claimed_by_name||'-')}</td><td>${esc(t.closed_by_name||'-')}</td><td style="white-space:normal;min-width:180px">${shortDesc(t.closure_note)}</td><td class="row-actions"><button onclick="editTicket(${t.id})">تعديل</button>${t.status==='closed'?`<button class="light" onclick="setTicketStatus(${t.id},'open')">إعادة فتح</button>`:`${t.status!=='processing'?`<button class="light" onclick="claimTicket(${t.id})">استلام</button>`:''}<button onclick="closeTicket(${t.id})">إغلاق</button>`}</td></tr>`).join('')||'<tr><td colspan="11">لا توجد تكتات</td></tr>'; }
   };
 
-  window.editTicket = function(id){ const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t)return; if($('ticketId')) $('ticketId').value=t.id; if($('ticketProject')) $('ticketProject').value=t.project_id||''; if($('ticketSupervisor')) $('ticketSupervisor').value=t.supervisor_id||''; if($('ticketTitle')) $('ticketTitle').value=t.title||''; if($('ticketPriority')) $('ticketPriority').value=t.priority||'normal'; if($('ticketStatus')) $('ticketStatus').value=t.status||'open'; if($('ticketDescription')) $('ticketDescription').value=t.description||''; if($('ticketFormTitle')) $('ticketFormTitle').textContent='تعديل تكت '+ticketNo(t); window.scrollTo({top:0,behavior:'smooth'}); };
+  window.editTicket = function(id){ const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t)return; if($('ticketId')) $('ticketId').value=t.id; if($('ticketProject')) $('ticketProject').value=t.project_id||''; if($('ticketSupervisor')) $('ticketSupervisor').value=t.supervisor_id||''; if($('ticketTitle')) $('ticketTitle').value=t.title||''; if($('ticketPriority')) $('ticketPriority').value=t.priority||'normal'; if($('ticketStatus')) $('ticketStatus').value=t.status||'open'; if($('ticketDescription')) $('ticketDescription').value=t.description||''; if($('ticketClosedByName')) $('ticketClosedByName').value=t.closed_by_name||''; if($('ticketClosureNote')) $('ticketClosureNote').value=t.closure_note||''; if($('ticketFormTitle')) $('ticketFormTitle').textContent='تعديل تكت '+ticketNo(t); toggleTicketClosureBox(); window.scrollTo({top:0,behavior:'smooth'}); };
 
   window.claimTicket = async function(id){ const u=session(); if(!u)return msg('سجّل الدخول أولاً','err'); const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t)return msg('التكت غير موجود','err'); if(t.status==='closed')return msg('التكت مغلق','err'); const now=new Date().toISOString(), name=currentName(); const {error}=await sb.from('tickets').update({status:'processing',claimed_by:u.id,claimed_by_name:name,claimed_at:now,updated_at:now}).eq('id',id); if(error)return msg(error.message,'err'); msg('تم استلام التكت بواسطة '+name); if(u?.role==='supervisor') await window.initSupervisor(); else await refreshAll(); };
 
