@@ -192,7 +192,31 @@
 
     <section id="monthly" class="page hidden"><div class="card"><h2>الأوقات الشهرية</h2><div class="filters"><input type="month" id="monthlyMonth" onchange="renderMonthly()"><select id="monthlySupervisor" onchange="renderMonthly()"></select><button onclick="exportMonthlyCSV()">تصدير CSV</button></div><div id="monthlySummary" class="kpis small"></div><div class="table-wrap"><table><thead><tr><th>المشرف</th><th>المشروع</th><th>عدد السجلات</th><th>الساعات المطلوبة</th><th>الساعات الفعلية</th><th>وقت الانتقال</th><th>نسبة العمل</th><th>حالة الأداء</th></tr></thead><tbody id="monthlyBody"></tbody></table></div></div></section>
 
-    <section id="tickets" class="page hidden"><div class="grid two"><div class="card"><h2 id="ticketFormTitle">إضافة تكت</h2><input type="hidden" id="ticketId"><label>المشروع</label><select id="ticketProject"></select><label>المشرف</label><select id="ticketSupervisor"></select><label>العنوان</label><input id="ticketTitle"><label>الأولوية</label><select id="ticketPriority"><option value="normal">عادي</option><option value="high">عاجل</option><option value="low">منخفض</option></select><label>الحالة</label><select id="ticketStatus"><option value="open">مفتوح</option><option value="closed">مغلق</option></select><label>الوصف</label><textarea id="ticketDescription"></textarea><div class="actions"><button onclick="saveTicket()">حفظ</button><button class="light" onclick="clearTicketForm()">جديد</button></div></div><div class="card"><h2>التكتات</h2><div class="filters"><select id="ticketFilterStatus" onchange="renderTickets()"><option value="">الكل</option><option value="open">مفتوح</option><option value="closed">مغلق</option></select><input id="ticketSearch" oninput="renderTickets()" placeholder="بحث"></div><div class="table-wrap"><table><thead><tr><th>المشروع</th><th>المشرف</th><th>العنوان</th><th>الأولوية</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="ticketsBody"></tbody></table></div></div></div></section>
+    <section id="tickets" class="page hidden">
+      <div class="grid two">
+        <div class="card">
+          <h2 id="ticketFormTitle">إضافة تكت</h2>
+          <input type="hidden" id="ticketId">
+          <label>المشروع</label><select id="ticketProject"></select>
+          <label>المشرف</label><select id="ticketSupervisor"></select>
+          <label>العنوان</label><input id="ticketTitle" placeholder="مثال: عطل إنارة / تسريب / ملاحظة نظافة">
+          <label>الأولوية</label>
+          <select id="ticketPriority"><option value="normal">عادي</option><option value="high">مهم</option><option value="urgent">عاجل</option><option value="low">منخفض</option></select>
+          <label>الحالة</label>
+          <select id="ticketStatus"><option value="open">مفتوح</option><option value="processing">تحت المعالجة</option><option value="closed">مغلق</option></select>
+          <label>الوصف</label><textarea id="ticketDescription" placeholder="اكتب وصف التكت بشكل واضح"></textarea>
+          <div class="actions"><button onclick="saveTicket()">حفظ التكت</button><button class="light" onclick="clearTicketForm()">جديد</button></div>
+        </div>
+        <div class="card">
+          <h2>التكتات</h2>
+          <div class="filters">
+            <select id="ticketFilterStatus" onchange="renderTickets()"><option value="">كل الحالات</option><option value="open">مفتوح</option><option value="processing">تحت المعالجة</option><option value="closed">مغلق</option></select>
+            <input id="ticketSearch" oninput="renderTickets()" placeholder="بحث برقم التكت، المشروع، العنوان أو الوصف">
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>رقم التكت</th><th>المشروع</th><th>المشرف</th><th>العنوان</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="ticketsBody"></tbody></table></div>
+        </div>
+      </div>
+    </section>
 
     <section id="alerts" class="page hidden"><div class="card"><h2>التنبيهات وأخطاء التوزيع</h2><div id="alertsList" class="alerts"></div></div></section>
     <section id="export" class="page hidden"><div class="card"><h2>التصدير</h2><p>صدّر بيانات النظام الحالية بصيغة CSV.</p><div class="actions"><button onclick="exportTable('app_users')">المستخدمين</button><button onclick="exportTable('projects')">المشاريع</button><button onclick="exportTable('workers')">العمال</button><button onclick="exportTable('attendance')">الحضور</button><button onclick="exportTable('time_logs')">التسجيلات اليومية</button><button onclick="exportTable('tickets')">التكتات</button></div></div></section>

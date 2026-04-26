@@ -506,3 +506,129 @@ async function saveSupervisorAttendance(){ const u=session(); const date=$('atte
     if(id === 'attendance') setTimeout(()=>window.renderAttendanceMonthly && window.renderAttendanceMonthly(), 0);
   };
 })();
+
+
+/* ===== V11: Tickets management for admin and supervisor ===== */
+(function(){
+  function ticketNo(t){ return t.ticket_number || ('T-' + String(t.id||0).padStart(4,'0')); }
+  function ticketStatusLabel(status){ return status==='closed'?'مغلق':(status==='processing'?'تحت المعالجة':'مفتوح'); }
+  function ticketStatusCls(status){ return status==='closed'?'green':(status==='processing'?'amber':'red'); }
+  function ticketPriorityLabel(p){ return p==='urgent'?'عاجل':(p==='high'?'مهم':(p==='low'?'منخفض':'عادي')); }
+  function ticketPriorityCls(p){ return p==='urgent'?'red':(p==='high'?'amber':''); }
+  function shortDesc(s){ s=String(s||''); return s.length>80 ? esc(s.slice(0,80))+'…' : esc(s||'-'); }
+
+  window.clearTicketForm = function(){
+    ['ticketId','ticketTitle','ticketDescription'].forEach(id=>{ if($(id)) $(id).value=''; });
+    if($('ticketStatus')) $('ticketStatus').value='open';
+    if($('ticketPriority')) $('ticketPriority').value='normal';
+    if($('ticketFormTitle')) $('ticketFormTitle').textContent='إضافة تكت';
+  };
+
+  window.saveTicket = async function(){
+    const u=session(); if(!u) return msg('سجّل الدخول أولاً','err');
+    const title=($('ticketTitle')?.value||'').trim();
+    if(!title) return msg('عنوان التكت مطلوب','err');
+    const status=$('ticketStatus')?.value || 'open';
+    const row={
+      project_id:Number($('ticketProject')?.value)||null,
+      supervisor_id:Number($('ticketSupervisor')?.value || (u.role==='supervisor'?u.id:''))||null,
+      created_by:u.id,
+      title,
+      description:$('ticketDescription')?.value || '',
+      priority:$('ticketPriority')?.value || 'normal',
+      status,
+      updated_at:new Date().toISOString()
+    };
+    row.closed_at = status==='closed' ? new Date().toISOString() : null;
+    const id=$('ticketId')?.value;
+    let res;
+    if(id){
+      res=await sb.from('tickets').update(row).eq('id',id).select('*').maybeSingle();
+    }else{
+      res=await sb.from('tickets').insert(row).select('*').single();
+      if(!res.error && res.data && !res.data.ticket_number){
+        const tn='T-'+String(res.data.id).padStart(4,'0');
+        await sb.from('tickets').update({ticket_number:tn}).eq('id',res.data.id);
+      }
+    }
+    if(res.error) return msg(res.error.message,'err');
+    playAppSound('ticket');
+    msg(id?'تم تحديث التكت':'تم حفظ التكت');
+    clearTicketForm();
+    if(u.role==='supervisor') await window.initSupervisor(); else await refreshAll();
+  };
+
+  window.renderTickets = function(){
+    const adminBody=$('ticketsBody');
+    const supBody=$('supTicketsBody');
+    if(!adminBody && !supBody) return;
+    let rows=[...(data.tickets||[])];
+
+    if(adminBody){
+      const st=$('ticketFilterStatus')?.value || '';
+      const q=($('ticketSearch')?.value||'').trim().toLowerCase();
+      let list=rows;
+      if(st) list=list.filter(t=>t.status===st);
+      if(q) list=list.filter(t=>[ticketNo(t),t.title,t.description,projectName(t.project_id),supervisorName(t.supervisor_id),ticketStatusLabel(t.status)].join(' ').toLowerCase().includes(q));
+      adminBody.innerHTML=list.map(t=>`<tr>
+        <td><b>${esc(ticketNo(t))}</b></td>
+        <td>${esc(projectName(t.project_id))}</td>
+        <td>${esc(supervisorName(t.supervisor_id))}</td>
+        <td>${esc(t.title)}</td>
+        <td style="white-space:normal;min-width:220px">${shortDesc(t.description)}</td>
+        <td><span class="badge ${ticketPriorityCls(t.priority)}">${ticketPriorityLabel(t.priority)}</span></td>
+        <td><span class="badge ${ticketStatusCls(t.status)}">${ticketStatusLabel(t.status)}</span></td>
+        <td>${fmt(t.created_at)}</td>
+        <td class="row-actions"><button onclick="editTicket(${t.id})">تعديل</button>${t.status==='closed'?`<button class="light" onclick="setTicketStatus(${t.id},'open')">إعادة فتح</button>`:`<button class="light" onclick="setTicketStatus(${t.id},'processing')">معالجة</button><button onclick="setTicketStatus(${t.id},'closed')">إغلاق</button>`}<button class="danger" onclick="deleteRow('tickets',${t.id})">حذف</button></td>
+      </tr>`).join('')||'<tr><td colspan="9">لا توجد تكتات</td></tr>';
+    }
+
+    if(supBody){
+      const st=$('supTicketFilterStatus')?.value || '';
+      const pid=$('supTicketFilterProject')?.value || '';
+      const q=($('supTicketSearch')?.value||'').trim().toLowerCase();
+      let list=rows;
+      if(pid) list=list.filter(t=>String(t.project_id)===String(pid));
+      if(st) list=list.filter(t=>t.status===st);
+      if(q) list=list.filter(t=>[ticketNo(t),t.title,t.description,projectName(t.project_id),ticketStatusLabel(t.status)].join(' ').toLowerCase().includes(q));
+      supBody.innerHTML=list.map(t=>`<tr>
+        <td><b>${esc(ticketNo(t))}</b></td>
+        <td>${esc(projectName(t.project_id))}</td>
+        <td>${esc(t.title)}</td>
+        <td style="white-space:normal;min-width:180px">${shortDesc(t.description)}</td>
+        <td><span class="badge ${ticketPriorityCls(t.priority)}">${ticketPriorityLabel(t.priority)}</span></td>
+        <td><span class="badge ${ticketStatusCls(t.status)}">${ticketStatusLabel(t.status)}</span></td>
+        <td class="row-actions"><button onclick="editTicket(${t.id})">تعديل</button>${t.status==='closed'?`<button class="light" onclick="setTicketStatus(${t.id},'open')">إعادة فتح</button>`:`<button class="light" onclick="setTicketStatus(${t.id},'processing')">معالجة</button><button onclick="setTicketStatus(${t.id},'closed')">إغلاق</button>`}</td>
+      </tr>`).join('')||'<tr><td colspan="7">لا توجد تكتات</td></tr>';
+    }
+  };
+
+  window.editTicket = function(id){
+    const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t) return;
+    if($('ticketId')) $('ticketId').value=t.id;
+    if($('ticketProject')) $('ticketProject').value=t.project_id||'';
+    if($('ticketSupervisor')) $('ticketSupervisor').value=t.supervisor_id||'';
+    if($('ticketTitle')) $('ticketTitle').value=t.title||'';
+    if($('ticketPriority')) $('ticketPriority').value=t.priority||'normal';
+    if($('ticketStatus')) $('ticketStatus').value=t.status||'open';
+    if($('ticketDescription')) $('ticketDescription').value=t.description||'';
+    if($('ticketFormTitle')) $('ticketFormTitle').textContent='تعديل تكت '+ticketNo(t);
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+
+  window.setTicketStatus = async function(id,status){
+    const row={status, updated_at:new Date().toISOString(), closed_at: status==='closed'?new Date().toISOString():null};
+    const {error}=await sb.from('tickets').update(row).eq('id',id);
+    if(error) return msg(error.message,'err');
+    msg(status==='closed'?'تم إغلاق التكت':(status==='processing'?'تم تحويل التكت للمعالجة':'تم إعادة فتح التكت'));
+    const u=session();
+    if(u?.role==='supervisor') await window.initSupervisor(); else await refreshAll();
+  };
+
+  const oldInitSupervisorV11 = window.initSupervisor;
+  window.initSupervisor = async function(){
+    await oldInitSupervisorV11();
+    if($('supTicketFilterProject')) fillSelect('supTicketFilterProject', data.projects||[], 'name', 'كل المشاريع');
+    renderTickets();
+  };
+})();
