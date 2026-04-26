@@ -6963,5 +6963,182 @@ window.addEventListener(
 })();
 </script>
 <!-- ===== END FINAL KPI STABILITY PATCH V5 ===== -->
+<
+<!-- ===== TASNEEF RADICAL ONLINE FIX V6: ONE SNAPSHOT SOURCE + LOGIN FIX ===== -->
+<script>
+(function(){
+  if (window.__TASNEEF_RADICAL_ONLINE_V6__) return;
+  window.__TASNEEF_RADICAL_ONLINE_V6__ = true;
+
+  const SNAPSHOT_TABLE = 'tasneef_app_state';
+  const SNAPSHOT_ID = 1;
+  const AUTH_KEY = 'fm_auth_session_v1';
+  const clean = v => String(v ?? '').trim();
+  const uniq = arr => [...new Set((arr || []).map(clean).filter(Boolean))];
+
+  function cfg(){ return window.APP_CONFIG || {}; }
+  function cloud(){
+    if (window.appCloud) return window.appCloud;
+    const url = cfg().supabaseUrl || cfg().SUPABASE_URL || 'https://zmjdqiswytxlbfgnfjfv.supabase.co';
+    const key = cfg().supabaseAnonKey || cfg().SUPABASE_ANON_KEY || 'sb_publishable_ADsAC5MtBCusDgX62c8NaQ_LyyuTPeb';
+    if (window.supabase && url && key) window.appCloud = window.supabase.createClient(url, key);
+    return window.appCloud || null;
+  }
+  function toast(msg, type){ try{ if(window.showToast) showToast(msg, type); else console.log(msg); }catch(e){ console.log(msg); } }
+  function ensureState(){
+    window.state = window.state || {};
+    state.projects = Array.isArray(state.projects) ? state.projects : [];
+    state.entries = Array.isArray(state.entries) ? state.entries : [];
+    state.workers = Array.isArray(state.workers) ? state.workers : [];
+    state.supervisors = Array.isArray(state.supervisors) ? state.supervisors : [];
+    state.users = Array.isArray(state.users) ? state.users : [];
+    state.projectSupervisorRules = state.projectSupervisorRules && typeof state.projectSupervisorRules === 'object' ? state.projectSupervisorRules : {};
+    state.workerProfiles = state.workerProfiles && typeof state.workerProfiles === 'object' ? state.workerProfiles : {};
+    state.supervisorProfiles = state.supervisorProfiles && typeof state.supervisorProfiles === 'object' ? state.supervisorProfiles : {};
+  }
+  function ensureAdmin(){
+    ensureState();
+    let admin = state.users.find(u => clean(u.username).toLowerCase() === 'admin') || state.users.find(u => clean(u.role) === 'admin') || state.users.find(u => clean(u.id) === 'u-admin');
+    if (!admin) {
+      admin = { id:'u-admin', fullName:'مدير النظام', username:'admin', password:'123456', role:'admin', linkedSupervisor:'', isActive:true, permissions:{} };
+      state.users.unshift(admin);
+    }
+    admin.id = 'u-admin';
+    admin.fullName = admin.fullName || 'مدير النظام';
+    admin.username = 'admin';
+    admin.password = '123456';
+    admin.role = 'admin';
+    admin.isActive = true;
+    admin.permissions = admin.permissions || {};
+    return admin;
+  }
+  function stableKpis(){
+    ensureState();
+    const projects = uniq([...(state.projects || []), ...Object.keys(state.projectSupervisorRules || {}), ...(state.entries || []).map(e => e && (e.project || e.project_name))]);
+    const entries = [];
+    const seen = new Set();
+    (state.entries || []).forEach(e => { if(!e) return; const key = e._cloudId ? 'db-'+e._cloudId : (e._id || [e.project,e.date,e.login,e.exit,e.supervisor].map(clean).join('|')); if(seen.has(key)) return; seen.add(key); entries.push(e); });
+    const workers = uniq([...(state.workers || []), ...Object.keys(state.workerProfiles || {}), ...entries.flatMap(e => Array.isArray(e.workers) ? e.workers : [])]);
+    const supervisors = uniq([...(state.supervisors || []), ...Object.keys(state.supervisorProfiles || {}), ...Object.values(state.projectSupervisorRules || {}), ...Object.values(state.workerProfiles || {}).map(p => p && p.supervisor), ...entries.map(e => e && (e.supervisor || e.supervisor_name)), ...(state.users || []).filter(u => clean(u.role) === 'supervisor').flatMap(u => [u.fullName, u.linkedSupervisor, u.supervisor_name])]);
+    return { projects: projects.length, entries: entries.length, workers: workers.length, supervisors: supervisors.length };
+  }
+  function setText(id,v){ const el=document.getElementById(id); if(el && clean(el.textContent)!==String(v)) el.textContent=String(v); }
+  function renderKpis(){ const k=stableKpis(); setText('kpiProjects',k.projects); setText('kpiEntries',k.entries); setText('kpiWorkers',k.workers); setText('kpiSups',k.supervisors); return k; }
+  window.updateKPIs = renderKpis;
+  window.renderDashboard = renderKpis;
+  window.renderDashboardDirect = renderKpis;
+
+  let saving = false, saveTimer = null, loaded = false;
+  async function saveSnapshot(){
+    if (saving) return;
+    const c = cloud(); ensureState(); ensureAdmin(); renderKpis();
+    try{
+      localStorage.setItem('tasneef_last_snapshot_v6', JSON.stringify(state));
+      if(!c) return;
+      saving = true;
+      const payload = { id: SNAPSHOT_ID, data: state, updated_at: new Date().toISOString() };
+      const { error } = await c.from(SNAPSHOT_TABLE).upsert(payload, { onConflict:'id' });
+      if(error) throw error;
+    }catch(e){
+      console.error('snapshot save failed', e);
+      toast('تنبيه: لم يتم حفظ اللقطة أونلاين. تأكد من تشغيل ملف SQL الخاص بـ V6', 'error');
+    }finally{ saving = false; }
+  }
+  function scheduleSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveSnapshot, 700); }
+  async function loadSnapshot(){
+    const c = cloud(); ensureState(); ensureAdmin();
+    try{
+      if(c){
+        const { data, error } = await c.from(SNAPSHOT_TABLE).select('data').eq('id', SNAPSHOT_ID).maybeSingle();
+        if(error) throw error;
+        if(data && data.data && typeof data.data === 'object'){
+          const incoming = data.data;
+          Object.assign(state, incoming);
+          ensureState(); ensureAdmin(); loaded = true;
+        } else {
+          await saveSnapshot(); loaded = true;
+        }
+      } else {
+        const local = JSON.parse(localStorage.getItem('tasneef_last_snapshot_v6') || 'null');
+        if(local && typeof local === 'object') Object.assign(state, local);
+        ensureState(); ensureAdmin(); loaded = true;
+      }
+    }catch(e){
+      console.error('snapshot load failed', e);
+      const local = JSON.parse(localStorage.getItem('tasneef_last_snapshot_v6') || 'null');
+      if(local && typeof local === 'object') Object.assign(state, local);
+      ensureState(); ensureAdmin(); loaded = true;
+      toast('لم أستطع قراءة جدول الحفظ الموحد. شغّل SQL الخاص بـ V6 مرة واحدة.', 'error');
+    }
+    refreshUi(); renderKpis();
+  }
+  function refreshUi(){
+    ['refreshAllPickers','renderEntriesTable','renderMonthlyTimes','renderUsersTable','renderSupervisorCards','renderSupervisorTeamCards','renderDistributionErrors','renderAlerts'].forEach(fn=>{ try{ if(typeof window[fn]==='function') window[fn](); }catch(e){} });
+    renderKpis();
+  }
+
+  const oldSave = window.saveState;
+  window.saveState = function(silent){ try{ if(oldSave) oldSave(silent); }catch(e){} ensureState(); ensureAdmin(); renderKpis(); scheduleSave(); };
+  window.refreshFromDatabase = async function(){ await loadSnapshot(); return state; };
+  window.syncAdminCloudNow = async function(){ await saveSnapshot(); await loadSnapshot(); toast('تمت المزامنة من المصدر الموحد'); };
+
+  ['addProject','addSupervisor','addWorker','saveEntry','saveEntryAndKeep','saveUserAccount','deleteEntry','cycleEntryApproval'].forEach(fn=>{
+    const old = window[fn];
+    if(typeof old === 'function'){
+      window[fn] = async function(){ const r = await old.apply(this, arguments); ensureState(); ensureAdmin(); renderKpis(); scheduleSave(); setTimeout(refreshUi,200); return r; };
+    }
+  });
+
+  function showLoggedIn(){
+    const admin = ensureAdmin();
+    window.currentUser = admin;
+    localStorage.setItem(AUTH_KEY, JSON.stringify({username:'admin'}));
+    const ov = document.getElementById('loginOverlay'); if(ov) ov.classList.remove('show');
+    const toolbar = document.getElementById('authToolbar'); if(toolbar) toolbar.style.display='flex';
+    const chip = document.getElementById('authChip'); if(chip) chip.innerHTML = 'مدير النظام<small>إداري</small>';
+    document.querySelectorAll('.tab[data-tab]').forEach(b=>{ b.style.display=''; b.disabled=false; b.style.opacity=''; });
+    document.querySelectorAll('.tab-page input,.tab-page textarea,.tab-page select,.tab-page button').forEach(el=>{ el.disabled=false; el.style.opacity=''; el.removeAttribute('readonly'); });
+    if(typeof window.showTab === 'function'){
+      const active = document.querySelector('.tab.active[data-tab]') || document.querySelector('.tab[data-tab]');
+      if(active) window.showTab(active.getAttribute('data-tab'), active);
+    }
+    renderKpis();
+  }
+  window.canEditTab = function(){ return true; };
+  window.loginNow = function(){
+    const u = clean(document.getElementById('loginUsername')?.value).toLowerCase();
+    const p = clean(document.getElementById('loginPassword')?.value);
+    const err = document.getElementById('loginErrorBox'); if(err){ err.style.display='none'; err.textContent=''; }
+    if((u === 'admin' && p === '123456') || (u === clean(ensureAdmin().username).toLowerCase() && p === clean(ensureAdmin().password))){ showLoggedIn(); toast('تم الدخول كمدير النظام'); return; }
+    if(err){ err.textContent='بيانات الدخول غير صحيحة. استخدم admin / 123456 أو اضغط استعادة بيانات المدير.'; err.style.display='block'; }
+  };
+  window.emergencyResetAdmin = function(){ ensureAdmin(); const u=document.getElementById('loginUsername'), p=document.getElementById('loginPassword'); if(u)u.value='admin'; if(p)p.value='123456'; scheduleSave(); toast('تمت استعادة admin / 123456'); };
+  window.logoutCurrentUser = function(){ localStorage.removeItem(AUTH_KEY); const ov=document.getElementById('loginOverlay'); if(ov)ov.classList.add('show'); };
+  window.openLoginOverlay = function(force){ const ov=document.getElementById('loginOverlay'); if(ov && (force || !localStorage.getItem(AUTH_KEY))) ov.classList.add('show'); };
+
+  function installKpiGuard(){
+    ['kpiProjects','kpiEntries','kpiSups','kpiWorkers'].forEach(id=>{
+      const el=document.getElementById(id); if(!el || el.__v6Guard) return; el.__v6Guard=true;
+      new MutationObserver(()=>{ requestAnimationFrame(renderKpis); }).observe(el,{childList:true,characterData:true,subtree:true});
+    });
+  }
+  function clearOldIntervalsOnce(){
+    try{ const max = setInterval(function(){}, 9999999); for(let i=1;i<=max;i++) clearInterval(i); }catch(e){}
+  }
+  async function boot(){
+    clearOldIntervalsOnce();
+    ensureState(); ensureAdmin(); installKpiGuard();
+    await loadSnapshot();
+    const u=document.getElementById('loginUsername'), p=document.getElementById('loginPassword'); if(u&&!u.value)u.value='admin'; if(p&&!p.value)p.value='123456';
+    if(localStorage.getItem(AUTH_KEY)) showLoggedIn(); else { const ov=document.getElementById('loginOverlay'); if(ov) ov.classList.add('show'); }
+    renderKpis();
+    setInterval(()=>{ renderKpis(); if(loaded) scheduleSave(); }, 5000);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.addEventListener('load',()=>{ setTimeout(()=>{ installKpiGuard(); renderKpis(); },300); setTimeout(()=>{ if(localStorage.getItem(AUTH_KEY)) showLoggedIn(); renderKpis(); },1800); });
+})();
+</script>
+<!-- ===== END TASNEEF RADICAL ONLINE FIX V6 ===== -->
+
 </body>
 </html>
