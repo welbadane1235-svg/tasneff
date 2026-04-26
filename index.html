@@ -1725,51 +1725,6 @@ function printDailyEntriesReport() {
   ${rows.map(e=>{ const mins = durationMinutes(e.login,e.exit); const timeInfo = (window.getEntryTimeColorInfo ? getEntryTimeColorInfo(e) : {label:'—'}); const expectedText = (window.formatExpectedTime ? formatExpectedTime(state.projectMeta?.[e.project]?.expectedTime || '') : '') || '—'; return `<tr><td>${esc(e.date)}</td><td>${esc(getArabicDayName(e.date))}</td><td>${esc(e.project)}</td><td>${esc(e.supervisor||'-')}</td><td>${esc((e.workers||[]).join('، '))}</td><td>${esc(e.login||'-')}</td><td>${esc(e.exit||'-')}</td><td>${esc(formatHM(mins))}</td><td>${esc(expectedText)}</td><td>${esc(timeInfo.label || '—')}</td><td>${entryStatusInfo(e).complete ? 'مكتمل' : 'ناقص'}</td><td>${esc(e.approvalStatus||'مسجل')}</td><td>${esc(e.note||'')}</td></tr>`; }).join('')}
   </tbody></table><div class="footer">شركة تصنيف لإدارة المرافق</div>
 
-<!-- ===== FINAL KPI STABILITY PATCH V5: one source only ===== -->
-<script>
-(function(){
-  if (window.__TASNEEF_FINAL_KPI_STABILITY_V5__) return;
-  window.__TASNEEF_FINAL_KPI_STABILITY_V5__ = true;
-  const clean = v => String(v ?? '').trim();
-  const uniq = arr => [...new Set((arr || []).map(clean).filter(Boolean))];
-  function byId(id){ return document.getElementById(id); }
-  function setKpi(id, value){ const el = byId(id); if (el && String(el.textContent).trim() !== String(value)) el.textContent = String(value); }
-  function ensureArrays(){
-    window.state = window.state || {};
-    state.projects = Array.isArray(state.projects) ? state.projects : [];
-    state.entries = Array.isArray(state.entries) ? state.entries : [];
-    state.workers = Array.isArray(state.workers) ? state.workers : [];
-    state.supervisors = Array.isArray(state.supervisors) ? state.supervisors : [];
-    state.users = Array.isArray(state.users) ? state.users : [];
-    state.projectSupervisorRules = state.projectSupervisorRules && typeof state.projectSupervisorRules === 'object' ? state.projectSupervisorRules : {};
-    state.workerProfiles = state.workerProfiles && typeof state.workerProfiles === 'object' ? state.workerProfiles : {};
-    state.supervisorProfiles = state.supervisorProfiles && typeof state.supervisorProfiles === 'object' ? state.supervisorProfiles : {};
-  }
-  function recomputeFromState(){
-    ensureArrays();
-    const projects = uniq([...state.projects, ...Object.keys(state.projectSupervisorRules || {}), ...state.entries.map(e => e && (e.project || e.project_name))]);
-    const workers = uniq([...state.workers, ...Object.keys(state.workerProfiles || {}), ...state.entries.flatMap(e => Array.isArray(e && e.workers) ? e.workers : [])]);
-    const supervisors = uniq([...state.supervisors, ...Object.keys(state.supervisorProfiles || {}), ...Object.values(state.projectSupervisorRules || {}), ...Object.values(state.workerProfiles || {}).map(p => p && p.supervisor), ...state.entries.map(e => e && (e.supervisor || e.supervisor_name)), ...state.users.filter(u => clean(u.role) === 'supervisor').flatMap(u => [u.linkedSupervisor, u.fullName, u.supervisor_name])]);
-    const entryIds = new Set();
-    const entries = (state.entries || []).filter(e => { if (!e) return false; const key = e._cloudId ? 'db-' + e._cloudId : (e._id || [e.project,e.date,e.login,e.exit,e.supervisor].map(clean).join('|')); if (entryIds.has(key)) return false; entryIds.add(key); return true; });
-    return { projects: projects.length, entries: entries.length, supervisors: supervisors.length, workers: workers.length };
-  }
-  function renderStableKPIs(){ const k = recomputeFromState(); setKpi('kpiProjects', k.projects); setKpi('kpiEntries', k.entries); setKpi('kpiSups', k.supervisors); setKpi('kpiWorkers', k.workers); window.__tasneefLastStableKpis = k; return k; }
-  window.updateKPIs = renderStableKPIs;
-  window.renderDashboard = renderStableKPIs;
-  window.renderDashboardDirect = renderStableKPIs;
-  const oldRefresh = window.refreshFromDatabase;
-  if (typeof oldRefresh === 'function') window.refreshFromDatabase = async function(){ const r = await oldRefresh.apply(this, arguments); renderStableKPIs(); return r; };
-  ['addProject','addSupervisor','addWorker','saveEntry','saveEntryAndKeep','saveUserAccount'].forEach(fn => { const old = window[fn]; if (typeof old === 'function') window[fn] = async function(){ const r = await old.apply(this, arguments); setTimeout(renderStableKPIs, 50); setTimeout(renderStableKPIs, 400); setTimeout(renderStableKPIs, 1200); return r; }; });
-  let guard = false;
-  function installGuard(){ ['kpiProjects','kpiEntries','kpiSups','kpiWorkers'].forEach(id => { const el = byId(id); if (!el || el.__kpiGuardInstalled) return; el.__kpiGuardInstalled = true; new MutationObserver(() => { if (guard) return; guard = true; requestAnimationFrame(() => { renderStableKPIs(); guard = false; }); }).observe(el, { childList:true, characterData:true, subtree:true }); }); }
-  function boot(){ installGuard(); renderStableKPIs(); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  window.addEventListener('load', () => { boot(); [100,400,900,1600,2600,4200,6500].forEach(t => setTimeout(boot, t)); });
-  setInterval(boot, 2000);
-})();
-</script>
-<!-- ===== END FINAL KPI STABILITY PATCH V5 ===== -->
 </body></html>`;
   const win = window.open('', '_blank');
   if (!win) { showToast('المتصفح منع فتح نافذة الطباعة', 'error'); return; }
@@ -2773,51 +2728,6 @@ function openPrintWindow(html) {
 @media (max-width:1100px){.team-editor-grid{grid-template-columns:1fr;}}
 
 
-<!-- ===== FINAL KPI STABILITY PATCH V5: one source only ===== -->
-<script>
-(function(){
-  if (window.__TASNEEF_FINAL_KPI_STABILITY_V5__) return;
-  window.__TASNEEF_FINAL_KPI_STABILITY_V5__ = true;
-  const clean = v => String(v ?? '').trim();
-  const uniq = arr => [...new Set((arr || []).map(clean).filter(Boolean))];
-  function byId(id){ return document.getElementById(id); }
-  function setKpi(id, value){ const el = byId(id); if (el && String(el.textContent).trim() !== String(value)) el.textContent = String(value); }
-  function ensureArrays(){
-    window.state = window.state || {};
-    state.projects = Array.isArray(state.projects) ? state.projects : [];
-    state.entries = Array.isArray(state.entries) ? state.entries : [];
-    state.workers = Array.isArray(state.workers) ? state.workers : [];
-    state.supervisors = Array.isArray(state.supervisors) ? state.supervisors : [];
-    state.users = Array.isArray(state.users) ? state.users : [];
-    state.projectSupervisorRules = state.projectSupervisorRules && typeof state.projectSupervisorRules === 'object' ? state.projectSupervisorRules : {};
-    state.workerProfiles = state.workerProfiles && typeof state.workerProfiles === 'object' ? state.workerProfiles : {};
-    state.supervisorProfiles = state.supervisorProfiles && typeof state.supervisorProfiles === 'object' ? state.supervisorProfiles : {};
-  }
-  function recomputeFromState(){
-    ensureArrays();
-    const projects = uniq([...state.projects, ...Object.keys(state.projectSupervisorRules || {}), ...state.entries.map(e => e && (e.project || e.project_name))]);
-    const workers = uniq([...state.workers, ...Object.keys(state.workerProfiles || {}), ...state.entries.flatMap(e => Array.isArray(e && e.workers) ? e.workers : [])]);
-    const supervisors = uniq([...state.supervisors, ...Object.keys(state.supervisorProfiles || {}), ...Object.values(state.projectSupervisorRules || {}), ...Object.values(state.workerProfiles || {}).map(p => p && p.supervisor), ...state.entries.map(e => e && (e.supervisor || e.supervisor_name)), ...state.users.filter(u => clean(u.role) === 'supervisor').flatMap(u => [u.linkedSupervisor, u.fullName, u.supervisor_name])]);
-    const entryIds = new Set();
-    const entries = (state.entries || []).filter(e => { if (!e) return false; const key = e._cloudId ? 'db-' + e._cloudId : (e._id || [e.project,e.date,e.login,e.exit,e.supervisor].map(clean).join('|')); if (entryIds.has(key)) return false; entryIds.add(key); return true; });
-    return { projects: projects.length, entries: entries.length, supervisors: supervisors.length, workers: workers.length };
-  }
-  function renderStableKPIs(){ const k = recomputeFromState(); setKpi('kpiProjects', k.projects); setKpi('kpiEntries', k.entries); setKpi('kpiSups', k.supervisors); setKpi('kpiWorkers', k.workers); window.__tasneefLastStableKpis = k; return k; }
-  window.updateKPIs = renderStableKPIs;
-  window.renderDashboard = renderStableKPIs;
-  window.renderDashboardDirect = renderStableKPIs;
-  const oldRefresh = window.refreshFromDatabase;
-  if (typeof oldRefresh === 'function') window.refreshFromDatabase = async function(){ const r = await oldRefresh.apply(this, arguments); renderStableKPIs(); return r; };
-  ['addProject','addSupervisor','addWorker','saveEntry','saveEntryAndKeep','saveUserAccount'].forEach(fn => { const old = window[fn]; if (typeof old === 'function') window[fn] = async function(){ const r = await old.apply(this, arguments); setTimeout(renderStableKPIs, 50); setTimeout(renderStableKPIs, 400); setTimeout(renderStableKPIs, 1200); return r; }; });
-  let guard = false;
-  function installGuard(){ ['kpiProjects','kpiEntries','kpiSups','kpiWorkers'].forEach(id => { const el = byId(id); if (!el || el.__kpiGuardInstalled) return; el.__kpiGuardInstalled = true; new MutationObserver(() => { if (guard) return; guard = true; requestAnimationFrame(() => { renderStableKPIs(); guard = false; }); }).observe(el, { childList:true, characterData:true, subtree:true }); }); }
-  function boot(){ installGuard(); renderStableKPIs(); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  window.addEventListener('load', () => { boot(); [100,400,900,1600,2600,4200,6500].forEach(t => setTimeout(boot, t)); });
-  setInterval(boot, 2000);
-})();
-</script>
-<!-- ===== END FINAL KPI STABILITY PATCH V5 ===== -->
 </style></head><body>${html}</body></html>`);
   win.document.close();
   win.focus();
@@ -4345,51 +4255,6 @@ initAll();
       </table>
       <div class="footer">شركة تصنيف لإدارة المرافق</div>
 
-<!-- ===== FINAL KPI STABILITY PATCH V5: one source only ===== -->
-<script>
-(function(){
-  if (window.__TASNEEF_FINAL_KPI_STABILITY_V5__) return;
-  window.__TASNEEF_FINAL_KPI_STABILITY_V5__ = true;
-  const clean = v => String(v ?? '').trim();
-  const uniq = arr => [...new Set((arr || []).map(clean).filter(Boolean))];
-  function byId(id){ return document.getElementById(id); }
-  function setKpi(id, value){ const el = byId(id); if (el && String(el.textContent).trim() !== String(value)) el.textContent = String(value); }
-  function ensureArrays(){
-    window.state = window.state || {};
-    state.projects = Array.isArray(state.projects) ? state.projects : [];
-    state.entries = Array.isArray(state.entries) ? state.entries : [];
-    state.workers = Array.isArray(state.workers) ? state.workers : [];
-    state.supervisors = Array.isArray(state.supervisors) ? state.supervisors : [];
-    state.users = Array.isArray(state.users) ? state.users : [];
-    state.projectSupervisorRules = state.projectSupervisorRules && typeof state.projectSupervisorRules === 'object' ? state.projectSupervisorRules : {};
-    state.workerProfiles = state.workerProfiles && typeof state.workerProfiles === 'object' ? state.workerProfiles : {};
-    state.supervisorProfiles = state.supervisorProfiles && typeof state.supervisorProfiles === 'object' ? state.supervisorProfiles : {};
-  }
-  function recomputeFromState(){
-    ensureArrays();
-    const projects = uniq([...state.projects, ...Object.keys(state.projectSupervisorRules || {}), ...state.entries.map(e => e && (e.project || e.project_name))]);
-    const workers = uniq([...state.workers, ...Object.keys(state.workerProfiles || {}), ...state.entries.flatMap(e => Array.isArray(e && e.workers) ? e.workers : [])]);
-    const supervisors = uniq([...state.supervisors, ...Object.keys(state.supervisorProfiles || {}), ...Object.values(state.projectSupervisorRules || {}), ...Object.values(state.workerProfiles || {}).map(p => p && p.supervisor), ...state.entries.map(e => e && (e.supervisor || e.supervisor_name)), ...state.users.filter(u => clean(u.role) === 'supervisor').flatMap(u => [u.linkedSupervisor, u.fullName, u.supervisor_name])]);
-    const entryIds = new Set();
-    const entries = (state.entries || []).filter(e => { if (!e) return false; const key = e._cloudId ? 'db-' + e._cloudId : (e._id || [e.project,e.date,e.login,e.exit,e.supervisor].map(clean).join('|')); if (entryIds.has(key)) return false; entryIds.add(key); return true; });
-    return { projects: projects.length, entries: entries.length, supervisors: supervisors.length, workers: workers.length };
-  }
-  function renderStableKPIs(){ const k = recomputeFromState(); setKpi('kpiProjects', k.projects); setKpi('kpiEntries', k.entries); setKpi('kpiSups', k.supervisors); setKpi('kpiWorkers', k.workers); window.__tasneefLastStableKpis = k; return k; }
-  window.updateKPIs = renderStableKPIs;
-  window.renderDashboard = renderStableKPIs;
-  window.renderDashboardDirect = renderStableKPIs;
-  const oldRefresh = window.refreshFromDatabase;
-  if (typeof oldRefresh === 'function') window.refreshFromDatabase = async function(){ const r = await oldRefresh.apply(this, arguments); renderStableKPIs(); return r; };
-  ['addProject','addSupervisor','addWorker','saveEntry','saveEntryAndKeep','saveUserAccount'].forEach(fn => { const old = window[fn]; if (typeof old === 'function') window[fn] = async function(){ const r = await old.apply(this, arguments); setTimeout(renderStableKPIs, 50); setTimeout(renderStableKPIs, 400); setTimeout(renderStableKPIs, 1200); return r; }; });
-  let guard = false;
-  function installGuard(){ ['kpiProjects','kpiEntries','kpiSups','kpiWorkers'].forEach(id => { const el = byId(id); if (!el || el.__kpiGuardInstalled) return; el.__kpiGuardInstalled = true; new MutationObserver(() => { if (guard) return; guard = true; requestAnimationFrame(() => { renderStableKPIs(); guard = false; }); }).observe(el, { childList:true, characterData:true, subtree:true }); }); }
-  function boot(){ installGuard(); renderStableKPIs(); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  window.addEventListener('load', () => { boot(); [100,400,900,1600,2600,4200,6500].forEach(t => setTimeout(boot, t)); });
-  setInterval(boot, 2000);
-})();
-</script>
-<!-- ===== END FINAL KPI STABILITY PATCH V5 ===== -->
     </body></html>`;
     const iframe = document.getElementById('printFrame') || (() => {
       const f = document.createElement('iframe');
@@ -6918,51 +6783,6 @@ window.addEventListener(
 </script>
 
 
-<!-- ===== FINAL KPI STABILITY PATCH V5: one source only ===== -->
-<script>
-(function(){
-  if (window.__TASNEEF_FINAL_KPI_STABILITY_V5__) return;
-  window.__TASNEEF_FINAL_KPI_STABILITY_V5__ = true;
-  const clean = v => String(v ?? '').trim();
-  const uniq = arr => [...new Set((arr || []).map(clean).filter(Boolean))];
-  function byId(id){ return document.getElementById(id); }
-  function setKpi(id, value){ const el = byId(id); if (el && String(el.textContent).trim() !== String(value)) el.textContent = String(value); }
-  function ensureArrays(){
-    window.state = window.state || {};
-    state.projects = Array.isArray(state.projects) ? state.projects : [];
-    state.entries = Array.isArray(state.entries) ? state.entries : [];
-    state.workers = Array.isArray(state.workers) ? state.workers : [];
-    state.supervisors = Array.isArray(state.supervisors) ? state.supervisors : [];
-    state.users = Array.isArray(state.users) ? state.users : [];
-    state.projectSupervisorRules = state.projectSupervisorRules && typeof state.projectSupervisorRules === 'object' ? state.projectSupervisorRules : {};
-    state.workerProfiles = state.workerProfiles && typeof state.workerProfiles === 'object' ? state.workerProfiles : {};
-    state.supervisorProfiles = state.supervisorProfiles && typeof state.supervisorProfiles === 'object' ? state.supervisorProfiles : {};
-  }
-  function recomputeFromState(){
-    ensureArrays();
-    const projects = uniq([...state.projects, ...Object.keys(state.projectSupervisorRules || {}), ...state.entries.map(e => e && (e.project || e.project_name))]);
-    const workers = uniq([...state.workers, ...Object.keys(state.workerProfiles || {}), ...state.entries.flatMap(e => Array.isArray(e && e.workers) ? e.workers : [])]);
-    const supervisors = uniq([...state.supervisors, ...Object.keys(state.supervisorProfiles || {}), ...Object.values(state.projectSupervisorRules || {}), ...Object.values(state.workerProfiles || {}).map(p => p && p.supervisor), ...state.entries.map(e => e && (e.supervisor || e.supervisor_name)), ...state.users.filter(u => clean(u.role) === 'supervisor').flatMap(u => [u.linkedSupervisor, u.fullName, u.supervisor_name])]);
-    const entryIds = new Set();
-    const entries = (state.entries || []).filter(e => { if (!e) return false; const key = e._cloudId ? 'db-' + e._cloudId : (e._id || [e.project,e.date,e.login,e.exit,e.supervisor].map(clean).join('|')); if (entryIds.has(key)) return false; entryIds.add(key); return true; });
-    return { projects: projects.length, entries: entries.length, supervisors: supervisors.length, workers: workers.length };
-  }
-  function renderStableKPIs(){ const k = recomputeFromState(); setKpi('kpiProjects', k.projects); setKpi('kpiEntries', k.entries); setKpi('kpiSups', k.supervisors); setKpi('kpiWorkers', k.workers); window.__tasneefLastStableKpis = k; return k; }
-  window.updateKPIs = renderStableKPIs;
-  window.renderDashboard = renderStableKPIs;
-  window.renderDashboardDirect = renderStableKPIs;
-  const oldRefresh = window.refreshFromDatabase;
-  if (typeof oldRefresh === 'function') window.refreshFromDatabase = async function(){ const r = await oldRefresh.apply(this, arguments); renderStableKPIs(); return r; };
-  ['addProject','addSupervisor','addWorker','saveEntry','saveEntryAndKeep','saveUserAccount'].forEach(fn => { const old = window[fn]; if (typeof old === 'function') window[fn] = async function(){ const r = await old.apply(this, arguments); setTimeout(renderStableKPIs, 50); setTimeout(renderStableKPIs, 400); setTimeout(renderStableKPIs, 1200); return r; }; });
-  let guard = false;
-  function installGuard(){ ['kpiProjects','kpiEntries','kpiSups','kpiWorkers'].forEach(id => { const el = byId(id); if (!el || el.__kpiGuardInstalled) return; el.__kpiGuardInstalled = true; new MutationObserver(() => { if (guard) return; guard = true; requestAnimationFrame(() => { renderStableKPIs(); guard = false; }); }).observe(el, { childList:true, characterData:true, subtree:true }); }); }
-  function boot(){ installGuard(); renderStableKPIs(); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  window.addEventListener('load', () => { boot(); [100,400,900,1600,2600,4200,6500].forEach(t => setTimeout(boot, t)); });
-  setInterval(boot, 2000);
-})();
-</script>
-<!-- ===== END FINAL KPI STABILITY PATCH V5 ===== -->
 <
 <!-- ===== TASNEEF RADICAL ONLINE FIX V6: ONE SNAPSHOT SOURCE + LOGIN FIX ===== -->
 <script>
