@@ -730,3 +730,114 @@ async function saveSupervisorAttendance(){ const u=session(); const date=$('atte
     }
   };
 })();
+
+/* ===== V13: Supervisor ticket live notifications, badge, and auto refresh ===== */
+(function(){
+  let ticketWatchTimer = null;
+  let lastSeenTicketId = 0;
+  let watchStarted = false;
+
+  function ticketNoV13(t){ return t.ticket_number || ('T-' + String(t.id||0).padStart(4,'0')); }
+
+  function ensureTicketNoticeUI(){
+    if(!document.getElementById('supervisorTicketNotice')){
+      const box = document.createElement('div');
+      box.id = 'supervisorTicketNotice';
+      box.style.cssText = 'display:none;position:fixed;left:14px;right:14px;top:14px;z-index:99999;background:#0A4033;color:#fff;border-radius:16px;padding:13px 15px;box-shadow:0 12px 30px rgba(0,0,0,.22);font-family:Tahoma,Arial,sans-serif;line-height:1.7;';
+      document.body.appendChild(box);
+    }
+    const ticketBtn = [...document.querySelectorAll('.sup-tab')].find(b => (b.textContent||'').includes('التكتات'));
+    if(ticketBtn && !ticketBtn.querySelector('#supTicketOpenCount')){
+      ticketBtn.innerHTML = 'التكتات <span id="supTicketOpenCount" style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:999px;background:#b83232;color:#fff;font-size:12px;margin-inline-start:6px;padding:0 6px;">0</span>';
+    }
+  }
+
+  function supervisorTicketScope(rows){
+    const u = session();
+    if(!u || u.role !== 'supervisor') return rows || [];
+    const pids = new Set((data.projects||[]).map(p => String(p.id)));
+    return (rows||[]).filter(t =>
+      String(t.supervisor_id||'') === String(u.id) ||
+      String(t.created_by||'') === String(u.id) ||
+      pids.has(String(t.project_id||''))
+    );
+  }
+
+  function updateSupervisorTicketBadge(){
+    ensureTicketNoticeUI();
+    const el = document.getElementById('supTicketOpenCount');
+    if(!el) return;
+    const openCount = (data.tickets||[]).filter(t => t.status !== 'closed').length;
+    el.textContent = openCount;
+    el.style.display = openCount > 0 ? 'inline-flex' : 'none';
+  }
+
+  function showSupervisorTicketNotice(t){
+    ensureTicketNoticeUI();
+    const box = document.getElementById('supervisorTicketNotice');
+    if(!box) return;
+    box.innerHTML = `<b>تكت جديد وصل</b><br>${ticketNoV13(t)} - ${esc(projectName(t.project_id))}<br>${esc(t.title || '')}`;
+    box.style.display = 'block';
+    clearTimeout(window.__ticketNoticeTimeout);
+    window.__ticketNoticeTimeout = setTimeout(()=>{ box.style.display='none'; }, 8000);
+  }
+
+  async function pollSupervisorTickets(silent=false){
+    const u = session();
+    if(!u || u.role !== 'supervisor') return;
+    try{
+      const {data:rows,error}=await sb.from('tickets').select('*').order('created_at',{ascending:false});
+      if(error) return console.warn(error.message);
+      const scoped = supervisorTicketScope(rows||[]);
+      const newestId = scoped.reduce((m,t)=>Math.max(m, Number(t.id||0)), 0);
+      const newTickets = scoped.filter(t => Number(t.id||0) > Number(lastSeenTicketId||0));
+
+      data.tickets = scoped;
+      if(typeof renderTickets === 'function') renderTickets();
+      if(typeof renderSupervisorDailySummary === 'function') renderSupervisorDailySummary();
+      updateSupervisorTicketBadge();
+
+      if(!silent && watchStarted && newTickets.length){
+        const latest = newTickets.sort((a,b)=>Number(b.id||0)-Number(a.id||0))[0];
+        showSupervisorTicketNotice(latest);
+        try{ playAppSound('ticket'); }catch(e){}
+      }
+      if(newestId > lastSeenTicketId) lastSeenTicketId = newestId;
+      watchStarted = true;
+    }catch(e){ console.warn('ticket watch failed', e); }
+  }
+
+  function startSupervisorTicketWatcher(){
+    const u=session();
+    if(!u || u.role !== 'supervisor') return;
+    ensureTicketNoticeUI();
+    updateSupervisorTicketBadge();
+    const currentMax = (data.tickets||[]).reduce((m,t)=>Math.max(m, Number(t.id||0)), 0);
+    if(!lastSeenTicketId) lastSeenTicketId = currentMax;
+    watchStarted = true;
+    if(ticketWatchTimer) clearInterval(ticketWatchTimer);
+    ticketWatchTimer = setInterval(()=>pollSupervisorTickets(false), 20000);
+  }
+
+  const oldRenderTicketsV13 = window.renderTickets;
+  window.renderTickets = function(){
+    if(typeof oldRenderTicketsV13 === 'function') oldRenderTicketsV13();
+    updateSupervisorTicketBadge();
+  };
+
+  const oldShowSupervisorWindowV13 = window.showSupervisorWindow;
+  window.showSupervisorWindow = function(id, btn){
+    if(typeof oldShowSupervisorWindowV13 === 'function') oldShowSupervisorWindowV13(id, btn);
+    if(id === 'supTickets'){
+      pollSupervisorTickets(true);
+    }
+  };
+
+  const oldInitSupervisorV13 = window.initSupervisor;
+  window.initSupervisor = async function(){
+    await oldInitSupervisorV13();
+    ensureTicketNoticeUI();
+    updateSupervisorTicketBadge();
+    startSupervisorTicketWatcher();
+  };
+})();
