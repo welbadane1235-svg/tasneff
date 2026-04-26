@@ -15,7 +15,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 let data = { users:[], supervisors:[], projects:[], workers:[], attendance:[], logs:[], tickets:[] };
 function msg(text, type='ok'){ const el=$('globalMsg')||$('loginMsg'); if(!el) return; el.className='msg '+(type==='err'?'err':''); el.textContent=text; el.classList.remove('hidden'); setTimeout(()=>el.classList.add('hidden'),4000); }
 function playAppSound(type){ try{ const files={checkin:'sounds/checkin.wav', checkout:'sounds/checkout.wav', ticket:'sounds/ticket.wav'}; const src=files[type]; if(!src) return; const a=new Audio(src); a.volume=0.75; a.play().catch(()=>{}); }catch(e){} }
-function requireRole(role){ const u=session(); if(!u){ location.href='index.html'; return null; } if(role && u.role!==role){ location.href=u.role==='admin'?'admin.html':'supervisor.html'; return null; } return u; }
+function requireRole(role){ const u=session(); if(!u){ location.href='index.html'; return null; } if(role && u.role!==role){ location.href = u.role==='admin' ? 'admin.html' : (u.role==='technician' ? 'technician.html' : 'supervisor.html'); return null; } return u; }
 async function login(){
   const username=$('loginUsername').value.trim(), password=$('loginPassword').value.trim();
   if(!username||!password) return msg('أدخل اسم المستخدم وكلمة المرور','err');
@@ -25,7 +25,7 @@ async function login(){
   }
   const {data:u,error}=await sb.from('app_users').select('*').eq('username',username).eq('password',password).eq('is_active',true).maybeSingle();
   if(error||!u) return msg(error?.message || 'بيانات الدخول غير صحيحة','err');
-  setSession(u); location.href=u.role==='admin'?'admin.html':'supervisor.html';
+  setSession(u); location.href = u.role==='admin' ? 'admin.html' : (u.role==='technician' ? 'technician.html' : 'supervisor.html');
 }
 function logout(){ clearSession(); location.href='index.html'; }
 async function loadAll(){
@@ -38,7 +38,7 @@ async function loadAll(){
     sb.from('tickets').select('*').order('created_at',{ascending:false})
   ]);
   for(const r of [users,projects,workers,attendance,logs,tickets]) if(r.error) console.warn(r.error.message);
-  data.users = users.data || []; data.supervisors = data.users.filter(u=>u.role==='supervisor' && u.is_active!==false);
+  data.users = users.data || []; data.supervisors = data.users.filter(u=>u.role==='supervisor' && u.is_active!==false); data.technicians = data.users.filter(u=>u.role==='technician' && u.is_active!==false); data.technicians = data.users.filter(u=>u.role==='technician' && u.is_active!==false);
   data.projects = projects.data || []; data.workers = workers.data || []; data.attendance = attendance.data || []; data.logs = logs.data || []; data.tickets = tickets.data || [];
 }
 function fillSelect(id, rows, label='name', allLabel=null, value='id'){ const el=$(id); if(!el) return; el.innerHTML = (allLabel!==null?`<option value="">${allLabel}</option>`:'') + rows.map(r=>`<option value="${r[value]}">${esc(r[label]||r.full_name||r.username)}</option>`).join(''); }
@@ -111,7 +111,7 @@ function editTimeLog(id){ const l=data.logs.find(x=>x.id===id); if(!l) return; $
 async function deleteRow(table,id){ if(!confirm('تأكيد الحذف؟')) return; const {error}=await sb.from(table).delete().eq('id',id); if(error) return msg(error.message,'err'); msg('تم الحذف'); await refreshAll(); }
 function clearUserForm(){ ['userId','userFullName','userUsername','userPassword'].forEach(id=>$(id)&&($(id).value='')); if($('userRole')) $('userRole').value='supervisor'; if($('userActive')) $('userActive').value='true'; $('userFormTitle')&&($('userFormTitle').textContent='إضافة مستخدم'); }
 async function saveUser(){ const id=$('userId').value; const row={full_name:$('userFullName').value.trim(), username:$('userUsername').value.trim(), password:$('userPassword').value.trim()||'123456', role:$('userRole').value, is_active:$('userActive').value==='true'}; if(!row.full_name||!row.username) return msg('الاسم واسم المستخدم مطلوبان','err'); const res=id?await sb.from('app_users').update(row).eq('id',id):await sb.from('app_users').insert(row); if(res.error) return msg(res.error.message,'err'); msg('تم حفظ المستخدم'); clearUserForm(); await refreshAll(); }
-function renderUsers(){ const b=$('usersBody'); if(!b) return; b.innerHTML=data.users.map(u=>`<tr><td>${esc(u.full_name)}</td><td>${esc(u.username)}</td><td><span class="badge">${u.role==='admin'?'مدير':'مشرف'}</span></td><td><span class="badge ${u.is_active?'green':'red'}">${u.is_active?'نشط':'موقوف'}</span></td><td class="row-actions"><button onclick="editUser(${u.id})">تعديل</button><button class="danger" onclick="deleteRow('app_users',${u.id})">حذف</button></td></tr>`).join(''); }
+function renderUsers(){ const b=$('usersBody'); if(!b) return; b.innerHTML=data.users.map(u=>`<tr><td>${esc(u.full_name)}</td><td>${esc(u.username)}</td><td><span class="badge">${u.role==='admin'?'مدير':(u.role==='technician'?'فني':'مشرف')}</span></td><td><span class="badge ${u.is_active?'green':'red'}">${u.is_active?'نشط':'موقوف'}</span></td><td class="row-actions"><button onclick="editUser(${u.id})">تعديل</button><button class="danger" onclick="deleteRow('app_users',${u.id})">حذف</button></td></tr>`).join(''); }
 function editUser(id){ const u=data.users.find(x=>x.id===id); if(!u)return; $('userId').value=u.id; $('userFullName').value=u.full_name||''; $('userUsername').value=u.username||''; $('userPassword').value=u.password||''; $('userRole').value=u.role; $('userActive').value=String(u.is_active!==false); $('userFormTitle').textContent='تعديل مستخدم'; }
 function projectOperationText(t){ return t==='full_time'?'دوام كامل':(t==='as_needed'?'حسب الحاجة':'زيارة يومية'); }
 function visitTypeText(t){ return t==='deep'?'نظافة عميقة':'نظافة سطحية'; }
@@ -678,4 +678,43 @@ async function saveSupervisorAttendance(){ const u=session(); const date=$('atte
     updateSupervisorTicketBadge();
     startSupervisorTicketWatcher();
   };
+})();
+
+/* ===== V15: Technician ticket workspace ===== */
+(function(){
+  function tNo(t){ return t.ticket_number || ('T-' + String(t.id||0).padStart(4,'0')); }
+  function statusLabel(status){ return status==='closed'?'مغلق':(status==='processing'?'تحت المعالجة':'مفتوح'); }
+  function priorityLabel(p){ return p==='urgent'?'عاجل':(p==='high'?'مهم':(p==='low'?'منخفض':'عادي')); }
+  function shortText(s, n=80){ s=String(s||''); return s.length>n ? esc(s.slice(0,n))+'…' : esc(s||'-'); }
+  function d(v){ const x=v?new Date(v):null; return x&&!isNaN(x)?x:null; }
+  function between(a,b){ const da=d(a), db=d(b); if(!da||!db)return 0; return Math.max(0, Math.round((db-da)/60000)); }
+  function dur(min){ min=Number(min||0); if(!min)return '0د'; const day=Math.floor(min/1440), h=Math.floor((min%1440)/60), m=min%60; const arr=[]; if(day)arr.push(day+'ي'); if(h)arr.push(h+'س'); if(m||!arr.length)arr.push(m+'د'); return arr.join(' '); }
+  function openMins(t){ return t.status==='closed' ? (Number(t.open_duration_minutes||0)||between(t.created_at,t.closed_at)) : between(t.created_at,new Date().toISOString()); }
+  function rowClass(t){ if(t.status==='closed') return 'ticket-row-closed'; if(t.status==='processing') return 'ticket-row-processing'; if(t.priority==='urgent'||t.priority==='high') return 'ticket-row-urgent'; return 'ticket-row-normal'; }
+  function badge(t){ const cls=t.status==='closed'?'green':(t.status==='processing'?'amber':((t.priority==='urgent'||t.priority==='high')?'red':'pink')); return `<span class="badge ${cls}">${statusLabel(t.status)}</span>`; }
+  function pri(t){ const cls=t.priority==='urgent'?'red':(t.priority==='high'?'amber':'pink'); return `<span class="badge ${cls}">${priorityLabel(t.priority)}</span>`; }
+  function currentTechName(){ const u=session(); return (u && (u.full_name || u.username)) || 'فني'; }
+  function filterRows(kind){
+    const u=session(); if(!u) return [];
+    let rows=[...(data.tickets||[])];
+    const q=($('techTicketSearch')?.value||'').trim().toLowerCase();
+    const st=$('techTicketStatus')?.value||'';
+    if(st) rows=rows.filter(t=>t.status===st);
+    if(q) rows=rows.filter(t=>[tNo(t),t.title,t.description,projectName(t.project_id),statusLabel(t.status),t.claimed_by_name,t.closed_by_name,t.closure_note].join(' ').toLowerCase().includes(q));
+    if(kind==='open') rows=rows.filter(t=>t.status!=='closed' && !t.claimed_by);
+    if(kind==='mine') rows=rows.filter(t=>String(t.claimed_by||'')===String(u.id) && t.status!=='closed');
+    if(kind==='done') rows=rows.filter(t=>String(t.closed_by||'')===String(u.id) || (t.status==='closed' && String(t.closed_by_name||'')===String(currentTechName())));
+    return rows.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+  }
+  function renderTechList(kind, bodyId){
+    const b=$(bodyId); if(!b) return;
+    const rows=filterRows(kind);
+    b.innerHTML = rows.map(t=>`<tr class="${rowClass(t)}"><td><b>${esc(tNo(t))}</b></td><td>${esc(projectName(t.project_id))}</td><td>${esc(t.title||'-')}</td><td style="white-space:normal;min-width:180px">${shortText(t.description)}</td><td>${pri(t)}</td><td>${badge(t)}</td><td>${esc(dur(openMins(t)))}</td><td>${esc(t.claimed_by_name||'-')}<br><small>${t.claimed_at?fmt(t.claimed_at):''}</small></td><td>${esc(t.closed_by_name||'-')}<br><small>${t.closed_at?fmt(t.closed_at):''}</small></td><td style="white-space:normal;min-width:180px">${shortText(t.closure_note)}</td><td class="row-actions">${t.status==='closed'?'':`${!t.claimed_by?`<button onclick="techClaimTicket(${t.id})">استلام</button>`:''}<button onclick="techCloseTicket(${t.id})">إغلاق</button>`}</td></tr>`).join('') || '<tr><td colspan="11">لا توجد تكتات</td></tr>';
+  }
+  window.renderTechnicianTickets = function(){ renderTechList('open','techOpenTicketsBody'); renderTechList('mine','techMyTicketsBody'); renderTechList('done','techDoneTicketsBody'); updateTechKpis(); };
+  function updateTechKpis(){ const u=session(); if(!$('techOpenCount')) return; $('techOpenCount').textContent=(data.tickets||[]).filter(t=>t.status!=='closed'&&!t.claimed_by).length; $('techMineCount').textContent=(data.tickets||[]).filter(t=>String(t.claimed_by||'')===String(u?.id||'')&&t.status!=='closed').length; $('techDoneCount').textContent=(data.tickets||[]).filter(t=>String(t.closed_by||'')===String(u?.id||'')).length; }
+  window.showTechWindow = function(id, btn){ document.querySelectorAll('.tech-page').forEach(p=>p.classList.remove('active')); $(id)?.classList.add('active'); document.querySelectorAll('.tech-tab').forEach(b=>b.classList.remove('active')); btn?.classList.add('active'); renderTechnicianTickets(); };
+  window.initTechnician = async function(){ const u=requireRole('technician'); if(!u) return; await loadAll(); if($('techTitle')) $('techTitle').textContent='لوحة الفني - '+(u.full_name||u.username); renderTechnicianTickets(); setInterval(async()=>{ await loadAll(); renderTechnicianTickets(); }, 20000); };
+  window.techClaimTicket = async function(id){ const u=session(); if(!u) return msg('سجل الدخول أولاً','err'); const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t) return msg('التكت غير موجود','err'); if(t.status==='closed') return msg('التكت مغلق','err'); if(t.claimed_by && String(t.claimed_by)!==String(u.id)) return msg('هذا التكت مستلم بواسطة '+(t.claimed_by_name||'شخص آخر'),'err'); const now=new Date().toISOString(); const name=currentTechName(); const {error}=await sb.from('tickets').update({status:'processing',claimed_by:u.id,claimed_by_name:name,claimed_at:t.claimed_at||now,updated_at:now}).eq('id',id); if(error) return msg(error.message,'err'); playAppSound('ticket'); msg('تم استلام التكت بواسطة '+name); await loadAll(); renderTechnicianTickets(); };
+  window.techCloseTicket = async function(id){ const u=session(); if(!u) return msg('سجل الدخول أولاً','err'); const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t) return msg('التكت غير موجود','err'); if(t.status==='closed') return msg('التكت مغلق بالفعل','err'); const note=prompt('كيف تم إغلاق التكت؟\nاكتب الإجراء المنفذ بالتفصيل'); if(!note || !note.trim()) return msg('لا يمكن إغلاق التكت بدون ذكر كيف تم الإغلاق','err'); const now=new Date().toISOString(); const name=currentTechName(); const row={status:'closed',closed_at:now,closed_by:u.id,closed_by_name:name,closure_note:note.trim(),open_duration_minutes:between(t.created_at,now),processing_duration_minutes:t.claimed_at?between(t.claimed_at,now):null,updated_at:now}; if(!t.claimed_at){ row.claimed_by=u.id; row.claimed_by_name=name; row.claimed_at=now; } const {error}=await sb.from('tickets').update(row).eq('id',id); if(error) return msg(error.message,'err'); playAppSound('ticket'); msg('تم إغلاق التكت وحفظ طريقة الإغلاق'); await loadAll(); renderTechnicianTickets(); };
 })();

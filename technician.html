@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الفني</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.tech-shell{max-width:1100px;margin:0 auto;padding:16px}.tech-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}.tech-tab{background:#fff!important;color:var(--brand)!important;border:1px solid var(--line)!important}.tech-tab.active{background:var(--brand)!important;color:#fff!important}.tech-page{display:none}.tech-page.active{display:block}.tech-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.tech-kpi{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px}.tech-kpi small{display:block;color:var(--muted);margin-bottom:8px}.tech-kpi b{font-size:28px;color:var(--brand)}@media(max-width:760px){.tech-tabs,.tech-kpis{grid-template-columns:1fr}.tech-shell{padding:10px}.table-wrap{max-height:70vh}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body onload="initTechnician()">
+<div class="tech-shell">
+  <header class="hero compact">
+    <div><h1 id="techTitle">لوحة الفني</h1><p>استلام التكتات، إغلاقها، وتسجيل طريقة الإغلاق والمدة تلقائيًا.</p></div>
+    <div class="actions"><button onclick="playAppSound('ticket')">اختبار الصوت</button><button onclick="logout()">خروج</button></div>
+  </header>
+  <div id="globalMsg" class="msg hidden"></div>
+  <div class="tech-kpis">
+    <div class="tech-kpi"><small>تكتات مفتوحة</small><b id="techOpenCount">0</b></div>
+    <div class="tech-kpi"><small>تكتاتي قيد المعالجة</small><b id="techMineCount">0</b></div>
+    <div class="tech-kpi"><small>أغلقتها أنا</small><b id="techDoneCount">0</b></div>
+  </div>
+  <div class="card">
+    <div class="filters">
+      <select id="techTicketStatus" onchange="renderTechnicianTickets()"><option value="">كل الحالات</option><option value="open">مفتوح</option><option value="processing">تحت المعالجة</option><option value="closed">مغلق</option></select>
+      <input id="techTicketSearch" oninput="renderTechnicianTickets()" placeholder="بحث برقم التكت أو المشروع أو الوصف">
+      <button class="light" onclick="initTechnician()">تحديث</button>
+    </div>
+  </div>
+  <nav class="tech-tabs">
+    <button class="tech-tab active" onclick="showTechWindow('techOpen',this)">التكتات المفتوحة</button>
+    <button class="tech-tab" onclick="showTechWindow('techMine',this)">تكتاتي</button>
+    <button class="tech-tab" onclick="showTechWindow('techDone',this)">المنجزة</button>
+  </nav>
+  <section id="techOpen" class="tech-page active card"><h2>التكتات المفتوحة</h2><div class="table-wrap"><table><thead><tr><th>رقم</th><th>المشروع</th><th>العنوان</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>مدة الفتح</th><th>استلم بواسطة</th><th>أغلق بواسطة</th><th>كيف تم الإغلاق</th><th>إجراء</th></tr></thead><tbody id="techOpenTicketsBody"></tbody></table></div></section>
+  <section id="techMine" class="tech-page card"><h2>تكتاتي قيد المعالجة</h2><div class="table-wrap"><table><thead><tr><th>رقم</th><th>المشروع</th><th>العنوان</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>مدة الفتح</th><th>استلم بواسطة</th><th>أغلق بواسطة</th><th>كيف تم الإغلاق</th><th>إجراء</th></tr></thead><tbody id="techMyTicketsBody"></tbody></table></div></section>
+  <section id="techDone" class="tech-page card"><h2>التكتات التي أغلقتها</h2><div class="table-wrap"><table><thead><tr><th>رقم</th><th>المشروع</th><th>العنوان</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>مدة الفتح</th><th>استلم بواسطة</th><th>أغلق بواسطة</th><th>كيف تم الإغلاق</th><th>إجراء</th></tr></thead><tbody id="techDoneTicketsBody"></tbody></table></div></section>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
