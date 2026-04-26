@@ -47,6 +47,8 @@ function workerName(id){ return data.workers.find(w=>String(w.id)===String(id))?
 function getProjectSupervisorId(pid){ return data.projects.find(p=>String(p.id)===String(pid))?.supervisor_id || ''; }
 function dateTime(date, time){ return date && time ? new Date(`${date}T${time}:00`).toISOString() : null; }
 function minutesBetween(a,b){ if(!a||!b) return 0; return Math.max(0, Math.round((new Date(b)-new Date(a))/60000)); }
+function logActualMinutes(l){ const saved = Number(l.duration_minutes); if(Number.isFinite(saved) && saved > 0) return saved; return minutesBetween(l.check_in, l.check_out); }
+function logRequiredMinutes(l){ const logDate = l.log_date || String(l.check_in||'').slice(0,10); const saved = Number(l.required_minutes); if(Number.isFinite(saved) && saved > 0) return saved; return l.project_id ? requiredMinutesForLog(l.project_id, logDate) : 0; }
 async function initAdmin(){ requireRole('admin'); await refreshAll(); }
 async function refreshAll(){ await loadAll(); hydrateForms(); renderAll(); }
 function hydrateForms(){
@@ -208,7 +210,37 @@ function renderAttendance(){ const b=$('attendanceBody'); if(!b) return; const d
 function editAttendance(id){ const a=data.attendance.find(x=>x.id===id); if(!a)return; $('attendanceId').value=a.id; $('attendanceDate').value=a.attendance_date; $('attendanceSupervisor').value=a.supervisor_id||''; $('attendanceProject').value=a.project_id||''; $('attendanceWorker').value=a.worker_id||''; $('attendanceStatus').value=a.status; $('attendanceNotes').value=a.notes||''; $('attendanceFormTitle').textContent='تعديل حضور'; }
 function renderAttendanceWorkersQuick(){ const div=$('attendanceQuick'); if(!div) return; const sid=$('attendanceSupervisor')?.value; if(!sid){ div.innerHTML=''; return; } const ws=data.workers.filter(w=>String(workerSupId(w))===String(sid)); div.innerHTML=ws.map(w=>`<div class="quick-item"><b>${esc(w.name)}</b><div><button onclick="quickAttendance(${w.id},'present')">حاضر</button> <button class="danger" onclick="quickAttendance(${w.id},'absent')">غائب</button></div></div>`).join(''); }
 async function quickAttendance(workerId,status){ $('attendanceWorker').value=workerId; $('attendanceStatus').value=status; await saveAttendance(); }
-function renderMonthly(){ const body=$('monthlyBody'); if(!body) return; const month=$('monthlyMonth')?.value || today().slice(0,7), sid=$('monthlySupervisor')?.value; let rows=data.logs.filter(l=>(l.log_date||String(l.check_in||'').slice(0,7)).slice(0,7)===month); if(sid) rows=rows.filter(l=>String(l.supervisor_id)===String(sid)); const map={}; rows.forEach(l=>{ const k=(l.supervisor_id||'')+'_'+(l.project_id||''); if(!map[k]) map[k]={s:l.supervisor_id,p:l.project_id,c:0,m:0,t:0}; map[k].c++; map[k].m+=Number(l.duration_minutes||minutesBetween(l.check_in,l.check_out)); map[k].t+=Number(l.travel_minutes||0); }); const vals=Object.values(map).map(r=>{ r.req=projectRequiredMonthlyMinutes(r.p,month); r.percent=r.req? (r.m/r.req)*100 : 0; r.perf=performanceStatus(r.percent,r.req); return r; }); body.innerHTML=vals.map(r=>`<tr><td>${esc(supervisorName(r.s))}</td><td>${esc(projectName(r.p))}</td><td>${r.c}</td><td>${minsToText(r.req)}</td><td>${minsToText(r.m)}</td><td>${r.t} دقيقة</td><td><span class="badge ${r.perf.cls}">${percentText(r.percent)}</span></td><td><span class="badge ${r.perf.cls}">${r.perf.text}</span></td></tr>`).join('')||'<tr><td colspan="8">لا توجد بيانات</td></tr>'; const total=vals.reduce((a,r)=>a+r.m,0), required=vals.reduce((a,r)=>a+r.req,0), travel=vals.reduce((a,r)=>a+r.t,0), pct=required?total/required*100:0; const perf=performanceStatus(pct,required); if($('monthlySummary')) $('monthlySummary').innerHTML=`<div class="kpi"><small>عدد التسجيلات</small><b>${rows.length}</b></div><div class="kpi"><small>الساعات المطلوبة</small><b>${minsToText(required)}</b></div><div class="kpi"><small>الساعات الفعلية</small><b>${minsToText(total)}</b></div><div class="kpi"><small>وقت الانتقال</small><b>${travel}</b></div><div class="kpi"><small>نسبة العمل</small><b>${percentText(pct)}</b></div><div class="kpi"><small>حالة الأداء</small><b><span class="badge ${perf.cls}">${perf.text}</span></b></div>`; }
+function renderMonthly(){
+  const body=$('monthlyBody');
+  if(!body) return;
+  const month=$('monthlyMonth')?.value || today().slice(0,7);
+  const sid=$('monthlySupervisor')?.value;
+  let rows=data.logs.filter(l=>{
+    const d = l.log_date || String(l.check_in||'').slice(0,10);
+    return d.slice(0,7)===month;
+  });
+  if(sid) rows=rows.filter(l=>String(l.supervisor_id)===String(sid));
+  const map={};
+  rows.forEach(l=>{
+    const k=(l.supervisor_id||'')+'_'+(l.project_id||'');
+    if(!map[k]) map[k]={s:l.supervisor_id,p:l.project_id,c:0,m:0,req:0,t:0};
+    const actual = logActualMinutes(l);
+    const required = logRequiredMinutes(l);
+    map[k].c++;
+    map[k].m += actual;
+    map[k].req += required;
+    map[k].t += Number(l.travel_minutes||0);
+  });
+  const vals=Object.values(map).map(r=>{
+    r.percent = r.req ? (r.m/r.req)*100 : 0;
+    r.perf = performanceStatus(r.percent,r.req);
+    return r;
+  });
+  body.innerHTML=vals.map(r=>`<tr><td>${esc(supervisorName(r.s))}</td><td>${esc(projectName(r.p))}</td><td>${r.c}</td><td>${minsToText(r.req)}</td><td>${minsToText(r.m)}</td><td>${r.t} دقيقة</td><td><span class="badge ${r.perf.cls}">${percentText(r.percent)}</span></td><td><span class="badge ${r.perf.cls}">${r.perf.text}</span></td></tr>`).join('')||'<tr><td colspan="8">لا توجد بيانات</td></tr>';
+  const total=vals.reduce((a,r)=>a+r.m,0), required=vals.reduce((a,r)=>a+r.req,0), travel=vals.reduce((a,r)=>a+r.t,0), pct=required?total/required*100:0;
+  const perf=performanceStatus(pct,required);
+  if($('monthlySummary')) $('monthlySummary').innerHTML=`<div class="kpi"><small>عدد التسجيلات</small><b>${rows.length}</b></div><div class="kpi"><small>الساعات المطلوبة</small><b>${minsToText(required)}</b></div><div class="kpi"><small>الساعات الفعلية</small><b>${minsToText(total)}</b></div><div class="kpi"><small>وقت الانتقال</small><b>${travel} دقيقة</b></div><div class="kpi"><small>نسبة العمل</small><b>${percentText(pct)}</b></div><div class="kpi"><small>حالة الأداء</small><b><span class="badge ${perf.cls}">${perf.text}</span></b></div>`;
+}
 function clearTicketForm(){ ['ticketId','ticketTitle','ticketDescription'].forEach(id=>$(id)&&($(id).value='')); if($('ticketStatus')) $('ticketStatus').value='open'; if($('ticketPriority')) $('ticketPriority').value='normal'; $('ticketFormTitle')&&($('ticketFormTitle').textContent='إضافة تكت'); }
 async function saveTicket(){ const u=session(); const row={project_id:Number($('ticketProject').value)||null, supervisor_id:Number($('ticketSupervisor')?.value || (u.role==='supervisor'?u.id:''))||null, title:$('ticketTitle').value.trim(), description:$('ticketDescription').value, priority:$('ticketPriority').value, status:$('ticketStatus')?.value || 'open'}; if(!row.title) return msg('عنوان التكت مطلوب','err'); if(row.status==='closed') row.closed_at=new Date().toISOString(); const id=$('ticketId')?.value; const res=id?await sb.from('tickets').update(row).eq('id',id):await sb.from('tickets').insert(row); if(res.error) return msg(res.error.message,'err'); msg('تم حفظ التكت'); clearTicketForm(); await refreshAll(); }
 function renderTickets(){ const b=$('ticketsBody'); if(!b) return; const st=$('ticketFilterStatus')?.value, q=($('ticketSearch')?.value||'').trim(); let rows=data.tickets; if(st) rows=rows.filter(t=>t.status===st); if(q) rows=rows.filter(t=>[t.title,t.description,projectName(t.project_id),supervisorName(t.supervisor_id)].join(' ').includes(q)); b.innerHTML=rows.map(t=>`<tr><td>${esc(projectName(t.project_id))}</td><td>${esc(supervisorName(t.supervisor_id))}</td><td>${esc(t.title)}</td><td><span class="badge ${t.priority==='high'?'red':'amber'}">${t.priority||'normal'}</span></td><td><span class="badge ${t.status==='closed'?'green':'red'}">${t.status==='closed'?'مغلق':'مفتوح'}</span></td><td class="row-actions"><button onclick="editTicket(${t.id})">تعديل</button><button class="danger" onclick="deleteRow('tickets',${t.id})">حذف</button></td></tr>`).join('')||'<tr><td colspan="6">لا توجد بيانات</td></tr>'; }
