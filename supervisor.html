@@ -49,13 +49,13 @@
         <textarea id="ticketClosureNote" placeholder="اكتب طريقة الحل أو الإجراء المنفذ"></textarea>
         <div class="sup-help">لن يتم إغلاق التكت إلا بعد كتابة طريقة الإغلاق واسم من أغلقه.</div>
       </div><div class="actions"><button onclick="saveTicket()">حفظ التكت</button><button class="light" onclick="clearTicketForm()">تكت جديد</button></div></section>
-    <section class="card"><h2>تكتاتي</h2><div class="filters"><select id="supTicketFilterProject" onchange="renderTickets()"><option value="">كل المشاريع</option></select><select id="supTicketFilterStatus" onchange="renderTickets()"><option value="">كل الحالات</option><option value="open">مفتوح</option><option value="processing">تحت المعالجة</option><option value="closed">مغلق</option></select><input id="supTicketSearch" oninput="renderTickets()" placeholder="بحث برقم التكت أو العنوان"></div><div class="table-wrap"><table><thead><tr><th>رقم</th><th>المشروع</th><th>العنوان</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>مدة الفتح</th><th>استلم بواسطة</th><th>أغلق بواسطة</th><th>كيف تم الإغلاق</th><th>إجراء</th></tr></thead><tbody id="supTicketsBody"></tbody></table></div></section>
+    <section class="card"><h2>تكتاتي</h2><div class="filters"><select id="supTicketFilterProject" onchange="renderTickets()"><option value="">كل المشاريع</option></select><select id="supTicketFilterStatus" onchange="renderTickets()"><option value="">كل الحالات</option><option value="open">مفتوح</option><option value="processing">تحت المعالجة</option><option value="closed">مغلق</option></select><input id="supTicketSearch" oninput="renderTickets()" placeholder="بحث برقم التكت أو العنوان"></div><div class="table-wrap"><table><thead><tr><th>رقم</th><th>المشروع</th><th>العنوان</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>مدة الفتح</th><th>استلم بواسطة</th><th>أغلق بواسطة</th><th>كيف تم الإغلاق</th><th>واتساب</th><th>إجراء</th></tr></thead><tbody id="supTicketsBody"></tbody></table></div></section>
   </section>
 
   <section id="supSummary" class="sup-page">
     <section class="card"><h2>الملخص اليومي</h2><div class="date-filter-row"><div><label>فلتر الأيام</label><select id="summaryRange" onchange="renderSupervisorDailySummary()"><option value="today">اليوم</option><option value="yesterday">أمس</option><option value="week">هذا الأسبوع</option><option value="custom">تاريخ محدد</option></select></div><div><label>تاريخ محدد</label><input type="date" id="summaryDate" onchange="renderSupervisorDailySummary()"></div></div><div id="supervisorSummaryCards" class="summary-card-grid" style="margin-top:12px"></div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>البند</th><th>العدد / الوقت</th></tr></thead><tbody id="supervisorSummaryBody"></tbody></table></div></section>
   </section>
 </div>
-<script src="app.js"></script>
+<script src="app.js?v=42"></script>
 </body>
 </html>

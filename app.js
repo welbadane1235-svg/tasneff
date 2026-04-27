@@ -965,120 +965,30 @@ window.showSupervisorWindow = function(id, btn){
   window.renderAll = function(){ if(typeof oldRenderAll==='function') oldRenderAll(); renderContracts(); renderContractAlerts(); };
 })();
 
-/* ===== V41: Ticket WhatsApp share buttons for Admin + Supervisor ===== */
+/* ===== V42: Clear WhatsApp column for tickets ===== */
 (function(){
-  function waTicketNo(t){ return t.ticket_number || ('T-' + String(t.id||0).padStart(4,'0')); }
-  function waStatusLabel(status){ return status==='closed'?'مغلق':(status==='processing'?'تحت المعالجة':'مفتوح'); }
-  function waPriorityLabel(p){ return p==='urgent'?'عاجل':(p==='high'?'مهم':(p==='low'?'منخفض':'عادي')); }
-  function waShortText(s, n=90){ s=String(s||''); return s.length>n ? esc(s.slice(0,n))+'…' : esc(s||'-'); }
-  function waParseDate(v){ const d=v?new Date(v):null; return d&&!isNaN(d)?d:null; }
-  function waLocalDate(v){
-    const d=waParseDate(v) || new Date();
-    const y=d.getFullYear();
-    const m=String(d.getMonth()+1).padStart(2,'0');
-    const day=String(d.getDate()).padStart(2,'0');
-    return `${y}-${m}-${day}`;
-  }
-  function waLocalTime(v){
-    const d=waParseDate(v) || new Date();
-    let h=d.getHours();
-    const min=String(d.getMinutes()).padStart(2,'0');
-    const ampm=h>=12?'م':'ص';
-    h=h%12 || 12;
-    return `${String(h).padStart(2,'0')}:${min} ${ampm}`;
-  }
-  function waMinutesBetween(a,b){ const da=waParseDate(a), db=waParseDate(b); if(!da||!db) return 0; return Math.max(0, Math.round((db-da)/60000)); }
-  function waDurationLabel(min){ min=Number(min||0); if(!min) return '0د'; const d=Math.floor(min/1440), h=Math.floor((min%1440)/60), m=min%60; const parts=[]; if(d) parts.push(d+'ي'); if(h) parts.push(h+'س'); if(m||!parts.length) parts.push(m+'د'); return parts.join(' '); }
-  function waOpenMinutes(t){ return t.status==='closed' ? (Number(t.open_duration_minutes||0)||waMinutesBetween(t.created_at,t.closed_at)) : waMinutesBetween(t.created_at,new Date().toISOString()); }
-  function waRowClass(t){ if(t.status==='closed') return 'ticket-row-closed'; if(t.status==='processing') return 'ticket-row-processing'; if(t.priority==='urgent'||t.priority==='high') return 'ticket-row-urgent'; return 'ticket-row-normal'; }
-  function waStatusBadge(t){ const cls=t.status==='closed'?'green':(t.status==='processing'?'amber':((t.priority==='urgent'||t.priority==='high')?'red':'pink')); return `<span class="badge ${cls}">${waStatusLabel(t.status)}</span>`; }
-  function waPriorityBadge(t){ const cls=t.priority==='urgent'?'red':(t.priority==='high'?'amber':'pink'); return `<span class="badge ${cls}">${waPriorityLabel(t.priority)}</span>`; }
-  function waProjectName(t){ return projectName(t.project_id) || t.project_name || '-'; }
-  function waProblemText(t){ return (t.description || t.title || '-'); }
-
-  function buildTicketOpenWhatsApp(t){
-    return [
-      'تم تسجيل تكت جديد',
-      '',
-      'اسم المشروع: ' + waProjectName(t),
-      'رقم التكت: ' + waTicketNo(t),
-      'وصف المشكلة: ' + waProblemText(t),
-      'حالة المشكلة: ' + waStatusLabel(t.status),
-      'التاريخ: ' + waLocalDate(t.created_at),
-      'الوقت: ' + waLocalTime(t.created_at)
-    ].join('\n');
-  }
-
-  function buildTicketCloseWhatsApp(t){
-    return [
-      'تم إغلاق التكت',
-      '',
-      'اسم المشروع: ' + waProjectName(t),
-      'رقم التكت: ' + waTicketNo(t),
-      'وصف المشكلة: ' + waProblemText(t),
-      'حالة المشكلة: مغلق',
-      'التاريخ: ' + waLocalDate(t.closed_at || t.updated_at),
-      'الوقت: ' + waLocalTime(t.closed_at || t.updated_at)
-    ].join('\n');
-  }
-
-  function copyTicketText(text){
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      return navigator.clipboard.writeText(text).catch(()=>{});
-    }
-    const ta=document.createElement('textarea');
-    ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
-    document.body.appendChild(ta); ta.select();
-    try{ document.execCommand('copy'); }catch(e){}
-    ta.remove();
-    return Promise.resolve();
-  }
-
-  window.sendTicketWhatsApp = function(id){
-    const t=(data.tickets||[]).find(x=>String(x.id)===String(id));
-    if(!t) return msg('التكت غير موجود','err');
-    const isClosed=t.status==='closed';
-    const text=isClosed ? buildTicketCloseWhatsApp(t) : buildTicketOpenWhatsApp(t);
-    copyTicketText(text).finally(()=>{
-      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
-      msg(isClosed ? 'تم تجهيز رسالة إغلاق التكت للواتساب' : 'تم تجهيز رسالة فتح التكت للواتساب');
-    });
+  function _e(v){return (typeof esc==='function'?esc(v):String(v??''));}
+  function _no(t){return t.ticket_number || ('T-' + String(t.id||0).padStart(4,'0'));}
+  function _status(s){return s==='closed'?'مغلق':(s==='processing'?'تحت المعالجة':'مفتوح');}
+  function _priority(p){return p==='urgent'?'عاجل':(p==='high'?'مهم':(p==='low'?'منخفض':'عادي'));}
+  function _short(s,n=90){s=String(s||'');return s.length>n?_e(s.slice(0,n))+'…':_e(s||'-');}
+  function _date(v){const d=v?new Date(v):new Date();const x=isNaN(d)?new Date():d;return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
+  function _time(v){const d=v?new Date(v):new Date();const x=isNaN(d)?new Date():d;let h=x.getHours();const m=String(x.getMinutes()).padStart(2,'0');const ap=h>=12?'م':'ص';h=h%12||12;return String(h).padStart(2,'0')+':'+m+' '+ap;}
+  function _between(a,b){const da=a?new Date(a):null,db=b?new Date(b):null;if(!da||!db||isNaN(da)||isNaN(db))return 0;return Math.max(0,Math.round((db-da)/60000));}
+  function _dur(min){min=Number(min||0);if(!min)return '0د';const d=Math.floor(min/1440),h=Math.floor((min%1440)/60),m=min%60;const p=[];if(d)p.push(d+'ي');if(h)p.push(h+'س');if(m||!p.length)p.push(m+'د');return p.join(' ');}
+  function _openMins(t){return t.status==='closed'?(Number(t.open_duration_minutes||0)||_between(t.created_at,t.closed_at)):_between(t.created_at,new Date().toISOString());}
+  function _row(t){if(t.status==='closed')return 'ticket-row-closed';if(t.status==='processing')return 'ticket-row-processing';if(t.priority==='urgent'||t.priority==='high')return 'ticket-row-urgent';return 'ticket-row-normal';}
+  function _sb(t){const cls=t.status==='closed'?'green':(t.status==='processing'?'amber':((t.priority==='urgent'||t.priority==='high')?'red':'pink'));return `<span class="badge ${cls}">${_status(t.status)}</span>`;}
+  function _pb(t){const cls=t.priority==='urgent'?'red':(t.priority==='high'?'amber':'pink');return `<span class="badge ${cls}">${_priority(t.priority)}</span>`;}
+  function _proj(t){return (typeof projectName==='function'?projectName(t.project_id):'') || t.project_name || '-';}
+  function _problem(t){return t.description || t.title || '-';}
+  window.buildTicketWhatsAppTextV42=function(t){const closed=t.status==='closed';const v=closed?(t.closed_at||t.updated_at):t.created_at;return [(closed?'تم إغلاق التكت':'تم تسجيل تكت جديد'),'','اسم المشروع: '+_proj(t),'رقم التكت: '+_no(t),'وصف المشكلة: '+_problem(t),'حالة المشكلة: '+(closed?'مغلق':_status(t.status)),'التاريخ: '+_date(v),'الوقت: '+_time(v)].join('\n');};
+  function _copy(text){if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(text).catch(()=>{});const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();return Promise.resolve();}
+  window.sendTicketWhatsApp=function(id){const t=(data.tickets||[]).find(x=>String(x.id)===String(id));if(!t)return msg('التكت غير موجود','err');const text=window.buildTicketWhatsAppTextV42(t);_copy(text).finally(()=>{window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');msg(t.status==='closed'?'تم تجهيز رسالة إغلاق التكت للواتساب':'تم تجهيز رسالة فتح التكت للواتساب');});};
+  function _wab(t){return `<button class="wa-ticket-btn-v42" onclick="sendTicketWhatsApp(${t.id})">واتساب<br><small>${t.status==='closed'?'إغلاق التكت':'فتح التكت'}</small></button>`;}
+  window.renderTickets=function(){const adminBody=$('ticketsBody'),supBody=$('supTicketsBody');if(!adminBody&&!supBody)return;const rows=[...(data.tickets||[])];
+    if(adminBody){const st=$('ticketFilterStatus')?.value||'',q=($('ticketSearch')?.value||'').trim().toLowerCase();let list=rows;if(st)list=list.filter(t=>t.status===st);if(q)list=list.filter(t=>[_no(t),t.title,t.description,_proj(t),supervisorName(t.supervisor_id),_status(t.status),t.claimed_by_name,t.closed_by_name,t.closure_note].join(' ').toLowerCase().includes(q));adminBody.innerHTML=list.map(t=>`<tr class="${_row(t)}"><td><b>${_e(_no(t))}</b></td><td>${_e(_proj(t))}</td><td>${_e(supervisorName(t.supervisor_id))}</td><td>${_e(t.title||'-')}</td><td style="white-space:normal;min-width:220px">${_short(t.description)}</td><td>${_pb(t)}</td><td>${_sb(t)}</td><td>${fmt(t.created_at)}</td><td>${_e(_dur(_openMins(t)))}</td><td>${_e(t.claimed_by_name||'-')}<br><small>${t.claimed_at?fmt(t.claimed_at):''}</small></td><td>${_e(t.closed_by_name||'-')}<br><small>${t.closed_at?fmt(t.closed_at):''}</small></td><td style="white-space:normal;min-width:220px">${_short(t.closure_note)}</td><td class="whatsapp-col">${_wab(t)}</td><td class="row-actions"><button onclick="editTicket(${t.id})">تعديل</button>${t.status==='closed'?`<button class="light" onclick="setTicketStatus(${t.id},'open')">إعادة فتح</button>`:`${t.status!=='processing'?`<button class="light" onclick="claimTicket(${t.id})">استلام</button>`:''}<button onclick="closeTicket(${t.id})">إغلاق</button>`}<button class="danger" onclick="deleteRow('tickets',${t.id})">حذف</button></td></tr>`).join('')||'<tr><td colspan="14">لا توجد تكتات</td></tr>';}
+    if(supBody){const st=$('supTicketFilterStatus')?.value||'',pid=$('supTicketFilterProject')?.value||'',q=($('supTicketSearch')?.value||'').trim().toLowerCase();let list=rows;if(pid)list=list.filter(t=>String(t.project_id)===String(pid));if(st)list=list.filter(t=>t.status===st);if(q)list=list.filter(t=>[_no(t),t.title,t.description,_proj(t),_status(t.status),t.claimed_by_name,t.closed_by_name,t.closure_note].join(' ').toLowerCase().includes(q));supBody.innerHTML=list.map(t=>`<tr class="${_row(t)}"><td><b>${_e(_no(t))}</b></td><td>${_e(_proj(t))}</td><td>${_e(t.title||'-')}</td><td style="white-space:normal;min-width:180px">${_short(t.description)}</td><td>${_pb(t)}</td><td>${_sb(t)}</td><td>${_e(_dur(_openMins(t)))}</td><td>${_e(t.claimed_by_name||'-')}</td><td>${_e(t.closed_by_name||'-')}</td><td style="white-space:normal;min-width:180px">${_short(t.closure_note)}</td><td class="whatsapp-col">${_wab(t)}</td><td class="row-actions"><button onclick="editTicket(${t.id})">تعديل</button>${t.status==='closed'?`<button class="light" onclick="setTicketStatus(${t.id},'open')">إعادة فتح</button>`:`${t.status!=='processing'?`<button class="light" onclick="claimTicket(${t.id})">استلام</button>`:''}<button onclick="closeTicket(${t.id})">إغلاق</button>`}</td></tr>`).join('')||'<tr><td colspan="12">لا توجد تكتات</td></tr>';}
   };
-
-  function ticketWhatsAppButton(t){
-    if(t.status==='closed'){
-      return `<button class="wa-ticket-btn" onclick="sendTicketWhatsApp(${t.id})">إرسال إغلاق التكت واتساب</button>`;
-    }
-    return `<button class="wa-ticket-btn" onclick="sendTicketWhatsApp(${t.id})">إرسال فتح التكت واتساب</button>`;
-  }
-
-  window.renderTickets = function(){
-    const adminBody=$('ticketsBody'), supBody=$('supTicketsBody');
-    if(!adminBody && !supBody) return;
-    let rows=[...(data.tickets||[])];
-
-    if(adminBody){
-      const st=$('ticketFilterStatus')?.value||'';
-      const q=($('ticketSearch')?.value||'').trim().toLowerCase();
-      let list=rows;
-      if(st) list=list.filter(t=>t.status===st);
-      if(q) list=list.filter(t=>[waTicketNo(t),t.title,t.description,projectName(t.project_id),supervisorName(t.supervisor_id),waStatusLabel(t.status),t.claimed_by_name,t.closed_by_name,t.closure_note].join(' ').toLowerCase().includes(q));
-      adminBody.innerHTML=list.map(t=>`<tr class="${waRowClass(t)}"><td><b>${esc(waTicketNo(t))}</b></td><td>${esc(projectName(t.project_id))}</td><td>${esc(supervisorName(t.supervisor_id))}</td><td>${esc(t.title)}</td><td style="white-space:normal;min-width:220px">${waShortText(t.description)}</td><td>${waPriorityBadge(t)}</td><td>${waStatusBadge(t)}</td><td>${fmt(t.created_at)}</td><td>${esc(waDurationLabel(waOpenMinutes(t)))}</td><td>${esc(t.claimed_by_name||'-')}<br><small>${t.claimed_at?fmt(t.claimed_at):''}</small></td><td>${esc(t.closed_by_name||'-')}<br><small>${t.closed_at?fmt(t.closed_at):''}</small></td><td style="white-space:normal;min-width:220px">${waShortText(t.closure_note)}</td><td class="row-actions"><button onclick="editTicket(${t.id})">تعديل</button>${ticketWhatsAppButton(t)}${t.status==='closed'?`<button class="light" onclick="setTicketStatus(${t.id},'open')">إعادة فتح</button>`:`${t.status!=='processing'?`<button class="light" onclick="claimTicket(${t.id})">استلام</button>`:''}<button onclick="closeTicket(${t.id})">إغلاق</button>`}<button class="danger" onclick="deleteRow('tickets',${t.id})">حذف</button></td></tr>`).join('') || '<tr><td colspan="13">لا توجد تكتات</td></tr>';
-    }
-
-    if(supBody){
-      const st=$('supTicketFilterStatus')?.value||'';
-      const pid=$('supTicketFilterProject')?.value||'';
-      const q=($('supTicketSearch')?.value||'').trim().toLowerCase();
-      let list=rows;
-      if(pid) list=list.filter(t=>String(t.project_id)===String(pid));
-      if(st) list=list.filter(t=>t.status===st);
-      if(q) list=list.filter(t=>[waTicketNo(t),t.title,t.description,projectName(t.project_id),waStatusLabel(t.status),t.claimed_by_name,t.closed_by_name,t.closure_note].join(' ').toLowerCase().includes(q));
-      supBody.innerHTML=list.map(t=>`<tr class="${waRowClass(t)}"><td><b>${esc(waTicketNo(t))}</b></td><td>${esc(projectName(t.project_id))}</td><td>${esc(t.title)}</td><td style="white-space:normal;min-width:180px">${waShortText(t.description)}</td><td>${waPriorityBadge(t)}</td><td>${waStatusBadge(t)}</td><td>${esc(waDurationLabel(waOpenMinutes(t)))}</td><td>${esc(t.claimed_by_name||'-')}</td><td>${esc(t.closed_by_name||'-')}</td><td style="white-space:normal;min-width:180px">${waShortText(t.closure_note)}</td><td class="row-actions"><button onclick="editTicket(${t.id})">تعديل</button>${ticketWhatsAppButton(t)}${t.status==='closed'?`<button class="light" onclick="setTicketStatus(${t.id},'open')">إعادة فتح</button>`:`${t.status!=='processing'?`<button class="light" onclick="claimTicket(${t.id})">استلام</button>`:''}<button onclick="closeTicket(${t.id})">إغلاق</button>`}</td></tr>`).join('') || '<tr><td colspan="11">لا توجد تكتات</td></tr>';
-    }
-  };
-
-  const st=document.createElement('style');
-  st.textContent='.wa-ticket-btn{background:#128C7E!important;color:#fff!important;border:0!important}.wa-ticket-btn:hover{filter:brightness(.94)}';
-  document.head.appendChild(st);
+  const css=document.createElement('style');css.textContent='.wa-ticket-btn-v42{background:#128C7E!important;color:white!important;border:0!important;border-radius:10px!important;padding:8px 10px!important;line-height:1.25!important;min-width:110px!important;font-weight:700!important}.wa-ticket-btn-v42 small{font-weight:500;font-size:10px;color:white!important}.whatsapp-col{white-space:nowrap;text-align:center!important}';document.head.appendChild(css);
 })();
