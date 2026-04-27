@@ -61,7 +61,7 @@
         <div class="card">
           <h2>التسجيلات اليومية</h2>
           <div class="filters"><input type="date" id="dailyDate" onchange="renderTimeLogs()"><select id="dailySupervisor" onchange="renderTimeLogs()"></select><select id="dailyProject" onchange="renderTimeLogs()"></select><input id="dailySearch" oninput="renderTimeLogs()" placeholder="بحث"></div>
-          <div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>المشرف</th><th>المشروع</th><th>نوع الزيارة</th><th>الدخول</th><th>الخروج</th><th>الوقت المطلوب</th><th>المدة الفعلية</th><th>الفرق</th><th>حالة الوقت</th><th>انتقال</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody id="logsBody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>المشرف</th><th>المشروع</th><th>نوع الزيارة</th><th>الدخول</th><th>الخروج</th><th>الوقت المطلوب</th><th>المدة الفعلية</th><th>الفرق</th><th>حالة الوقت</th><th>انتقال</th><th>ملاحظات</th><th>واتساب</th><th>إجراء</th></tr></thead><tbody id="logsBody"></tbody></table></div>
         </div>
       </div>
     </section>
@@ -175,7 +175,7 @@
             <select id="workerFilterStatus" onchange="renderWorkers()"><option value="">كل الحالات</option><option value="active">نشط</option><option value="inactive">موقوف</option></select>
             <select id="workerFilterType" onchange="renderWorkers()"><option value="">كل الأنواع</option><option value="primary">أساسي</option><option value="support">بديل / مساند</option></select>
           </div>
-          <div class="table-wrap"><table><thead><tr><th>العامل</th><th>المشرف</th><th>المشروع</th><th>النوع</th><th>الجوال</th><th>الراتب</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody id="workersBody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>العامل</th><th>المشرف</th><th>المشروع</th><th>النوع</th><th>الجوال</th><th>الراتب</th><th>الحالة</th><th>ملاحظات</th><th>واتساب</th><th>إجراء</th></tr></thead><tbody id="workersBody"></tbody></table></div>
         </div>
       </div>
     </section>
@@ -197,7 +197,7 @@
         <div class="card">
           <h2>سجلات الحضور</h2>
           <div class="filters"><input type="date" id="attendanceFilterDate" onchange="renderAttendance()"><select id="attendanceFilterSupervisor" onchange="renderAttendance()"></select><input id="attendanceSearch" oninput="renderAttendance()" placeholder="بحث"></div>
-          <div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>العامل</th><th>المشرف</th><th>المشروع</th><th>الحالة</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody id="attendanceBody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>العامل</th><th>المشرف</th><th>المشروع</th><th>الحالة</th><th>ملاحظات</th><th>واتساب</th><th>إجراء</th></tr></thead><tbody id="attendanceBody"></tbody></table></div>
         </div>
       </div>
 
@@ -258,6 +258,6 @@
     <section id="export" class="page hidden"><div class="card"><h2>التصدير</h2><p>صدّر بيانات النظام الحالية بصيغة CSV.</p><div class="actions"><button onclick="exportTable('app_users')">المستخدمين</button><button onclick="exportTable('projects')">المشاريع</button><button onclick="exportTable('workers')">العمال</button><button onclick="exportTable('attendance')">الحضور</button><button onclick="exportTable('time_logs')">التسجيلات اليومية</button><button onclick="exportTable('tickets')">التكتات</button></div></div></section>
   </main>
 </div>
-<script src="app.js?v=43"></script>
+<script src="app.js?v=44"></script>
 </body>
 </html>
