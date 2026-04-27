@@ -992,3 +992,35 @@ window.showSupervisorWindow = function(id, btn){
   };
   const css=document.createElement('style');css.textContent='.wa-ticket-btn-v42{background:#128C7E!important;color:white!important;border:0!important;border-radius:10px!important;padding:8px 10px!important;line-height:1.25!important;min-width:110px!important;font-weight:700!important}.wa-ticket-btn-v42 small{font-weight:500;font-size:10px;color:white!important}.whatsapp-col{white-space:nowrap;text-align:center!important}';document.head.appendChild(css);
 })();
+
+/* ===== V43: Force WhatsApp button in supervisor tickets too ===== */
+(function(){
+  function _safeTicketNo(t){return t.ticket_number || ('T-' + String(t.id||0).padStart(4,'0'));}
+  function _statusLabel43(s){return s==='closed'?'مغلق':(s==='processing'?'تحت المعالجة':'مفتوح');}
+  function _date43(v){try{const d=v?new Date(v):new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}catch(e){return '';}}
+  function _time43(v){try{const d=v?new Date(v):new Date();return d.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});}catch(e){return '';}}
+  function _project43(t){try{return projectName(t.project_id)||t.project_name||'-';}catch(e){return t.project_name||'-';}}
+  function _msg43(t){const closed=t.status==='closed';const dt=closed?(t.closed_at||t.updated_at||t.created_at):(t.created_at||t.updated_at);return [closed?'تم إغلاق التكت':'تم تسجيل تكت جديد','',`اسم المشروع: ${_project43(t)}`,`رقم التكت: ${_safeTicketNo(t)}`,`وصف المشكلة: ${t.description||t.title||'-'}`,`حالة المشكلة: ${closed?'مغلق':_statusLabel43(t.status)}`,`التاريخ: ${_date43(dt)}`,`الوقت: ${_time43(dt)}`].join('\n');}
+  window.sendTicketWhatsAppV43=function(id){const t=(data.tickets||[]).find(x=>String(x.id)===String(id)); if(!t){ if(typeof msg==='function') msg('التكت غير موجود','err'); return; } const txt=_msg43(t); const go=function(){window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank'); if(typeof msg==='function') msg(t.status==='closed'?'تم تجهيز رسالة إغلاق التكت للواتساب':'تم تجهيز رسالة فتح التكت للواتساب');}; if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).finally(go); else go();};
+  function _btn43(t){return `<button type="button" class="wa-ticket-btn-v43" onclick="sendTicketWhatsAppV43(${t.id})">واتساب<br><small>${t.status==='closed'?'إغلاق التكت':'فتح التكت'}</small></button>`;}
+  function forceSupervisorWhatsApp43(){
+    const body=document.getElementById('supTicketsBody'); if(!body) return;
+    const rows=Array.from(body.querySelectorAll('tr')); if(!rows.length) return;
+    rows.forEach(function(tr,i){
+      if((tr.innerText||'').includes('لا توجد')) return;
+      if(tr.querySelector('.wa-ticket-btn-v43') || tr.querySelector('.wa-ticket-btn-v42')) return;
+      const first=tr.cells&&tr.cells[0]?tr.cells[0].innerText.trim():'';
+      let t=(data.tickets||[]).find(function(x){return _safeTicketNo(x)===first;});
+      if(!t) t=(data.tickets||[])[i];
+      if(!t) return;
+      const target=tr.cells[10] || tr.cells[tr.cells.length-1];
+      if(target){ target.innerHTML=_btn43(t); target.classList.add('whatsapp-col'); }
+    });
+  }
+  const oldRenderTickets43=window.renderTickets;
+  window.renderTickets=function(){ if(typeof oldRenderTickets43==='function') oldRenderTickets43.apply(this,arguments); setTimeout(forceSupervisorWhatsApp43,80); setTimeout(forceSupervisorWhatsApp43,400); };
+  const oldShowSupervisorWindow43=window.showSupervisorWindow;
+  window.showSupervisorWindow=function(id,btn){ if(typeof oldShowSupervisorWindow43==='function') oldShowSupervisorWindow43.apply(this,arguments); if(id==='supTickets') setTimeout(forceSupervisorWhatsApp43,700); };
+  window.addEventListener('load',function(){setTimeout(forceSupervisorWhatsApp43,900);setTimeout(forceSupervisorWhatsApp43,1800);});
+  const css=document.createElement('style');css.textContent='.wa-ticket-btn-v43{background:#128C7E!important;color:white!important;border:0!important;border-radius:10px!important;padding:8px 10px!important;line-height:1.25!important;min-width:110px!important;font-weight:700!important;cursor:pointer!important}.wa-ticket-btn-v43 small{font-weight:500;font-size:10px;color:white!important}.whatsapp-col{white-space:nowrap;text-align:center!important}';document.head.appendChild(css);
+})();
