@@ -17,6 +17,16 @@
     <div class="actions"><button onclick="playAppSound('ticket')">اختبار الصوت</button><button onclick="logout()">خروج</button></div>
   </header>
   <div id="globalMsg" class="msg hidden"></div>
+  <section class="card" id="techCreateTicketCard">
+    <h2>رفع تكت جديد</h2>
+    <div class="grid two">
+      <div><label>المشروع</label><select id="techNewTicketProject"><option value="">اختر المشروع</option></select></div>
+      <div><label>الأولوية</label><select id="techNewTicketPriority"><option value="normal">عادي</option><option value="high">مهم</option><option value="urgent">عاجل</option><option value="low">منخفض</option></select></div>
+      <div><label>عنوان المشكلة</label><input id="techNewTicketTitle" placeholder="مثال: تسريب مياه / عطل إنارة"></div>
+      <div><label>وصف المشكلة</label><input id="techNewTicketDescription" placeholder="اكتب وصف واضح للمشكلة"></div>
+    </div>
+    <div class="actions" style="margin-top:10px"><button onclick="saveTechnicianTicket()">حفظ التكت</button><button class="light" onclick="clearTechnicianTicketForm()">مسح</button></div>
+  </section>
   <div class="tech-kpis">
     <div class="tech-kpi"><small>تكتات مفتوحة</small><b id="techOpenCount">0</b></div>
     <div class="tech-kpi"><small>تكتاتي قيد المعالجة</small><b id="techMineCount">0</b></div>
@@ -34,10 +44,10 @@
     <button class="tech-tab" onclick="showTechWindow('techMine',this)">تكتاتي</button>
     <button class="tech-tab" onclick="showTechWindow('techDone',this)">المنجزة</button>
   </nav>
-  <section id="techOpen" class="tech-page active card"><h2>التكتات المفتوحة</h2><div class="table-wrap"><table><thead><tr><th>رقم</th><th>المشروع</th><th>العنوان</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>مدة الفتح</th><th>استلم بواسطة</th><th>أغلق بواسطة</th><th>كيف تم الإغلاق</th><th>إجراء</th></tr></thead><tbody id="techOpenTicketsBody"></tbody></table></div></section>
-  <section id="techMine" class="tech-page card"><h2>تكتاتي قيد المعالجة</h2><div class="table-wrap"><table><thead><tr><th>رقم</th><th>المشروع</th><th>العنوان</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>مدة الفتح</th><th>استلم بواسطة</th><th>أغلق بواسطة</th><th>كيف تم الإغلاق</th><th>إجراء</th></tr></thead><tbody id="techMyTicketsBody"></tbody></table></div></section>
-  <section id="techDone" class="tech-page card"><h2>التكتات التي أغلقتها</h2><div class="table-wrap"><table><thead><tr><th>رقم</th><th>المشروع</th><th>العنوان</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>مدة الفتح</th><th>استلم بواسطة</th><th>أغلق بواسطة</th><th>كيف تم الإغلاق</th><th>إجراء</th></tr></thead><tbody id="techDoneTicketsBody"></tbody></table></div></section>
+  <section id="techOpen" class="tech-page active card"><h2>التكتات المفتوحة</h2><div class="table-wrap"><table><thead><tr><th>رقم</th><th>المشروع</th><th>العنوان</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>مدة الفتح</th><th>استلم بواسطة</th><th>أغلق بواسطة</th><th>كيف تم الإغلاق</th><th>واتساب</th><th>إجراء</th></tr></thead><tbody id="techOpenTicketsBody"></tbody></table></div></section>
+  <section id="techMine" class="tech-page card"><h2>تكتاتي قيد المعالجة</h2><div class="table-wrap"><table><thead><tr><th>رقم</th><th>المشروع</th><th>العنوان</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>مدة الفتح</th><th>استلم بواسطة</th><th>أغلق بواسطة</th><th>كيف تم الإغلاق</th><th>واتساب</th><th>إجراء</th></tr></thead><tbody id="techMyTicketsBody"></tbody></table></div></section>
+  <section id="techDone" class="tech-page card"><h2>التكتات التي أغلقتها</h2><div class="table-wrap"><table><thead><tr><th>رقم</th><th>المشروع</th><th>العنوان</th><th>الوصف</th><th>الأولوية</th><th>الحالة</th><th>مدة الفتح</th><th>استلم بواسطة</th><th>أغلق بواسطة</th><th>كيف تم الإغلاق</th><th>واتساب</th><th>إجراء</th></tr></thead><tbody id="techDoneTicketsBody"></tbody></table></div></section>
 </div>
-<script src="app.js"></script>
+<script src="app.js?v=46"></script>
 </body>
 </html>

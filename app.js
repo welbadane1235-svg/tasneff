@@ -1109,3 +1109,102 @@ window.showSupervisorWindow = function(id, btn){
   const css=document.createElement('style');css.textContent='.wa-ticket-btn-v45{background:#128C7E!important;color:#fff!important;border:0!important;border-radius:10px!important;padding:8px 10px!important;line-height:1.25!important;min-width:110px!important;font-weight:700!important;cursor:pointer!important}.wa-ticket-btn-v45 small{font-weight:500!important;font-size:10px!important;color:#fff!important}.whatsapp-col{text-align:center!important;white-space:nowrap!important}';document.head.appendChild(css);
   window.addEventListener('load',function(){setTimeout(renderSupervisorTicketsV45,1000);setTimeout(renderSupervisorTicketsV45,2200);});
 })();
+
+
+/* ===== V46: Technician can create tickets + WhatsApp buttons ===== */
+(function(){
+  function _e(v){ return (typeof esc==='function') ? esc(v) : String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function _tNo(t){ return t.ticket_number || ('T-' + String(t.id||0).padStart(4,'0')); }
+  function _statusLabel(status){ return status==='closed'?'مغلق':(status==='processing'?'تحت المعالجة':'مفتوح'); }
+  function _priorityLabel(p){ return p==='urgent'?'عاجل':(p==='high'?'مهم':(p==='low'?'منخفض':'عادي')); }
+  function _short(s,n=80){ s=String(s||''); return s.length>n ? _e(s.slice(0,n))+'…' : _e(s||'-'); }
+  function _dateObj(v){ const x=v?new Date(v):null; return x&&!isNaN(x)?x:null; }
+  function _between(a,b){ const da=_dateObj(a), db=_dateObj(b); if(!da||!db)return 0; return Math.max(0, Math.round((db-da)/60000)); }
+  function _dur(min){ min=Number(min||0); if(!min)return '0د'; const day=Math.floor(min/1440), h=Math.floor((min%1440)/60), m=min%60; const arr=[]; if(day)arr.push(day+'ي'); if(h)arr.push(h+'س'); if(m||!arr.length)arr.push(m+'د'); return arr.join(' '); }
+  function _openMins(t){ return t.status==='closed' ? (Number(t.open_duration_minutes||0)||_between(t.created_at,t.closed_at)) : _between(t.created_at,new Date().toISOString()); }
+  function _rowClass(t){ if(t.status==='closed') return 'ticket-row-closed'; if(t.status==='processing') return 'ticket-row-processing'; if(t.priority==='urgent'||t.priority==='high') return 'ticket-row-urgent'; return 'ticket-row-normal'; }
+  function _badge(t){ const cls=t.status==='closed'?'green':(t.status==='processing'?'amber':((t.priority==='urgent'||t.priority==='high')?'red':'pink')); return `<span class="badge ${cls}">${_statusLabel(t.status)}</span>`; }
+  function _pri(t){ const cls=t.priority==='urgent'?'red':(t.priority==='high'?'amber':'pink'); return `<span class="badge ${cls}">${_priorityLabel(t.priority)}</span>`; }
+  function _currentTechName(){ const u=session(); return (u && (u.full_name || u.username)) || 'فني'; }
+  function _projectName(id){ return (typeof projectName==='function') ? projectName(id) : ((data.projects||[]).find(p=>String(p.id)===String(id))?.name || '-'); }
+  function _fmt(v){ return (typeof fmt==='function') ? fmt(v) : (v ? new Date(v).toLocaleString('ar-SA') : ''); }
+  function _waBtn(t){
+    const fn = window.sendTicketWhatsAppV43 || window.sendTicketWhatsApp;
+    if(!fn) return '-';
+    return `<button type="button" class="wa-ticket-btn-v46" onclick="${fn===window.sendTicketWhatsAppV43?'sendTicketWhatsAppV43':'sendTicketWhatsApp'}(${t.id})">واتساب<br><small>${t.status==='closed'?'إغلاق التكت':'فتح التكت'}</small></button>`;
+  }
+  function _filterTechRows(kind){
+    const u=session(); if(!u) return [];
+    let rows=[...(data.tickets||[])];
+    const q=($('techTicketSearch')?.value||'').trim().toLowerCase();
+    const st=$('techTicketStatus')?.value||'';
+    if(st) rows=rows.filter(t=>t.status===st);
+    if(q) rows=rows.filter(t=>[_tNo(t),t.title,t.description,_projectName(t.project_id),_statusLabel(t.status),t.claimed_by_name,t.closed_by_name,t.closure_note].join(' ').toLowerCase().includes(q));
+    if(kind==='open') rows=rows.filter(t=>t.status!=='closed' && !t.claimed_by);
+    if(kind==='mine') rows=rows.filter(t=>String(t.claimed_by||'')===String(u.id) && t.status!=='closed');
+    if(kind==='done') rows=rows.filter(t=>String(t.closed_by||'')===String(u.id) || (t.status==='closed' && String(t.closed_by_name||'')===String(_currentTechName())));
+    return rows.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+  }
+  function _renderTechList(kind, bodyId){
+    const b=$(bodyId); if(!b) return;
+    const rows=_filterTechRows(kind);
+    b.innerHTML = rows.map(t=>`<tr class="${_rowClass(t)}"><td><b>${_e(_tNo(t))}</b></td><td>${_e(_projectName(t.project_id))}</td><td>${_e(t.title||'-')}</td><td style="white-space:normal;min-width:180px">${_short(t.description)}</td><td>${_pri(t)}</td><td>${_badge(t)}</td><td>${_e(_dur(_openMins(t)))}</td><td>${_e(t.claimed_by_name||'-')}<br><small>${t.claimed_at?_fmt(t.claimed_at):''}</small></td><td>${_e(t.closed_by_name||'-')}<br><small>${t.closed_at?_fmt(t.closed_at):''}</small></td><td style="white-space:normal;min-width:180px">${_short(t.closure_note)}</td><td class="whatsapp-col">${_waBtn(t)}</td><td class="row-actions">${t.status==='closed'?'':`${!t.claimed_by?`<button onclick="techClaimTicket(${t.id})">استلام</button>`:''}<button onclick="techCloseTicket(${t.id})">إغلاق</button>`}</td></tr>`).join('') || '<tr><td colspan="12">لا توجد تكتات</td></tr>';
+  }
+  function _updateTechKpisV46(){ const u=session(); if(!$('techOpenCount')) return; $('techOpenCount').textContent=(data.tickets||[]).filter(t=>t.status!=='closed'&&!t.claimed_by).length; $('techMineCount').textContent=(data.tickets||[]).filter(t=>String(t.claimed_by||'')===String(u?.id||'')&&t.status!=='closed').length; $('techDoneCount').textContent=(data.tickets||[]).filter(t=>String(t.closed_by||'')===String(u?.id||'')).length; }
+  window.renderTechnicianTickets = function(){ _renderTechList('open','techOpenTicketsBody'); _renderTechList('mine','techMyTicketsBody'); _renderTechList('done','techDoneTicketsBody'); _updateTechKpisV46(); };
+  window.clearTechnicianTicketForm = function(){
+    if($('techNewTicketProject')) $('techNewTicketProject').value='';
+    if($('techNewTicketPriority')) $('techNewTicketPriority').value='normal';
+    if($('techNewTicketTitle')) $('techNewTicketTitle').value='';
+    if($('techNewTicketDescription')) $('techNewTicketDescription').value='';
+  };
+  window.saveTechnicianTicket = async function(){
+    const u=session(); if(!u) return msg('سجل الدخول أولاً','err');
+    const projectId=Number($('techNewTicketProject')?.value)||null;
+    const title=($('techNewTicketTitle')?.value||'').trim();
+    const description=($('techNewTicketDescription')?.value||'').trim();
+    const priority=$('techNewTicketPriority')?.value || 'normal';
+    if(!projectId) return msg('اختر المشروع','err');
+    if(!title) return msg('عنوان المشكلة مطلوب','err');
+    const proj=(data.projects||[]).find(p=>String(p.id)===String(projectId));
+    const now=new Date().toISOString();
+    const row={
+      project_id: projectId,
+      supervisor_id: Number(proj?.supervisor_id)||null,
+      created_by: u.id,
+      title,
+      description,
+      priority,
+      status:'open',
+      updated_at: now
+    };
+    const res=await sb.from('tickets').insert(row).select('*').single();
+    if(res.error) return msg(res.error.message,'err');
+    if(res.data && !res.data.ticket_number){
+      const tn='T-'+String(res.data.id).padStart(4,'0');
+      await sb.from('tickets').update({ticket_number:tn}).eq('id',res.data.id);
+      res.data.ticket_number=tn;
+    }
+    playAppSound('ticket');
+    msg('تم رفع التكت بنجاح');
+    clearTechnicianTicketForm();
+    await loadAll();
+    renderTechnicianTickets();
+    // تجهيز رسالة واتساب بعد رفع التكت مباشرة
+    setTimeout(()=>{ try{ (window.sendTicketWhatsAppV43||window.sendTicketWhatsApp)?.(res.data.id); }catch(e){} }, 300);
+  };
+  const _oldInitTech = window.initTechnician;
+  window.initTechnician = async function(){
+    const u=requireRole('technician'); if(!u) return;
+    await loadAll();
+    if($('techTitle')) $('techTitle').textContent='لوحة الفني - '+(u.full_name||u.username);
+    if($('techNewTicketProject') && typeof fillSelect==='function') fillSelect('techNewTicketProject', data.projects||[], 'name', 'اختر المشروع');
+    renderTechnicianTickets();
+    if(!window.__techAutoRefreshV46){
+      window.__techAutoRefreshV46=setInterval(async()=>{ await loadAll(); if($('techNewTicketProject') && typeof fillSelect==='function' && !$('techNewTicketProject').options.length) fillSelect('techNewTicketProject', data.projects||[], 'name', 'اختر المشروع'); renderTechnicianTickets(); }, 20000);
+    }
+  };
+  const css=document.createElement('style');
+  css.textContent='.wa-ticket-btn-v46{background:#128C7E!important;color:#fff!important;border:0!important;border-radius:10px!important;padding:8px 10px!important;line-height:1.25!important;min-width:105px!important;font-weight:700!important}.wa-ticket-btn-v46 small{font-size:10px;color:#fff!important}.whatsapp-col{text-align:center!important;white-space:nowrap}.grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}@media(max-width:760px){.grid.two{grid-template-columns:1fr}}';
+  document.head.appendChild(css);
+})();
