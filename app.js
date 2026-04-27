@@ -93,10 +93,15 @@ function projectRequiredMonthlyMinutes(projectId, monthStr){
   return total;
 }
 function performanceStatus(percent, required){
+  percent = Number(percent || 0);
   if(!required) return {text:'غير محدد', cls:'amber'};
-  if(percent >= 90) return {text:'ممتاز', cls:'green'};
-  if(percent >= 70) return {text:'متوسط', cls:'amber'};
-  return {text:'ناقص', cls:'red'};
+
+  // 90% إلى 110% = ممتاز
+  // 70% إلى 89% أو 111% إلى 140% = جيد
+  // أقل من 70% أو أكثر من 140% = ضعيف
+  if(percent >= 90 && percent <= 110) return {text:'ممتاز', cls:'green'};
+  if((percent >= 70 && percent < 90) || (percent > 110 && percent <= 140)) return {text:'جيد', cls:'amber'};
+  return {text:'ضعيف', cls:'red'};
 }
 function percentText(v){ return (Math.round(Number(v||0)*10)/10).toFixed(1)+'%'; }
 function calcTimeStatus(actualMinutes, requiredMinutes){ const diff = Number(actualMinutes||0) - Number(requiredMinutes||0); if(!requiredMinutes) return {diff, status:'unknown', text:'غير محدد', cls:'amber'}; if(diff > 5) return {diff, status:'over_time', text:'زيادة', cls:'red'}; if(diff < -5) return {diff, status:'under_time', text:'ناقص', cls:'amber'}; return {diff, status:'within_time', text:'ضمن الوقت', cls:'green'}; }
