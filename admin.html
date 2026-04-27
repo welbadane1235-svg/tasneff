@@ -20,6 +20,7 @@
     <button class="nav" onclick="showPage('daily',this)">التسجيلات اليومية</button>
     <button class="nav" onclick="showPage('users',this)">إدارة المستخدمين</button>
     <button class="nav" onclick="showPage('projects',this)">المشاريع</button>
+    <button class="nav" onclick="showPage('contracts',this)">العقود والخدمات</button>
     <button class="nav" onclick="showPage('workers',this)">العمال</button>
     <button class="nav" onclick="showPage('attendance',this)">الحضور والغياب</button>
     <button class="nav" onclick="showPage('monthly',this)">الأوقات الشهرية</button>
@@ -40,6 +41,7 @@
         <div class="kpi"><small>تسجيلات اليوم</small><b id="kpiTodayLogs">0</b></div>
       </div>
       <div class="card"><h2>ملخص اليوم</h2><div id="todaySummary" class="summary-grid"></div></div>
+      <div class="card"><h2>تنبيهات العقود</h2><div id="contractDashboardAlerts" class="alerts"></div></div>
     </section>
 
     <section id="daily" class="page hidden">
@@ -79,6 +81,8 @@
           <input type="hidden" id="projectId">
           <label>اسم المشروع</label><input id="projectName" placeholder="مثال: تعمير 17">
           <label>الموقع</label><input id="projectLocation" placeholder="اختياري">
+          <div class="split"><div><label>عدد العمائر</label><input type="number" id="projectBuildingsCount" min="0" value="0"></div><div><label>عدد الشقق</label><input type="number" id="projectUnitsCount" min="0" value="0"></div></div>
+          <div class="split"><div><label>تاريخ بداية العقد</label><input type="date" id="projectContractStart"></div><div><label>تاريخ نهاية العقد</label><input type="date" id="projectContractEnd"></div></div>
           <label>المشرف المرتبط</label><select id="projectSupervisor"></select>
           <div class="split">
             <div><label>الوقت المطلوب يوميًا (بالدقائق)</label><input type="number" id="projectRequiredDaily" min="0" value="180"></div>
@@ -95,7 +99,7 @@
         <div class="card">
           <div class="table-head"><h2>المشاريع</h2><button class="light" onclick="exportTable('projects')">تصدير CSV</button></div>
           <div class="filters"><input id="projectSearch" oninput="renderProjects()" placeholder="بحث باسم المشروع أو المشرف"><select id="projectFilterSupervisor" onchange="renderProjects()"></select><select id="projectFilterStatus" onchange="renderProjects()"><option value="">كل الحالات</option><option value="active">نشط</option><option value="inactive">متوقف</option></select></div>
-          <div class="table-wrap"><table><thead><tr><th>المشروع</th><th>المشرف</th><th>الوقت اليومي</th><th>الجمعة</th><th>نوع التشغيل</th><th>نوع الزيارة</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="projectsBody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>المشروع</th><th>المشرف</th><th>العمائر</th><th>الشقق</th><th>نهاية العقد</th><th>المتبقي</th><th>حالة العقد</th><th>الوقت اليومي</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="projectsBody"></tbody></table></div>
         </div>
       </div>
       <div id="projectManagerCard" class="card hidden">
@@ -110,6 +114,28 @@
           <div><h3>العمال المرتبطون بالمشروع</h3><div class="table-wrap"><table><thead><tr><th>العامل</th><th>المشرف</th><th>النوع</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="projectWorkersBody"></tbody></table></div></div>
         </div>
       </div>
+    </section>
+
+
+
+    <section id="contracts" class="page hidden">
+      <div class="card section-head">
+        <div><h2>العقود والخدمات السنوية</h2><p>متابعة تواريخ العقود، الأيام المتبقية، والتنبيه قبل شهر من نهاية العقد.</p></div>
+        <button class="light" onclick="showPage('projects', document.querySelector(`[onclick*=projects]`))">تعديل بيانات مشروع</button>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><small>عقود نشطة</small><b id="contractsActiveCount">0</b></div>
+        <div class="kpi"><small>قريبة الانتهاء</small><b id="contractsSoonCount">0</b></div>
+        <div class="kpi"><small>منتهية</small><b id="contractsExpiredCount">0</b></div>
+        <div class="kpi"><small>بيانات ناقصة</small><b id="contractsMissingCount">0</b></div>
+      </div>
+      <div class="card"><h2>العقود القريبة والمنتهية</h2><div id="contractsAlertsList" class="alerts"></div></div>
+      <div class="card">
+        <div class="table-head"><h2>كل العقود</h2><button class="light" onclick="exportTable('projects')">تصدير CSV</button></div>
+        <div class="filters"><input id="contractSearch" oninput="renderContracts()" placeholder="بحث باسم المشروع"><select id="contractFilterStatus" onchange="renderContracts()"><option value="">كل الحالات</option><option value="active">نشط</option><option value="soon">قريب الانتهاء</option><option value="expired">منتهي</option><option value="missing">بيانات ناقصة</option></select></div>
+        <div class="table-wrap"><table><thead><tr><th>المشروع</th><th>العمائر</th><th>الشقق</th><th>بداية العقد</th><th>نهاية العقد</th><th>الأيام المتبقية</th><th>حالة العقد</th><th>إجراء</th></tr></thead><tbody id="contractsBody"></tbody></table></div>
+      </div>
+      <div class="card"><h2>الخدمات السنوية</h2><p>هذه الواجهة جاهزة للمرحلة التالية: إضافة خدمات مثل غسيل الخزانات، مكافحة الحشرات، المصاعد، والدفاع المدني وربطها بكل عقد.</p></div>
     </section>
 
     <section id="workers" class="page hidden">
