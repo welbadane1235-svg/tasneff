@@ -1438,3 +1438,101 @@ window.showSupervisorWindow = function(id, btn){
   css.textContent = '.worker-project-preview{margin:8px 0 12px;padding:10px;border:1px solid #d9e8e2;background:#f7fbf9;border-radius:12px}.worker-chip-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.worker-chip{display:inline-flex;gap:6px;align-items:center;background:#0A4033;color:#fff;border-radius:999px;padding:5px 10px;font-size:12px}.worker-chip small{opacity:.85}.warn-text{color:#b45309}.workers-cell{white-space:normal;min-width:220px}.monthly-total-row{background:#f3f7f5;font-weight:700}.monthly-total-row td{border-top:2px solid #0A4033!important}';
   document.head.appendChild(css);
 })();
+
+
+/* ===== V51: Smarter worker names in monthly + stricter project worker filtering ===== */
+(function(){
+  function _e(v){ return (typeof esc === 'function') ? esc(v) : String(v ?? '').replace(/[&<>\"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m])); }
+  function _wp(w){ try { return workerProjectId(w); } catch(e){ return w.project_id || w.assigned_project_id || w.project || w.projectId || ''; } }
+  function _ws(w){ try { return workerSupId(w); } catch(e){ return w.app_supervisor_id || w.supervisor_id || w.supervisor || w.supervisorId || ''; } }
+  function _wn(id){ try { return workerName(id); } catch(e){ return ((data.workers||[]).find(w=>String(w.id)===String(id))?.name || ''); } }
+  function _pn(id){ try { return projectName(id); } catch(e){ return ((data.projects||[]).find(p=>String(p.id)===String(id))?.name || '-'); } }
+  function _sn(id){ try { return supervisorName(id); } catch(e){ return ((data.users||[]).find(u=>String(u.id)===String(id))?.full_name || '-'); } }
+  function _mins(v){ try { return minsToText(v); } catch(e){ v=Number(v||0); return Math.floor(v/60)+':'+String(v%60).padStart(2,'0'); } }
+  function _actual(l){ try { return logActualMinutes(l); } catch(e){ return Number(l.duration_minutes||0) || (typeof minutesBetween==='function'?minutesBetween(l.check_in,l.check_out):0); } }
+  function _required(l){ try { return logRequiredMinutes(l); } catch(e){ return Number(l.required_minutes||0); } }
+  function _percent(v){ try { return percentText(v); } catch(e){ return (Math.round(Number(v||0)*10)/10).toFixed(1)+'%'; } }
+  function _perf(p,r){ try { return performanceStatus(p,r); } catch(e){ return {text:'-', cls:'amber'}; } }
+  function _typeText(t){ try { return workerTypeText(t); } catch(e){ return t==='support'?'بديل / مساند':'أساسي'; } }
+  function _monthOf(l){ const d = l.log_date || String(l.check_in||'').slice(0,10); return String(d||'').slice(0,7); }
+  function _dateOf(a){ return String(a.attendance_date || a.log_date || a.created_at || '').slice(0,10); }
+  function _add(set, name){ name=String(name||'').trim(); if(name && name!=='-' && name.toLowerCase()!=='null') set.add(name); }
+  function _namesFromAnyText(set, v){
+    if(!v) return;
+    if(Array.isArray(v)) v.forEach(x=>_namesFromAnyText(set,x));
+    else if(typeof v === 'object') Object.values(v).forEach(x=>_namesFromAnyText(set,x));
+    else String(v).split(/[،,\n]+/).map(x=>x.trim()).filter(Boolean).forEach(x=>_add(set,x));
+  }
+  function projectWorkers(projectId, supervisorId){
+    return (data.workers||[]).filter(w => String(w.status||'active') !== 'inactive')
+      .filter(w => projectId ? String(_wp(w)||'') === String(projectId) : (supervisorId ? String(_ws(w)||'') === String(supervisorId) : true));
+  }
+  function workerNamesForProjectSmart(projectId, supervisorId, month, logsForProject){
+    const set = new Set();
+    projectWorkers(projectId, supervisorId).forEach(w => _add(set, w.name));
+    (data.attendance||[]).forEach(a => {
+      if(projectId && String(a.project_id||'') !== String(projectId)) return;
+      if(supervisorId && String(a.supervisor_id||'') !== String(supervisorId)) return;
+      if(month && !_dateOf(a).startsWith(month)) return;
+      const w = (data.workers||[]).find(x=>String(x.id)===String(a.worker_id));
+      _add(set, w?.name || a.worker_name || a.name);
+    });
+    (logsForProject||[]).forEach(l => {
+      _add(set, l.worker_name); _add(set, l.worker_names); _add(set, l.workers_names); _add(set, l.workerNames);
+      _namesFromAnyText(set, l.workers); _namesFromAnyText(set, l.worker_ids); _namesFromAnyText(set, l.workerIds);
+      if(l.worker_id) _add(set, _wn(l.worker_id));
+      if(l.notes && /عامل|عمال|العامل|العمال/.test(String(l.notes))){
+        const m=String(l.notes).match(/(?:العمال|عمال|العامل|عامل)\s*[:：-]?\s*([^|\n]+)/);
+        if(m) _namesFromAnyText(set,m[1]);
+      }
+    });
+    return [...set];
+  }
+  function ensureMonthlyHeader(){
+    const body=document.getElementById('monthlyBody'); if(!body) return;
+    const tr=body.closest('table')?.querySelector('thead tr');
+    if(tr) tr.innerHTML='<th>المشرف</th><th>المشروع</th><th>أسماء العمال</th><th>عدد العمال</th><th>عدد السجلات</th><th>الساعات المطلوبة</th><th>الساعات الفعلية</th><th>وقت الانتقال</th><th>نسبة العمل</th><th>حالة الأداء</th>';
+  }
+  window.renderMonthly = function(){
+    const body=document.getElementById('monthlyBody'); if(!body) return;
+    ensureMonthlyHeader();
+    const month=document.getElementById('monthlyMonth')?.value || today().slice(0,7);
+    const sid=document.getElementById('monthlySupervisor')?.value || '';
+    let logs=(data.logs||[]).filter(l => _monthOf(l) === month);
+    if(sid) logs=logs.filter(l=>String(l.supervisor_id||'')===String(sid));
+    const map={};
+    logs.forEach(l=>{
+      const key=(l.supervisor_id||'')+'_'+(l.project_id||'');
+      if(!map[key]) map[key]={s:l.supervisor_id,p:l.project_id,c:0,actual:0,required:0,travel:0,logs:[]};
+      map[key].c++; map[key].actual += Number(_actual(l)||0); map[key].required += Number(_required(l)||0); map[key].travel += Number(l.travel_minutes||0); map[key].logs.push(l);
+    });
+    const vals=Object.values(map).map(r=>{ r.workerNames=workerNamesForProjectSmart(r.p,r.s,month,r.logs); r.workerCount=r.workerNames.length; r.percent=r.required?(r.actual/r.required)*100:0; r.perf=_perf(r.percent,r.required); return r; }).sort((a,b)=>String(_pn(a.p)).localeCompare(String(_pn(b.p)),'ar'));
+    const totalActual=vals.reduce((a,r)=>a+r.actual,0), totalRequired=vals.reduce((a,r)=>a+r.required,0), totalTravel=vals.reduce((a,r)=>a+r.travel,0), totalRecords=vals.reduce((a,r)=>a+r.c,0);
+    const allWorkers=new Set(); vals.forEach(r=>r.workerNames.forEach(n=>allWorkers.add(n)));
+    const totalPct=totalRequired?(totalActual/totalRequired)*100:0; const totalPerf=_perf(totalPct,totalRequired);
+    body.innerHTML = vals.map(r=>{ const names=r.workerNames.length?r.workerNames.join('، '):'-'; return `<tr><td>${_e(_sn(r.s))}</td><td>${_e(_pn(r.p))}</td><td class="workers-cell">${_e(names)}</td><td>${r.workerCount}</td><td>${r.c}</td><td>${_mins(r.required)}</td><td>${_mins(r.actual)}</td><td>${r.travel} دقيقة</td><td><span class="badge ${r.perf.cls}">${_percent(r.percent)}</span></td><td><span class="badge ${r.perf.cls}">${_e(r.perf.text)}</span></td></tr>`; }).join('') || '<tr><td colspan="10">لا توجد بيانات</td></tr>';
+    if(vals.length) body.innerHTML += `<tr class="monthly-total-row"><td colspan="3"><b>الإجمالي العام</b></td><td><b>${allWorkers.size}</b></td><td><b>${totalRecords}</b></td><td><b>${_mins(totalRequired)}</b></td><td><b>${_mins(totalActual)}</b></td><td><b>${totalTravel} دقيقة</b></td><td><span class="badge ${totalPerf.cls}">${_percent(totalPct)}</span></td><td><span class="badge ${totalPerf.cls}">${_e(totalPerf.text)}</span></td></tr>`;
+    if(document.getElementById('monthlySummary')) document.getElementById('monthlySummary').innerHTML=`<div class="kpi"><small>عدد التسجيلات</small><b>${totalRecords}</b></div><div class="kpi"><small>عدد العمال الظاهرين</small><b>${allWorkers.size}</b></div><div class="kpi"><small>الساعات المطلوبة</small><b>${_mins(totalRequired)}</b></div><div class="kpi"><small>الساعات الفعلية</small><b>${_mins(totalActual)}</b></div><div class="kpi"><small>وقت الانتقال</small><b>${totalTravel} دقيقة</b></div><div class="kpi"><small>نسبة العمل</small><b>${_percent(totalPct)}</b></div><div class="kpi"><small>حالة الأداء</small><b><span class="badge ${totalPerf.cls}">${_e(totalPerf.text)}</span></b></div>`;
+  };
+  window.renderSupervisorAttendanceList = function(){
+    const div=document.getElementById('supervisorAttendanceList'); if(!div) return;
+    const u=(typeof session==='function')?session():null; const pid=document.getElementById('attendanceProject')?.value||'';
+    if(!pid){ div.innerHTML='<div class="quick-item">اختر المشروع أولاً لعرض عماله فقط</div>'; return; }
+    const rows=projectWorkers(pid,u?.id);
+    div.innerHTML=rows.map(w=>`<div class="quick-item"><b>${_e(w.name)}</b><small>${_e(_typeText(w.worker_type||'primary'))}</small><select data-worker="${w.id}"><option value="present">حاضر</option><option value="absent">غائب</option></select></div>`).join('') || '<div class="quick-item">لا يوجد عمال مربوطون بهذا المشروع. اربط العمال من الإدارة أولاً.</div>';
+  };
+  function renderLogWorkersPreviewV51(){
+    const projectEl=document.getElementById('logProject'); if(!projectEl) return;
+    let box=document.getElementById('logProjectWorkersPreview');
+    if(!box){ box=document.createElement('div'); box.id='logProjectWorkersPreview'; box.className='worker-project-preview'; projectEl.insertAdjacentElement('afterend',box); }
+    const pid=projectEl.value||''; const u=(typeof session==='function')?session():null;
+    if(!pid){ box.innerHTML='<small>اختر المشروع لعرض العمال المرتبطين به فقط.</small>'; return; }
+    const rows=projectWorkers(pid,u?.id);
+    box.innerHTML=rows.length?'<small>عمال المشروع:</small><div class="worker-chip-wrap">'+rows.map(w=>`<span class="worker-chip">${_e(w.name)} <small>${_e(_typeText(w.worker_type||'primary'))}</small></span>`).join('')+'</div>':'<small class="warn-text">لا يوجد عمال مربوطون بهذا المشروع. اربط العمال من الإدارة أولاً.</small>';
+  }
+  function bindV51(){ ensureMonthlyHeader(); renderLogWorkersPreviewV51(); const att=document.getElementById('attendanceProject'); if(att&&!att.__v51){ att.__v51=true; att.addEventListener('change',()=>window.renderSupervisorAttendanceList()); } const log=document.getElementById('logProject'); if(log&&!log.__v51){ log.__v51=true; log.addEventListener('change',renderLogWorkersPreviewV51); } if(document.getElementById('supervisorAttendanceList')) window.renderSupervisorAttendanceList(); }
+  const oldInit=window.initSupervisor; window.initSupervisor=async function(){ if(typeof oldInit==='function') await oldInit.apply(this,arguments); setTimeout(bindV51,80); setTimeout(bindV51,500); };
+  const oldShow=window.showSupervisorWindow; window.showSupervisorWindow=function(id,btn){ if(typeof oldShow==='function') oldShow.apply(this,arguments); if(id==='supAttendance'||id==='supLogs') setTimeout(bindV51,80); };
+  const oldRenderAll=window.renderAll; window.renderAll=function(){ if(typeof oldRenderAll==='function') oldRenderAll.apply(this,arguments); setTimeout(bindV51,60); };
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(bindV51,300)); window.addEventListener('load',()=>setTimeout(bindV51,900));
+})();
