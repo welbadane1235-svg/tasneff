@@ -60,7 +60,7 @@
         </div>
         <div class="card">
           <h2>التسجيلات اليومية</h2>
-          <div class="filters"><input type="date" id="dailyDate" onchange="renderTimeLogs()"><select id="dailySupervisor" onchange="renderTimeLogs()"></select><select id="dailyProject" onchange="renderTimeLogs()"></select><input id="dailySearch" oninput="renderTimeLogs()" placeholder="بحث"></div>
+          <div class="filters"><input type="date" id="dailyDate" onchange="renderTimeLogs()"><select id="dailySupervisor" onchange="renderTimeLogs()"></select><select id="dailyProject" onchange="renderTimeLogs()"></select><input id="dailySearch" oninput="renderTimeLogs()" placeholder="بحث"><button type="button" class="light" onclick="exportDailyManagerPDF()">تصدير PDF تقرير يومي</button></div>
           <div class="table-wrap"><table><thead><tr><th>التاريخ</th><th>المشرف</th><th>المشروع</th><th>نوع الزيارة</th><th>الدخول</th><th>الخروج</th><th>الوقت المطلوب</th><th>المدة الفعلية</th><th>الفرق</th><th>حالة الوقت</th><th>انتقال</th><th>ملاحظات</th><th>واتساب</th><th>إجراء</th></tr></thead><tbody id="logsBody"></tbody></table></div>
         </div>
       </div>
@@ -258,6 +258,6 @@
     <section id="export" class="page hidden"><div class="card"><h2>التصدير</h2><p>صدّر بيانات النظام الحالية بصيغة CSV.</p><div class="actions"><button onclick="exportTable('app_users')">المستخدمين</button><button onclick="exportTable('projects')">المشاريع</button><button onclick="exportTable('workers')">العمال</button><button onclick="exportTable('attendance')">الحضور</button><button onclick="exportTable('time_logs')">التسجيلات اليومية</button><button onclick="exportTable('tickets')">التكتات</button></div></div></section>
   </main>
 </div>
-<script src="app.js?v=51"></script>
+<script src="app.js?v=52"></script>
 </body>
 </html>
