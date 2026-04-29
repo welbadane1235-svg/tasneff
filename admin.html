@@ -216,7 +216,7 @@
       </div>
     </section>
 
-    <section id="monthly" class="page hidden"><div class="card"><h2>الأوقات الشهرية</h2><div class="filters"><input type="month" id="monthlyMonth" onchange="renderMonthly()"><select id="monthlySupervisor" onchange="renderMonthly()"></select><button onclick="exportMonthlyCSV()">تصدير CSV</button></div><div id="monthlySummary" class="kpis small"></div><div class="table-wrap"><table><thead><tr><th>المشرف</th><th>المشروع</th><th>عدد السجلات</th><th>الساعات المطلوبة</th><th>الساعات الفعلية</th><th>وقت الانتقال</th><th>نسبة العمل</th><th>حالة الأداء</th></tr></thead><tbody id="monthlyBody"></tbody></table></div></div></section>
+    <section id="monthly" class="page hidden"><div class="card"><h2>الأوقات الشهرية</h2><div class="filters"><input type="month" id="monthlyMonth" onchange="renderMonthly()"><select id="monthlySupervisor" onchange="renderMonthly()"></select><button onclick="exportMonthlyCSV()">تصدير CSV</button><button onclick="printMonthlyReportV57()">طباعة تقرير الأوقات الشهرية</button></div><div id="monthlySummary" class="kpis small"></div><div class="table-wrap"><table><thead><tr><th>المشرف</th><th>المشروع</th><th>عدد السجلات</th><th>الساعات المطلوبة</th><th>الساعات الفعلية</th><th>وقت الانتقال</th><th>نسبة العمل</th><th>حالة الأداء</th></tr></thead><tbody id="monthlyBody"></tbody></table></div></div></section>
 
     <section id="tickets" class="page hidden">
       <div class="grid two">
@@ -258,6 +258,6 @@
     <section id="export" class="page hidden"><div class="card"><h2>التصدير</h2><p>صدّر بيانات النظام الحالية بصيغة CSV.</p><div class="actions"><button onclick="exportTable('app_users')">المستخدمين</button><button onclick="exportTable('projects')">المشاريع</button><button onclick="exportTable('workers')">العمال</button><button onclick="exportTable('attendance')">الحضور</button><button onclick="exportTable('time_logs')">التسجيلات اليومية</button><button onclick="exportTable('tickets')">التكتات</button></div></div></section>
   </main>
 </div>
-<script src="app.js?v=56"></script>
+<script src="app.js?v=57"></script>
 </body>
 </html>
