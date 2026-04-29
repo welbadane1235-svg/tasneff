@@ -1428,3 +1428,101 @@ function printMonthlyReportV57(){
   </style></head><body><div class="page"><div class="top"><div class="brand"><div class="logo">تصنيف</div><div><h2>شركة تصنيف</h2><small>إدارة المرافق والتشغيل</small></div></div><div class="title"><h1>تقرير الأوقات الشهرية</h1><p>المسؤول: وائل شاكر</p></div></div><div class="meta"><div class="box"><b>الشهر</b><strong>${reportEscV52(monthLabelV57(month))}</strong></div><div class="box"><b>المشرف</b><strong>${reportEscV52(sup)}</strong></div><div class="box"><b>عدد المشاريع</b><strong>${rows.length}</strong></div><div class="box"><b>نسبة العمل الإجمالية</b><strong>${reportEscV52(percentText(totalPct))}</strong></div></div><div class="section"><span>ملخص المشرفين والمشاريع</span></div><div class="super-grid avoid">${groupCards}</div><div class="section"><span>تفاصيل الأوقات الشهرية</span></div><table class="details"><thead><tr><th>المشرف</th><th>المشروع</th><th>أسماء العمال</th><th>الوقت الفعلي</th><th>الوقت المطلوب</th><th>الفرق</th><th>نسبة العمل</th><th>حالة الوقت</th></tr></thead><tbody>${detailRows}</tbody></table><div class="section"><span>ملخص التقرير</span></div><div class="kpis"><div class="kpi"><strong>${reportEscV52(minsToText(actualTotal))}</strong><span>إجمالي الوقت الفعلي</span></div><div class="kpi"><strong>${reportEscV52(minsToText(requiredTotal))}</strong><span>إجمالي الوقت المطلوب</span></div><div class="kpi"><strong>${reportEscV52(monthlyDiffTextV57(actualTotal-requiredTotal))}</strong><span>إجمالي فرق الوقت</span></div><div class="kpi"><strong>${reportEscV52(percentText(totalPct))}</strong><span>نسبة العمل</span></div><div class="kpi"><strong>${over}</strong><span>زيادة وقت</span></div><div class="kpi"><strong>${under}</strong><span>ناقص وقت</span></div></div><div class="bottom"><div class="panel"><h3>ملاحظات المدير</h3><div class="line"></div><div class="line"></div></div><div class="panel"><h3>اعتماد مدير التشغيل</h3><p>الاسم: وائل شاكر</p><div class="line">التوقيع:</div></div></div><div class="footer">هذا التقرير مولّد آليًا من نظام تصنيف — يحفظ PDF من نافذة الطباعة</div><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></div></body></html>`;
   const w=window.open('','_blank'); if(!w){msg('المتصفح منع فتح نافذة التقرير. اسمح بالنوافذ المنبثقة','err');return} w.document.open();w.document.write(html);w.document.close();
 }
+
+/* ===== V59: Monthly work percentage formula like Excel =====
+   نسبة العمل = وقت المشروع الفعلي ÷ إجمالي وقت نفس المشرف × 100
+   نسبة الالتزام = الوقت الفعلي ÷ الوقت المطلوب × 100
+   حالة الوقت = حسب فرق الدقائق ±5
+*/
+function monthlyTimeClassV59(diff, required){
+  if(!Number(required||0)) return 'neutral';
+  diff=Number(diff||0);
+  if(diff < -5) return 'bad';
+  if(diff > 5) return 'warn';
+  return 'ok';
+}
+function monthlyTimeStatusV59(diff, required){
+  if(!Number(required||0)) return 'غير محدد';
+  diff=Number(diff||0);
+  if(diff < -5) return 'ناقص وقت';
+  if(diff > 5) return 'زيادة وقت';
+  return 'ضمن الوقت';
+}
+function monthlyCommitmentClassV59(percent, required){
+  if(!Number(required||0)) return 'neutral';
+  percent=Number(percent||0);
+  if(percent>=95 && percent<=105) return 'ok';
+  if(percent>105) return 'warn';
+  return 'bad';
+}
+function monthlyBaseRowsV59(){
+  const month=$('monthlyMonth')?.value||today().slice(0,7), sid=$('monthlySupervisor')?.value||'';
+  let logs=(data.logs||[]).filter(l=>{const d=l.log_date||String(l.check_in||'').slice(0,10);return d&&d.slice(0,7)===month});
+  if(sid) logs=logs.filter(l=>String(l.supervisor_id)===String(sid));
+  const map=new Map();
+  logs.forEach(l=>{
+    const k=(l.supervisor_id||'')+'_'+(l.project_id||'');
+    if(!map.has(k)) map.set(k,{s:l.supervisor_id,p:l.project_id,c:0,a:0,r:0,t:0});
+    const x=map.get(k);
+    x.c++;
+    x.a+=Number((typeof logActualMinutes==='function'?logActualMinutes(l):(l.duration_minutes||minutesBetween(l.check_in,l.check_out)))||0);
+    x.r+=Number((typeof logRequiredMinutes==='function'?logRequiredMinutes(l):l.required_minutes)||0);
+    x.t+=Number(l.travel_minutes||0);
+  });
+  const vals=[...map.values()];
+  const supTotals={};
+  vals.forEach(r=>{ const s=String(r.s||''); supTotals[s]=(supTotals[s]||0)+Number(r.a||0); });
+  return vals.map(r=>{
+    const supTotal=supTotals[String(r.s||'')]||0;
+    const workPercent=supTotal ? (r.a/supTotal*100) : 0;
+    const commitmentPercent=r.r ? (r.a/r.r*100) : 0;
+    const diff=r.a-r.r;
+    const cls=monthlyTimeClassV59(diff,r.r);
+    const st=monthlyTimeStatusV59(diff,r.r);
+    const ccls=monthlyCommitmentClassV59(commitmentPercent,r.r);
+    return {...r,supTotal,workPercent,commitmentPercent,diff,cls,st,ccls,workers:(typeof uniqueWorkersForProjectTextV56==='function'?uniqueWorkersForProjectTextV56(r.p):'-')};
+  }).sort((a,b)=>{const s=supervisorName(a.s).localeCompare(supervisorName(b.s),'ar');return s||projectName(a.p).localeCompare(projectName(b.p),'ar')});
+}
+function renderMonthly(){
+  const body=$('monthlyBody');
+  if(!body) return;
+  const vals=monthlyBaseRowsV59();
+  body.innerHTML=vals.map(r=>`<tr><td>${esc(supervisorName(r.s))}</td><td>${esc(projectName(r.p))}</td><td>${r.c}</td><td>${minsToText(r.r)}</td><td>${minsToText(r.a)}</td><td>${r.t} دقيقة</td><td><span class="badge green">${percentText(r.workPercent)}</span></td><td><span class="badge ${r.ccls}">${percentText(r.commitmentPercent)}</span></td><td><span class="badge ${r.cls}">${r.st}</span></td></tr>`).join('')||'<tr><td colspan="9">لا توجد بيانات</td></tr>';
+  const total=vals.reduce((a,r)=>a+r.a,0), required=vals.reduce((a,r)=>a+r.r,0), travel=vals.reduce((a,r)=>a+r.t,0), commitment=required?total/required*100:0;
+  const diff=total-required, cls=monthlyTimeClassV59(diff,required), status=monthlyTimeStatusV59(diff,required);
+  if($('monthlySummary')) $('monthlySummary').innerHTML=`<div class="kpi"><small>الساعات المطلوبة</small><b>${minsToText(required)}</b></div><div class="kpi"><small>الساعات الفعلية</small><b>${minsToText(total)}</b></div><div class="kpi"><small>فرق الوقت</small><b>${monthlyDiffTextV57(diff)}</b></div><div class="kpi"><small>وقت الانتقال</small><b>${travel} دقيقة</b></div><div class="kpi"><small>نسبة الالتزام</small><b>${percentText(commitment)}</b></div><div class="kpi"><small>حالة الأداء</small><b><span class="badge ${cls}">${status}</span></b></div>`;
+}
+function exportMonthlyCSV(){
+  const rows=[...document.querySelectorAll('#monthlyBody tr')].map(tr=>[...tr.children].map(td=>td.textContent.trim()));
+  const csv=['المشرف,المشروع,عدد السجلات,الساعات المطلوبة,الساعات الفعلية,وقت الانتقال,نسبة العمل,نسبة الالتزام,حالة الوقت',...rows.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(','))].join('\n');
+  download('monthly.csv',csv);
+}
+function monthlyReportRowsV58(){ return monthlyBaseRowsV59(); }
+function supervisorWorkersForMonthlyV58(supervisorId, rows){
+  const names=new Set();
+  rows.filter(r=>String(r.s)===String(supervisorId)).forEach(r=>{
+    String(r.workers||'').split(/[،,]/).map(x=>x.trim()).filter(Boolean).forEach(n=>{if(n!=='-') names.add(n)});
+  });
+  if(!names.size){
+    (data.workers||[]).filter(w=>String(workerSupId(w))===String(supervisorId)).forEach(w=>{if(w.name) names.add(w.name)});
+  }
+  return [...names].sort((a,b)=>a.localeCompare(b,'ar')).join('، ') || '-';
+}
+function printMonthlyReportV57(){
+  const rows=monthlyBaseRowsV59();
+  if(!rows.length){msg('لا توجد بيانات في الأوقات الشهرية للطباعة','err');return}
+  const month=$('monthlyMonth')?.value||today().slice(0,7), sup=$('monthlySupervisor')?.value?supervisorName($('monthlySupervisor').value):'الكل';
+  let actualTotal=0, requiredTotal=0, within=0, over=0, under=0;
+  rows.forEach(r=>{actualTotal+=r.a; requiredTotal+=r.r; if(r.st==='ضمن الوقت') within++; else if(r.st==='زيادة وقت') over++; else if(r.st==='ناقص وقت') under++;});
+  const commitmentTotal=requiredTotal ? actualTotal/requiredTotal*100 : 0;
+  const groups=new Map();
+  rows.forEach(r=>{const sid=String(r.s||''); if(!groups.has(sid)) groups.set(sid,[]); groups.get(sid).push(r);});
+  const groupCards=[...groups.entries()].map(([sid,items])=>{
+    const sActual=items.reduce((a,r)=>a+r.a,0), sReq=items.reduce((a,r)=>a+r.r,0), sCommit=sReq?sActual/sReq*100:0;
+    const projects=items.map(r=>`<tr><td class="pname">${reportEscV52(projectName(r.p))}</td><td>${reportEscV52(minsToText(r.a))}</td><td><span class="percent ok">${reportEscV52(percentText(r.workPercent))}</span></td></tr>`).join('');
+    return `<div class="super-card"><div class="super-head"><b>${reportEscV52(supervisorName(sid))}</b><span>${reportEscV52(minsToText(sActual))}</span></div><table class="mini"><thead><tr><th>المشروع</th><th>الفعلي</th><th>نسبة العمل</th></tr></thead><tbody>${projects}</tbody></table><div class="workers"><b>أسماء العمال</b><p>${reportEscV52(supervisorWorkersForMonthlyV58(sid,rows))}</p></div><div class="commitment">نسبة الالتزام: <b>${reportEscV52(percentText(sCommit))}</b></div></div>`;
+  }).join('');
+  const detailRows=rows.map(r=>`<tr><td>${reportEscV52(supervisorName(r.s))}</td><td>${reportEscV52(projectName(r.p))}</td><td>${reportEscV52(r.workers||'-')}</td><td>${reportEscV52(minsToText(r.a))}</td><td>${reportEscV52(minsToText(r.r))}</td><td>${reportEscV52(monthlyDiffTextV57(r.diff))}</td><td><span class="percent ok">${reportEscV52(percentText(r.workPercent))}</span></td><td><span class="percent ${r.ccls}">${reportEscV52(percentText(r.commitmentPercent))}</span></td><td><span class="pill ${r.cls}">${reportEscV52(r.st)}</span></td></tr>`).join('');
+  const html=`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير الأوقات الشهرية</title><style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;color:#123d32;background:#fff;font-size:11px}.page{min-height:100vh;padding:14px;background:radial-gradient(circle at top left,rgba(10,90,73,.10),transparent 32%),linear-gradient(135deg,#fff 0%,#fff 62%,rgba(199,162,77,.08));border:2px solid #0a5a49}.top{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0a5a49;padding-bottom:10px;margin-bottom:10px}.brand{display:flex;align-items:center;gap:10px}.logo{width:54px;height:54px;border-radius:50%;border:3px solid #c7a24d;display:grid;place-items:center;font-weight:900;color:#0a5a49}.brand h2{margin:0;font-size:19px;color:#0a5a49}.title{text-align:left}.title h1{margin:0;font-size:28px;color:#0a5a49}.title p{margin:4px 0 0;color:#68766e}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}.box{background:#fff;border:1px solid #d9e6e1;border-radius:13px;padding:9px;text-align:center}.box b{display:block;color:#63756d;font-size:10px}.box strong{font-size:16px;color:#0a5a49}.section{margin:12px 0 8px;text-align:center}.section span{display:inline-block;background:#0a5a49;color:#fff;border:2px solid #c7a24d;border-radius:999px;padding:7px 40px;font-weight:900}.super-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.super-card{background:#fff;border:2px solid #0a5a49;border-radius:10px;overflow:hidden;min-height:245px}.super-head{display:flex;justify-content:space-between;align-items:center;background:#f7fbfa;border-bottom:1px solid #d9e6e1;padding:7px 9px;color:#0a5a49}.super-head b{font-size:13px}.super-head span{font-weight:900}.mini,.details{width:100%;border-collapse:collapse}.mini th{background:#0a5a49;color:#fff;padding:6px;font-size:10px}.mini td{border-bottom:1px solid #e5eeee;padding:5px;text-align:center}.pname{text-align:right!important;font-weight:700}.workers{padding:8px;text-align:center}.workers b{display:block;color:#0a5a49;margin-bottom:5px}.workers p{margin:0;line-height:1.7;color:#243b34}.commitment{padding:7px;text-align:center;border-top:1px solid #e5eeee;color:#0a5a49}.details{margin-top:8px;border-radius:10px;overflow:hidden}.details th{background:#0a5a49;color:#fff;padding:7px}.details td{border:1px solid #e0e8e5;padding:6px;text-align:center}.percent,.pill{display:inline-block;border-radius:999px;padding:3px 8px;font-weight:900}.ok{background:#e5f6ec;color:#107338}.warn{background:#fff3d6;color:#8a5c00}.bad{background:#ffe5e5;color:#9d2020}.neutral{background:#edf1f4;color:#52616b}.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:8px}.kpi{background:#fff;border:1px solid #d9e6e1;border-radius:13px;padding:9px;text-align:center}.kpi strong{display:block;color:#0a5a49;font-size:16px}.kpi span{font-size:10px;color:#68766e}.bottom{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.panel{background:#fff;border:1px solid #d9e6e1;border-radius:12px;padding:9px}.panel h3{margin:0 0 8px;color:#0a5a49}.line{height:22px;border-bottom:1px dashed #afbeb8}.footer{text-align:center;margin-top:8px;color:#6a766f}.avoid{break-inside:avoid}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.page{border-radius:0}.super-card,.kpi,.panel{break-inside:avoid}}</style></head><body><div class="page"><div class="top"><div class="brand"><div class="logo">تصنيف</div><div><h2>شركة تصنيف</h2><small>إدارة المرافق والتشغيل</small></div></div><div class="title"><h1>تقرير الأوقات الشهرية</h1><p>المسؤول: وائل شاكر</p></div></div><div class="meta"><div class="box"><b>الشهر</b><strong>${reportEscV52(monthLabelV57(month))}</strong></div><div class="box"><b>المشرف</b><strong>${reportEscV52(sup)}</strong></div><div class="box"><b>عدد المشاريع</b><strong>${rows.length}</strong></div><div class="box"><b>نسبة الالتزام الإجمالية</b><strong>${reportEscV52(percentText(commitmentTotal))}</strong></div></div><div class="section"><span>ملخص المشرفين والمشاريع</span></div><div class="super-grid avoid">${groupCards}</div><div class="section"><span>تفاصيل الأوقات الشهرية</span></div><table class="details"><thead><tr><th>المشرف</th><th>المشروع</th><th>أسماء العمال</th><th>الوقت الفعلي</th><th>الوقت المطلوب</th><th>الفرق</th><th>نسبة العمل</th><th>نسبة الالتزام</th><th>حالة الوقت</th></tr></thead><tbody>${detailRows}</tbody></table><div class="section"><span>ملخص التقرير</span></div><div class="kpis"><div class="kpi"><strong>${reportEscV52(minsToText(actualTotal))}</strong><span>إجمالي الوقت الفعلي</span></div><div class="kpi"><strong>${reportEscV52(minsToText(requiredTotal))}</strong><span>إجمالي الوقت المطلوب</span></div><div class="kpi"><strong>${reportEscV52(monthlyDiffTextV57(actualTotal-requiredTotal))}</strong><span>إجمالي فرق الوقت</span></div><div class="kpi"><strong>${reportEscV52(percentText(commitmentTotal))}</strong><span>نسبة الالتزام</span></div><div class="kpi"><strong>${over}</strong><span>زيادة وقت</span></div><div class="kpi"><strong>${under}</strong><span>ناقص وقت</span></div></div><div class="bottom"><div class="panel"><h3>ملاحظات المدير</h3><div class="line"></div><div class="line"></div></div><div class="panel"><h3>اعتماد مدير التشغيل</h3><p>الاسم: وائل شاكر</p><div class="line">التوقيع:</div></div></div><div class="footer">ملاحظة: نسبة العمل = وقت المشروع ÷ إجمالي وقت المشرف. نسبة الالتزام = الوقت الفعلي ÷ الوقت المطلوب.</div><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></div></body></html>`;
+  const w=window.open('','_blank'); if(!w){msg('المتصفح منع فتح نافذة التقرير. اسمح بالنوافذ المنبثقة','err');return} w.document.open();w.document.write(html);w.document.close();
+}
