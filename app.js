@@ -1848,3 +1848,198 @@ function monthlyReportRowsV58(){return monthlyRowsV60()}
   };
   window.addEventListener('load', ()=>setTimeout(lockJourneySupervisorForSupervisorV64, 900));
 })();
+
+/* ===== V65: Cloud daily journeys + fixed productivity + admin visibility ===== */
+(function(){
+  function uV65(){ try{return typeof session==='function'?session():JSON.parse(localStorage.getItem('tasneef_user')||'null')}catch(e){return null} }
+  function escV65(v){ return String(v ?? '').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function todayV65(){ return typeof today==='function'?today():new Date().toISOString().slice(0,10); }
+  function fmtMinsV65(m){ m=Math.max(0,Math.round(Number(m)||0)); const h=Math.floor(m/60), mm=m%60; return h+':'+String(mm).padStart(2,'0'); }
+  function normV65(v){ return String(v||'').trim().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' '); }
+  function localDateV65(date,time){ if(!date||!time) return null; return new Date(date+'T'+time+':00'); }
+  function dateTimeIsoV65(date,time,plusDay){ const d=localDateV65(date,time); if(!d) return null; if(plusDay) d.setDate(d.getDate()+1); return d.toISOString(); }
+  function rangeV65(date,start,end){
+    const s=localDateV65(date,start), e=localDateV65(date,end);
+    if(!s||!e) return {start:null,end:null,total:0,overnight:false};
+    let overnight=false;
+    if(e<s){ e.setDate(e.getDate()+1); overnight=true; }
+    return {start:s,end:e,total:Math.max(0,Math.round((e-s)/60000)),overnight};
+  }
+  function logDayV65(l){ return l.log_date || String(l.check_in||'').slice(0,10); }
+  function overlapMinutesV65(log, start, end){
+    if(!log.check_in || !log.check_out || !start || !end) return 0;
+    let a=new Date(log.check_in), b=new Date(log.check_out);
+    if(b<a) b=new Date(b.getTime()+24*60*60000);
+    const os=Math.max(a.getTime(), start.getTime());
+    const oe=Math.min(b.getTime(), end.getTime());
+    return Math.max(0, Math.round((oe-os)/60000));
+  }
+  function journeySupIdV65(){
+    const u=uV65();
+    if(u && u.role==='supervisor') return String(u.id);
+    const sel=document.getElementById('journeySupervisorV61');
+    return sel ? String(sel.value||'') : '';
+  }
+  function supervisorLabelV65(id){
+    const u=uV65();
+    if(u && String(u.id)===String(id)) return u.full_name || u.username || 'المشرف';
+    try{ if(typeof supervisorName==='function') return supervisorName(id) || 'المشرف'; }catch(e){}
+    const s=(data.supervisors||[]).find(x=>String(x.id)===String(id));
+    return s ? (s.full_name||s.username||'المشرف') : 'المشرف';
+  }
+  function workersForSupervisorTextV65(supervisorId){
+    const projectIds=new Set((data.projects||[]).filter(p=>String(p.supervisor_id||'')===String(supervisorId)).map(p=>String(p.id)));
+    const names=[];
+    (data.workers||[]).forEach(w=>{
+      const ok=String(w.supervisor_id||'')===String(supervisorId) || String(w.app_supervisor_id||'')===String(supervisorId) || projectIds.has(String(w.project_id||''));
+      if(ok && (w.name||w.full_name)) names.push(w.name||w.full_name);
+    });
+    const seen=new Set();
+    const unique=names.filter(n=>{const k=normV65(n); if(!k||seen.has(k)) return false; seen.add(k); return true;});
+    return unique.join('، ') || '-';
+  }
+  function calcJourneyV65(date, sup, startTime, endTime){
+    const r=rangeV65(date,startTime,endTime);
+    let logs=(data.logs||[]).filter(l=>logDayV65(l)===date && l.check_in && l.check_out);
+    if(sup) logs=logs.filter(l=>String(l.supervisor_id)===String(sup));
+    const work=logs.reduce((sum,l)=>sum+overlapMinutesV65(l,r.start,r.end),0);
+    const safeWork=Math.min(work,r.total||0);
+    const travel=Math.max(0,(r.total||0)-safeWork);
+    const productivity=r.total?Math.min(100,Math.round((safeWork/r.total)*1000)/10):0;
+    const conflict=work>r.total;
+    return {total:r.total||0, work:safeWork, rawWork:work, travel, productivity, overnight:r.overnight, conflict};
+  }
+  function openWhatsappV65(text){
+    let opened=null;
+    try{ opened=window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank'); }catch(e){}
+    try{ navigator.clipboard && navigator.clipboard.writeText && navigator.clipboard.writeText(text); }catch(e){}
+    if(typeof msg==='function') msg(opened?'تم فتح واتساب وتجهيز الرسالة':'تم نسخ رسالة الواتساب، افتح واتساب والصقها');
+  }
+  function journeyMsgV65(type,sup,date,time){
+    const title=type==='start'?'حضور المشرف وعماله':'انصراف المشرف وعماله';
+    const label=type==='start'?'وقت الخروج من السكن':'وقت الرجوع للسكن';
+    return [title,'','المشرف: '+supervisorLabelV65(sup),'أسماء العمال: '+workersForSupervisorTextV65(sup),'التاريخ: '+date,label+': '+(time||'-'),'','شركة تصنيف لإدارة المرافق'].join('\n');
+  }
+  async function fetchJourneyRowsV65(date,sup){
+    try{
+      let q=sb.from('daily_journeys').select('*').eq('journey_date',date).order('supervisor_id',{ascending:true});
+      if(sup) q=q.eq('supervisor_id',Number(sup));
+      const {data:rows,error}=await q;
+      if(error) throw error;
+      return rows||[];
+    }catch(e){
+      window.__journeyCloudErrorV65=e.message||String(e);
+      return [];
+    }
+  }
+  async function saveJourneyCloudV65(date,sup,start,end,calc){
+    const r=rangeV65(date,start,end);
+    const row={
+      supervisor_id:Number(sup),
+      journey_date:date,
+      housing_out_time:start?dateTimeIsoV65(date,start,false):null,
+      housing_return_time:end?dateTimeIsoV65(date,end,r.overnight):null,
+      total_minutes:calc.total,
+      project_minutes:calc.work,
+      travel_minutes:calc.travel,
+      productivity_percent:calc.productivity,
+      updated_at:new Date().toISOString()
+    };
+    const user=uV65();
+    if(user){ row.updated_by=user.id; if(!row.created_by) row.created_by=user.id; }
+    const {error}=await sb.from('daily_journeys').upsert(row,{onConflict:'supervisor_id,journey_date'});
+    if(error) throw error;
+  }
+  function lockSupervisorSelectV65(){
+    const u=uV65(), sel=document.getElementById('journeySupervisorV61');
+    if(!sel) return;
+    if(u && u.role==='supervisor'){
+      sel.innerHTML='<option value="'+escV65(u.id)+'">'+escV65(u.full_name||u.username||'المشرف')+'</option>';
+      sel.value=String(u.id); sel.disabled=true;
+    }else{
+      sel.disabled=false;
+      if(!sel.options.length || !sel.querySelector('option[value=""]')){
+        sel.innerHTML='<option value="">الكل</option>'+(data.supervisors||[]).map(s=>'<option value="'+escV65(s.id)+'">'+escV65(s.full_name||s.username)+'</option>').join('');
+      }
+    }
+  }
+  function ensureJourneyExtrasV65(){
+    const box=document.getElementById('journeyBoxV61');
+    if(!box) return;
+    if(!document.getElementById('journeySavedRowsV65')){
+      const div=document.createElement('div');
+      div.id='journeySavedRowsV65';
+      div.className='table-wrap';
+      div.style.marginTop='16px';
+      div.innerHTML='<table><thead><tr><th>التاريخ</th><th>المشرف</th><th>خروج السكن</th><th>رجوع السكن</th><th>إجمالي اليوم</th><th>داخل المشاريع</th><th>تنقل / ضائع</th><th>الإنتاجية</th></tr></thead><tbody><tr><td colspan="8">جاري التحميل...</td></tr></tbody></table>';
+      box.appendChild(div);
+    }
+  }
+  function timeFromIsoV65(v){ if(!v) return '-'; try{return new Date(v).toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});}catch(e){return '-'} }
+  async function renderSavedJourneyRowsV65(){
+    const div=document.getElementById('journeySavedRowsV65'); if(!div) return;
+    const date=document.getElementById('journeyDateV61')?.value||todayV65();
+    const sup=journeySupIdV65();
+    const rows=await fetchJourneyRowsV65(date,sup);
+    const tbody=div.querySelector('tbody'); if(!tbody) return;
+    if(window.__journeyCloudErrorV65 && !rows.length){
+      tbody.innerHTML='<tr><td colspan="8">لم يتم تحميل رحلات السحابة. شغّل ملف schema_update_v65_daily_journeys.sql أولًا.</td></tr>';
+      return;
+    }
+    tbody.innerHTML=rows.map(r=>'<tr><td>'+escV65(r.journey_date)+'</td><td>'+escV65(supervisorLabelV65(r.supervisor_id))+'</td><td>'+timeFromIsoV65(r.housing_out_time)+'</td><td>'+timeFromIsoV65(r.housing_return_time)+'</td><td>'+fmtMinsV65(r.total_minutes)+'</td><td>'+fmtMinsV65(r.project_minutes)+'</td><td>'+fmtMinsV65(r.travel_minutes)+'</td><td>'+Number(r.productivity_percent||0).toFixed(1)+'%</td></tr>').join('') || '<tr><td colspan="8">لا توجد رحلات محفوظة لهذا اليوم</td></tr>';
+  }
+  function fillSavedFieldsFromCloudV65(row){
+    if(!row) return;
+    const s=document.getElementById('journeyStartV61'), e=document.getElementById('journeyEndV61');
+    if(s && row.housing_out_time && !s.value) s.value=new Date(row.housing_out_time).toTimeString().slice(0,5);
+    if(e && row.housing_return_time && !e.value) e.value=new Date(row.housing_return_time).toTimeString().slice(0,5);
+  }
+  async function loadCurrentJourneyCloudV65(){
+    const date=document.getElementById('journeyDateV61')?.value||todayV65();
+    const sup=journeySupIdV65();
+    if(!sup) return;
+    const rows=await fetchJourneyRowsV65(date,sup);
+    fillSavedFieldsFromCloudV65(rows[0]);
+    window.renderJourneyV61(false);
+  }
+  window.renderJourneyV61=function(loadCloud=true){
+    lockSupervisorSelectV65();
+    ensureJourneyExtrasV65();
+    const date=document.getElementById('journeyDateV61')?.value||todayV65();
+    const sup=journeySupIdV65();
+    const start=document.getElementById('journeyStartV61')?.value||'';
+    const end=document.getElementById('journeyEndV61')?.value||'';
+    const c=calcJourneyV65(date,sup,start,end);
+    const res=document.getElementById('journeyResultV61');
+    if(res){
+      const warn=c.conflict?'<div class="kpi" style="grid-column:1/-1"><small>تنبيه</small><b style="font-size:18px;color:#9a6b00">يوجد تداخل أو تعارض في سجلات المشاريع، وتم ضبط الإنتاجية حتى لا تتجاوز 100%</b></div>':'';
+      res.innerHTML='<div class="kpi"><small>إجمالي اليوم</small><b>'+fmtMinsV65(c.total)+'</b></div><div class="kpi"><small>داخل المشاريع</small><b>'+fmtMinsV65(c.work)+'</b></div><div class="kpi"><small>تنقل / ضائع</small><b>'+fmtMinsV65(c.travel)+'</b></div><div class="kpi"><small>نسبة الإنتاجية</small><b>'+c.productivity+'%</b></div>'+warn;
+    }
+    if(loadCloud){ setTimeout(loadCurrentJourneyCloudV65,10); setTimeout(renderSavedJourneyRowsV65,60); }
+  };
+  window.saveJourneyV61=async function(){
+    lockSupervisorSelectV65();
+    const date=document.getElementById('journeyDateV61')?.value||todayV65();
+    const sup=journeySupIdV65();
+    const start=document.getElementById('journeyStartV61')?.value||'';
+    const end=document.getElementById('journeyEndV61')?.value||'';
+    if(!sup){ if(typeof msg==='function') msg('اختر مشرف محدد لحفظ رحلة التشغيل','err'); return; }
+    if(!start && !end){ if(typeof msg==='function') msg('أدخل وقت الخروج من السكن أو وقت الرجوع للسكن','err'); return; }
+    let previous={}; try{ previous=JSON.parse(localStorage.getItem('tasneef_journey_'+date+'_'+sup)||'{}'); }catch(e){}
+    const c=calcJourneyV65(date,sup,start,end);
+    localStorage.setItem('tasneef_journey_'+date+'_'+sup,JSON.stringify({start,end,updated_at:new Date().toISOString()}));
+    try{
+      await saveJourneyCloudV65(date,sup,start,end,c);
+      if(typeof msg==='function') msg('تم حفظ رحلة التشغيل في السحابة');
+    }catch(e){
+      if(typeof msg==='function') msg('تم الحفظ محليًا فقط. شغّل SQL جدول رحلات التشغيل: '+(e.message||e),'err');
+    }
+    window.renderJourneyV61(false);
+    renderSavedJourneyRowsV65();
+    if(start && start!==previous.start) openWhatsappV65(journeyMsgV65('start',sup,date,start));
+    else if(end && end!==previous.end) openWhatsappV65(journeyMsgV65('end',sup,date,end));
+  };
+  const oldRenderAllV65=window.renderAll;
+  window.renderAll=function(){ if(typeof oldRenderAllV65==='function') oldRenderAllV65.apply(this,arguments); setTimeout(()=>{lockSupervisorSelectV65(); ensureJourneyExtrasV65(); window.renderJourneyV61(false); renderSavedJourneyRowsV65();},350); };
+  window.addEventListener('load',()=>setTimeout(()=>{lockSupervisorSelectV65(); ensureJourneyExtrasV65(); window.renderJourneyV61();},1200));
+})();
