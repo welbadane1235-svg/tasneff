@@ -2218,3 +2218,81 @@ function monthlyReportRowsV58(){return monthlyRowsV60()}
   window.renderAll=function(){ if(typeof oldRenderAllV66==='function') oldRenderAllV66.apply(this,arguments); setTimeout(()=>{lockSupV66(); ensureBoxV66(); window.renderJourneyV61(false); renderRowsV66();},450); };
   window.addEventListener('load',()=>setTimeout(()=>{lockSupV66(); ensureBoxV66(); window.renderJourneyV61(false); renderRowsV66();},1500));
 })();
+
+/* ===== V67: Load saved cloud journey into form/cards when date or supervisor changes ===== */
+(function(){
+  function sessionV67(){ try{return typeof session==='function'?session():JSON.parse(localStorage.getItem('tasneef_user')||'null')}catch(e){return null} }
+  function todayV67(){ return typeof today==='function'?today():new Date().toISOString().slice(0,10); }
+  function fmtMinsV67(m){ m=Math.max(0,Math.round(Number(m)||0)); const h=Math.floor(m/60), mm=m%60; return h+':'+String(mm).padStart(2,'0'); }
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function isoToInputTimeV67(v){
+    if(!v) return '';
+    try{ const d=new Date(v); return pad(d.getHours())+':'+pad(d.getMinutes()); }catch(e){ return ''; }
+  }
+  function getSupV67(){
+    const u=sessionV67();
+    if(u && u.role==='supervisor') return String(u.id);
+    const sel=document.getElementById('journeySupervisorV61');
+    return sel ? String(sel.value||'') : '';
+  }
+  function showJourneyCardsFromRowV67(row){
+    const res=document.getElementById('journeyResultV61');
+    if(!res || !row) return;
+    res.innerHTML =
+      '<div class="kpi"><small>إجمالي اليوم</small><b>'+fmtMinsV67(row.total_minutes)+'</b></div>'+
+      '<div class="kpi"><small>داخل المشاريع</small><b>'+fmtMinsV67(row.project_minutes)+'</b></div>'+
+      '<div class="kpi"><small>تنقل / ضائع</small><b>'+fmtMinsV67(row.travel_minutes)+'</b></div>'+
+      '<div class="kpi"><small>نسبة الإنتاجية</small><b>'+Number(row.productivity_percent||0).toFixed(1)+'%</b></div>';
+  }
+  async function fetchSavedJourneyV67(date,sup){
+    if(typeof sb==='undefined' || !sb || !sup) return null;
+    const {data:rows,error}=await sb.from('daily_journeys')
+      .select('*')
+      .eq('journey_date',date)
+      .eq('supervisor_id',Number(sup))
+      .limit(1);
+    if(error) throw error;
+    return rows && rows[0] ? rows[0] : null;
+  }
+  window.loadSavedJourneyToFormV67 = async function(force){
+    const date=document.getElementById('journeyDateV61')?.value || todayV67();
+    const sup=getSupV67();
+    if(!sup) return;
+    try{
+      const row=await fetchSavedJourneyV67(date,sup);
+      if(!row) return;
+      const s=document.getElementById('journeyStartV61');
+      const e=document.getElementById('journeyEndV61');
+      const st=isoToInputTimeV67(row.housing_out_time);
+      const et=isoToInputTimeV67(row.housing_return_time);
+      if(s && (force || !s.value)) s.value=st;
+      if(e && (force || !e.value)) e.value=et;
+      showJourneyCardsFromRowV67(row);
+    }catch(err){
+      try{ if(typeof msg==='function') msg('لم يتم تحميل رحلة التشغيل من السحابة: '+(err.message||err),'err'); }catch(e){}
+    }
+  };
+
+  const oldRenderV67=window.renderJourneyV61;
+  window.renderJourneyV61=function(loadCloud){
+    if(typeof oldRenderV67==='function') oldRenderV67.apply(this, arguments);
+    // عند فتح الصفحة أو تغيير التاريخ، اعرض القيم المحفوظة من السحابة بدل بقايا localStorage
+    if(loadCloud !== false) setTimeout(()=>window.loadSavedJourneyToFormV67(true), 150);
+  };
+
+  function bindV67(){
+    ['journeyDateV61','journeySupervisorV61'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el && !el.dataset.v67Bound){
+        el.dataset.v67Bound='1';
+        el.addEventListener('change',()=>setTimeout(()=>window.loadSavedJourneyToFormV67(true),120));
+      }
+    });
+  }
+  const oldRenderAllV67=window.renderAll;
+  window.renderAll=function(){
+    if(typeof oldRenderAllV67==='function') oldRenderAllV67.apply(this, arguments);
+    setTimeout(()=>{ bindV67(); window.loadSavedJourneyToFormV67(true); },700);
+  };
+  window.addEventListener('load',()=>setTimeout(()=>{ bindV67(); window.loadSavedJourneyToFormV67(true); },1800));
+})();
