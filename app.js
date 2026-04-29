@@ -2297,7 +2297,7 @@ function monthlyReportRowsV58(){return monthlyRowsV60()}
   window.addEventListener('load',()=>setTimeout(()=>{ bindV67(); window.loadSavedJourneyToFormV67(true); },1800));
 })();
 
-/* ===== V68: Daily summary uses saved daily_journeys for work/travel ===== */
+/* ===== V69: Daily summary hybrid daily_journeys + time_logs fallback ===== */
 (function(){
   function esc68(v){ try{return typeof esc==='function'?esc(v):String(v??'');}catch(e){return String(v??'');} }
   function session68(){ try{return typeof session==='function'?session():JSON.parse(localStorage.getItem('tasneef_user')||'null')}catch(e){return null} }
@@ -2356,9 +2356,20 @@ function monthlyReportRowsV58(){return monthlyRowsV60()}
     let workMinutes=fallbackLogWork68(logs);
     let travelMinutes=fallbackLogTravel68(logs);
     const journeys=await fetchJourneys68(r, supervisorId);
+
+    // V69: حساب هجين: الرحلات المحفوظة لا تخفي سجلات باقي المشرفين
+    // المشرف/اليوم الذي له رحلة محفوظة نستخدم أرقام daily_journeys له
+    // وباقي المشرفين/الأيام بدون رحلة محفوظة نستخدم سجلات time_logs كاحتياط
     if(journeys.length){
-      workMinutes=journeys.reduce((s,j)=>s+Number(j.project_minutes||0),0);
-      travelMinutes=journeys.reduce((s,j)=>s+Number(j.travel_minutes||0),0);
+      const journeyKeys=new Set(journeys.map(j=>`${String(j.supervisor_id||'')}|${String(j.journey_date||'')}`));
+      const journeyWork=journeys.reduce((s,j)=>s+Number(j.project_minutes||0),0);
+      const journeyTravel=journeys.reduce((s,j)=>s+Number(j.travel_minutes||0),0);
+      const logsWithoutJourney=logs.filter(l=>{
+        const k=`${String(l.supervisor_id||'')}|${String(dateOfLog68(l)||'')}`;
+        return !journeyKeys.has(k);
+      });
+      workMinutes=journeyWork + fallbackLogWork68(logsWithoutJourney);
+      travelMinutes=journeyTravel + fallbackLogTravel68(logsWithoutJourney);
     }
 
     const attendance=(window.data?.attendance||[]).filter(a=>{
