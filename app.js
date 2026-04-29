@@ -1720,3 +1720,131 @@ function monthlyReportRowsV58(){return monthlyRowsV60()}
 
 
 /* ===== V62: WhatsApp messages use attendance/departure wording with supervisor and workers ===== */
+
+/* ===== V64: WhatsApp for housing journey tied to logged-in supervisor account ===== */
+(function(){
+  function escV64(v){
+    return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function normNameV64(v){
+    return String(v || '')
+      .trim()
+      .replace(/[أإآ]/g,'ا')
+      .replace(/ى/g,'ي')
+      .replace(/ة/g,'ه')
+      .replace(/\s+/g,' ');
+  }
+  function currentUserV64(){
+    try { return typeof session === 'function' ? session() : JSON.parse(localStorage.getItem('tasneef_user') || 'null'); }
+    catch(e){ return null; }
+  }
+  function currentJourneySupervisorIdV64(){
+    const u=currentUserV64();
+    if(u && u.role === 'supervisor') return String(u.id);
+    const sel=document.getElementById('journeySupervisorV61');
+    return sel ? String(sel.value || '') : '';
+  }
+  function supervisorLabelV64(id){
+    const u=currentUserV64();
+    if(u && String(u.id)===String(id)) return u.full_name || u.username || 'المشرف';
+    if(typeof supervisorName === 'function') return supervisorName(id) || 'المشرف';
+    const s=(data.supervisors||[]).find(x=>String(x.id)===String(id));
+    return s ? (s.full_name || s.username || 'المشرف') : 'المشرف';
+  }
+  function todayV64(){ return typeof today === 'function' ? today() : new Date().toISOString().slice(0,10); }
+  function getSupervisorWorkersV64(supervisorId){
+    const names=[];
+    const projectIds=(data.projects||[])
+      .filter(p => String(p.supervisor_id || '') === String(supervisorId))
+      .map(p => String(p.id));
+    (data.workers||[]).forEach(w=>{
+      const bySupervisor = String(w.supervisor_id || '') === String(supervisorId) || String(w.app_supervisor_id || '') === String(supervisorId);
+      const byProject = projectIds.includes(String(w.project_id || ''));
+      if(bySupervisor || byProject){
+        const n=String(w.name || w.full_name || '').trim();
+        if(n) names.push(n);
+      }
+    });
+    const seen=new Set();
+    return names.filter(n=>{
+      const key=normNameV64(n);
+      if(!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  function openWhatsappV64(text){
+    const url='https://wa.me/?text=' + encodeURIComponent(text);
+    let opened=null;
+    try { opened=window.open(url, '_blank'); } catch(e){}
+    try { if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text); } catch(e){}
+    if(typeof msg === 'function'){
+      msg(opened ? 'تم فتح واتساب وتجهيز الرسالة' : 'تم نسخ رسالة الواتساب، افتح واتساب والصقها');
+    }
+  }
+  function buildJourneyWhatsappV64(type, supervisorId, date, timeValue){
+    const workers=getSupervisorWorkersV64(supervisorId);
+    const title = type === 'start' ? 'حضور المشرف وعماله' : 'انصراف المشرف وعماله';
+    const timeLabel = type === 'start' ? 'وقت الخروج من السكن' : 'وقت الرجوع للسكن';
+    return [
+      title,
+      '',
+      'المشرف: ' + supervisorLabelV64(supervisorId),
+      'أسماء العمال: ' + (workers.length ? workers.join('، ') : '-'),
+      'التاريخ: ' + date,
+      timeLabel + ': ' + (timeValue || '-'),
+      '',
+      'شركة تصنيف لإدارة المرافق'
+    ].join('\n');
+  }
+  function lockJourneySupervisorForSupervisorV64(){
+    const u=currentUserV64();
+    const sel=document.getElementById('journeySupervisorV61');
+    if(!sel || !u || u.role !== 'supervisor') return;
+    sel.innerHTML = '<option value="'+escV64(u.id)+'">'+escV64(u.full_name || u.username || 'المشرف')+'</option>';
+    sel.value = String(u.id);
+    sel.disabled = true;
+  }
+  const oldRenderJourneyV64 = window.renderJourneyV61;
+  window.renderJourneyV61 = function(){
+    lockJourneySupervisorForSupervisorV64();
+    if(typeof oldRenderJourneyV64 === 'function') return oldRenderJourneyV64.apply(this, arguments);
+  };
+  const oldSaveJourneyV64 = window.saveJourneyV61;
+  window.saveJourneyV61 = function(){
+    const u=currentUserV64();
+    const date=document.getElementById('journeyDateV61')?.value || todayV64();
+    let sup=currentJourneySupervisorIdV64();
+    if(u && u.role === 'supervisor') sup=String(u.id);
+    if(!sup){
+      if(typeof msg==='function') msg('اختر مشرف محدد لإرسال رسالة واتساب','err');
+      return;
+    }
+    const start=document.getElementById('journeyStartV61')?.value || '';
+    const end=document.getElementById('journeyEndV61')?.value || '';
+    let previous={};
+    try{
+      if(typeof loadJourneyV61 === 'function') previous = loadJourneyV61(date, sup) || {};
+      else previous = JSON.parse(localStorage.getItem('tasneef_journey_'+date+'_'+sup) || '{}');
+    }catch(e){ previous={}; }
+
+    if(typeof oldSaveJourneyV64 === 'function') oldSaveJourneyV64.apply(this, arguments);
+
+    // أرسل واتساب بناءً على الحقل الذي تم إدخاله/تغييره الآن.
+    if(start && start !== previous.start){
+      openWhatsappV64(buildJourneyWhatsappV64('start', sup, date, start));
+    } else if(end && end !== previous.end){
+      openWhatsappV64(buildJourneyWhatsappV64('end', sup, date, end));
+    } else if(start && !end){
+      openWhatsappV64(buildJourneyWhatsappV64('start', sup, date, start));
+    } else if(end){
+      openWhatsappV64(buildJourneyWhatsappV64('end', sup, date, end));
+    }
+  };
+  const oldRenderAllV64=window.renderAll;
+  window.renderAll=function(){
+    if(typeof oldRenderAllV64 === 'function') oldRenderAllV64.apply(this, arguments);
+    setTimeout(lockJourneySupervisorForSupervisorV64, 200);
+  };
+  window.addEventListener('load', ()=>setTimeout(lockJourneySupervisorForSupervisorV64, 900));
+})();
