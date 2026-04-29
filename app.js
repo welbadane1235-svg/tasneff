@@ -111,22 +111,33 @@ function diffText(m){ m=Number(m||0); return (m>0?'+':'') + m + ' دقيقة'; }
 function logDateText(l){ return l.log_date || String(l.check_in || l.created_at || today()).slice(0,10); }
 function logWorkersNames(l){
   const pid=String(l.project_id||''), sid=String(l.supervisor_id||'');
-  const rows=(data.workers||[]).filter(w =>
+  const seen=new Set();
+  const names=[];
+  (data.workers||[]).filter(w =>
     (pid && String(workerProjectId(w)||'')===pid) ||
     (!pid && sid && String(workerSupId(w)||'')===sid)
-  ).filter(w => w.status !== 'inactive');
-  return rows.map(w=>w.name).filter(Boolean).join('، ') || '-';
+  ).filter(w => String(w.status||'active').toLowerCase() !== 'inactive' && String(w.status||'active').toLowerCase() !== 'deleted')
+  .forEach(w=>{
+    const raw=String(w.name||'').trim();
+    if(!raw) return;
+    const key=(typeof tasneefNormNameV60==='function'?tasneefNormNameV60(raw):raw.replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim());
+    if(key && !seen.has(key)){ seen.add(key); names.push(raw); }
+  });
+  return names.join('، ') || '-';
 }
 function buildLogWhatsAppMessage(l, type){
   const isOut = type==='out' || !!l.check_out;
+  const title = isOut ? 'انصراف المشرف وعماله' : 'حضور المشرف وعماله';
+  const timeLabel = isOut ? 'وقت الانصراف' : 'وقت الحضور';
   return [
-    isOut ? 'تم تسجيل خروج' : 'تم تسجيل دخول',
+    title,
     '',
+    'المشرف: ' + supervisorName(l.supervisor_id),
     'اسم المشروع: ' + projectName(l.project_id),
     'نوع التنظيف: ' + visitTypeText(l.visit_type),
-    'اسم العمال: ' + logWorkersNames(l),
+    'أسماء العمال: ' + logWorkersNames(l),
     'التاريخ: ' + logDateText(l),
-    'الوقت: ' + (isOut ? timeOnly(l.check_out) : timeOnly(l.check_in))
+    timeLabel + ': ' + (isOut ? timeOnly(l.check_out) : timeOnly(l.check_in))
   ].join('\n');
 }
 function copyWhatsappText(text){
@@ -300,7 +311,7 @@ async function exportTable(table){ const {data:rows,error}=await sb.from(table).
 function exportMonthlyCSV(){ const rows=[...document.querySelectorAll('#monthlyBody tr')].map(tr=>[...tr.children].map(td=>td.textContent)); const csv=['المشرف,المشروع,عدد السجلات,الساعات المطلوبة,الساعات الفعلية,وقت الانتقال,نسبة العمل,حالة الأداء',...rows.map(r=>r.map(x=>'"'+x+'"').join(','))].join('\n'); download('monthly.csv',csv); }
 async function initSupervisor(){ const u=requireRole('supervisor'); if(!u) return; await loadAll(); data.projects=data.projects.filter(p=>String(p.supervisor_id)===String(u.id)); data.workers=data.workers.filter(w=>String(workerSupId(w))===String(u.id)); data.logs=data.logs.filter(l=>String(l.supervisor_id)===String(u.id)); const supProjectIds = new Set(data.projects.map(p=>String(p.id))); data.tickets=data.tickets.filter(t=>String(t.supervisor_id)===String(u.id) || String(t.created_by)===String(u.id) || supProjectIds.has(String(t.project_id))); $('supTitle').textContent=`لوحة المشرف - ${u.full_name}`; fillSelect('logProject',data.projects,'name','اختر المشروع'); fillSelect('attendanceProject',data.projects,'name','اختر المشروع'); fillSelect('ticketProject',data.projects,'name','اختر المشروع'); if($('logDate')) $('logDate').value=today(); if($('attendanceDate')) $('attendanceDate').value=today(); renderSupervisorAttendanceList(); renderTimeLogs(); }
 async function supervisorCheckIn(){ if(!$('logProject').value) return msg('اختر المشروع','err'); $('logDate').value=today(); $('logIn').value=nowTime(); $('logOut').value=''; await saveTimeLog(); await initSupervisor(); }
-async function supervisorCheckOut(){ const u=session(); const pid=$('logProject').value; const open=data.logs.find(l=>String(l.project_id)===String(pid)&&!l.check_out); if(open) editTimeLog(open.id); $('logOut').value=nowTime(); await saveTimeLog(); await initSupervisor(); }
+async function supervisorCheckOut(){ const u=session(); const pid=$('logProject').value; const date=$('logDate')?.value||today(); if(!pid) return msg('اختر المشروع','err'); const open=data.logs.find(l=>String(l.project_id)===String(pid)&&String(l.supervisor_id)===String(u.id)&&!l.check_out&&(l.log_date||String(l.check_in||'').slice(0,10))===date); if(open) editTimeLog(open.id); $('logOut').value=nowTime(); await saveTimeLog(); await initSupervisor(); }
 function renderSupervisorAttendanceList(){ const div=$('supervisorAttendanceList'); if(!div) return; div.innerHTML=data.workers.map(w=>`<div class="quick-item"><b>${esc(w.name)}</b><select data-worker="${w.id}"><option value="present">حاضر</option><option value="absent">غائب</option></select></div>`).join('')||'<div class="quick-item">لا يوجد عمال مرتبطين بك</div>'; }
 async function saveSupervisorAttendance(){ const u=session(); const date=$('attendanceDate').value||today(), project=Number($('attendanceProject').value)||null; const rows=[...document.querySelectorAll('#supervisorAttendanceList select')].map(s=>({attendance_date:date, worker_id:Number(s.dataset.worker), supervisor_id:u.id, project_id:project, status:s.value, created_by:u.id})); if(!rows.length) return; const {error}=await sb.from('attendance').upsert(rows,{onConflict:'attendance_date,worker_id'}); if(error) return msg(error.message,'err'); msg('تم حفظ التحضير'); await initSupervisor(); }
 
@@ -1656,3 +1667,6 @@ function monthlyReportRowsV58(){return monthlyRowsV60()}
   window.renderAll=function(){ if(typeof OLD_RENDER_ALL_V61==='function') OLD_RENDER_ALL_V61.apply(this,arguments); setTimeout(()=>{ensureJourneyBoxV61(); insertOpenLogsDashboardV61();},100); };
   window.addEventListener('load',()=>setTimeout(()=>{ensureJourneyBoxV61(); insertOpenLogsDashboardV61();},800));
 })();
+
+
+/* ===== V62: WhatsApp messages use attendance/departure wording with supervisor and workers ===== */
