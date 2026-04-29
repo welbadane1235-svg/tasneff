@@ -145,17 +145,48 @@ function copyWhatsappText(text){
   try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }catch(e){}
   return Promise.resolve();
 }
-function openWhatsappText(text){ window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank'); }
-window.sendLogWhatsapp = function(id, type){
+function prepareWhatsappPopupV63(){
+  try{
+    const w = window.open('', '_blank');
+    if(w){
+      try{ w.document.write('<html dir="rtl"><head><title>فتح واتساب</title></head><body style="font-family:Tahoma;padding:30px;text-align:center"><h3>جاري تجهيز رسالة واتساب...</h3><p>إذا لم ينتقل تلقائيًا، ارجع للتطبيق واضغط زر واتساب.</p></body></html>'); w.document.close(); }catch(e){}
+      window.__tasneefWaPopup = w;
+    }
+    return w;
+  }catch(e){ return null; }
+}
+function openWhatsappText(text){
+  const url = 'https://wa.me/?text=' + encodeURIComponent(text);
+  let w = window.__tasneefWaPopup || null;
+  window.__tasneefWaPopup = null;
+  try{
+    if(w && !w.closed){ w.location.href = url; return true; }
+  }catch(e){}
+  try{
+    const opened = window.open(url, '_blank');
+    if(opened) return true;
+  }catch(e){}
+  try{
+    const a=document.createElement('a');
+    a.href=url; a.target='_blank'; a.rel='noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+    return true;
+  }catch(e){}
+  return false;
+}
+function sendLogWhatsapp(id,type){
   const l=(data.logs||[]).find(x=>String(x.id)===String(id));
-  if(!l) return msg('لم يتم العثور على سجل الدخول والخروج','err');
+  if(!l) return msg('السجل غير موجود','err');
   const msgText=buildLogWhatsAppMessage(l, type || (l.check_out?'out':'in'));
-  copyWhatsappText(msgText).finally(()=>{ openWhatsappText(msgText); msg('تم تجهيز رسالة الواتساب'); });
-};
-function sendLogWhatsappFromRow(row, type){
-  if(!row) return;
+  openWhatsappText(msgText);
+  copyWhatsappText(msgText).catch(()=>{});
+  msg('تم تجهيز رسالة الواتساب');
+}
+function sendLogWhatsappFromRow(row,type){
   const msgText=buildLogWhatsAppMessage(row, type || (row.check_out?'out':'in'));
-  copyWhatsappText(msgText).finally(()=>openWhatsappText(msgText));
+  const ok = openWhatsappText(msgText);
+  copyWhatsappText(msgText).catch(()=>{});
+  msg(ok ? 'تم فتح واتساب وتجهيز الرسالة' : 'تم نسخ رسالة الواتساب، افتح واتساب والصقها');
 }
 function logWhatsappButtons(l){
   if(l.check_out){ return `<button class="small" style="background:#128C7E;color:#fff" onclick="sendLogWhatsapp(${l.id},'out')">واتساب خروج</button>`; }
@@ -310,8 +341,27 @@ function download(name,text){ const blob=new Blob([text],{type:'text/csv;charset
 async function exportTable(table){ const {data:rows,error}=await sb.from(table).select('*'); if(error) return msg(error.message,'err'); download(`${table}.csv`, toCSV(rows||[])); }
 function exportMonthlyCSV(){ const rows=[...document.querySelectorAll('#monthlyBody tr')].map(tr=>[...tr.children].map(td=>td.textContent)); const csv=['المشرف,المشروع,عدد السجلات,الساعات المطلوبة,الساعات الفعلية,وقت الانتقال,نسبة العمل,حالة الأداء',...rows.map(r=>r.map(x=>'"'+x+'"').join(','))].join('\n'); download('monthly.csv',csv); }
 async function initSupervisor(){ const u=requireRole('supervisor'); if(!u) return; await loadAll(); data.projects=data.projects.filter(p=>String(p.supervisor_id)===String(u.id)); data.workers=data.workers.filter(w=>String(workerSupId(w))===String(u.id)); data.logs=data.logs.filter(l=>String(l.supervisor_id)===String(u.id)); const supProjectIds = new Set(data.projects.map(p=>String(p.id))); data.tickets=data.tickets.filter(t=>String(t.supervisor_id)===String(u.id) || String(t.created_by)===String(u.id) || supProjectIds.has(String(t.project_id))); $('supTitle').textContent=`لوحة المشرف - ${u.full_name}`; fillSelect('logProject',data.projects,'name','اختر المشروع'); fillSelect('attendanceProject',data.projects,'name','اختر المشروع'); fillSelect('ticketProject',data.projects,'name','اختر المشروع'); if($('logDate')) $('logDate').value=today(); if($('attendanceDate')) $('attendanceDate').value=today(); renderSupervisorAttendanceList(); renderTimeLogs(); }
-async function supervisorCheckIn(){ if(!$('logProject').value) return msg('اختر المشروع','err'); $('logDate').value=today(); $('logIn').value=nowTime(); $('logOut').value=''; await saveTimeLog(); await initSupervisor(); }
-async function supervisorCheckOut(){ const u=session(); const pid=$('logProject').value; const date=$('logDate')?.value||today(); if(!pid) return msg('اختر المشروع','err'); const open=data.logs.find(l=>String(l.project_id)===String(pid)&&String(l.supervisor_id)===String(u.id)&&!l.check_out&&(l.log_date||String(l.check_in||'').slice(0,10))===date); if(open) editTimeLog(open.id); $('logOut').value=nowTime(); await saveTimeLog(); await initSupervisor(); }
+async function supervisorCheckIn(){
+  if(!$('logProject').value) return msg('اختر المشروع','err');
+  prepareWhatsappPopupV63();
+  $('logDate').value=today();
+  $('logIn').value=nowTime();
+  $('logOut').value='';
+  await saveTimeLog();
+  await initSupervisor();
+}
+async function supervisorCheckOut(){
+  const u=session();
+  const pid=$('logProject').value;
+  const date=$('logDate')?.value||today();
+  if(!pid) return msg('اختر المشروع','err');
+  prepareWhatsappPopupV63();
+  const open=data.logs.find(l=>String(l.project_id)===String(pid)&&String(l.supervisor_id)===String(u.id)&&!l.check_out&&(l.log_date||String(l.check_in||'').slice(0,10))===date);
+  if(open) editTimeLog(open.id);
+  $('logOut').value=nowTime();
+  await saveTimeLog();
+  await initSupervisor();
+}
 function renderSupervisorAttendanceList(){ const div=$('supervisorAttendanceList'); if(!div) return; div.innerHTML=data.workers.map(w=>`<div class="quick-item"><b>${esc(w.name)}</b><select data-worker="${w.id}"><option value="present">حاضر</option><option value="absent">غائب</option></select></div>`).join('')||'<div class="quick-item">لا يوجد عمال مرتبطين بك</div>'; }
 async function saveSupervisorAttendance(){ const u=session(); const date=$('attendanceDate').value||today(), project=Number($('attendanceProject').value)||null; const rows=[...document.querySelectorAll('#supervisorAttendanceList select')].map(s=>({attendance_date:date, worker_id:Number(s.dataset.worker), supervisor_id:u.id, project_id:project, status:s.value, created_by:u.id})); if(!rows.length) return; const {error}=await sb.from('attendance').upsert(rows,{onConflict:'attendance_date,worker_id'}); if(error) return msg(error.message,'err'); msg('تم حفظ التحضير'); await initSupervisor(); }
 
