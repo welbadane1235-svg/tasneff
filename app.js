@@ -2564,3 +2564,91 @@ function monthlyReportRowsV58(){return monthlyRowsV60()}
     if(id==='supSummary') setTimeout(()=>window.renderSupervisorDailySummary && window.renderSupervisorDailySummary(),120);
   };
 })();
+
+/* ===== V71: WhatsApp message for housing out / housing return in daily journey ===== */
+(function(){
+  function escText(v){ return String(v ?? '').trim(); }
+  function normAr(v){ return String(v||'').trim().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' '); }
+  function getUser(){ try{return typeof session==='function'?session():JSON.parse(localStorage.getItem('tasneef_user')||'null')}catch(e){return null} }
+  function getSupervisorId(){
+    const u=getUser();
+    if(u && u.role==='supervisor') return String(u.id);
+    const sel=document.getElementById('journeySupervisorV61');
+    return sel ? String(sel.value||'') : '';
+  }
+  function supervisorNameById(id){
+    const u=getUser();
+    if(u && String(u.id)===String(id)) return u.full_name || u.name || u.username || 'المشرف';
+    try{ if(typeof supervisorName==='function') return supervisorName(id) || 'المشرف'; }catch(e){}
+    const pools=[...(window.data?.supervisors||[]), ...(window.data?.users||[]), ...(window.data?.app_users||[])];
+    const s=pools.find(x=>String(x.id)===String(id));
+    return s ? (s.full_name||s.name||s.username||'المشرف') : 'المشرف';
+  }
+  function workersForSupervisor(id){
+    const projectIds=new Set((window.data?.projects||[]).filter(p=>String(p.supervisor_id||'')===String(id)).map(p=>String(p.id)));
+    const names=[];
+    (window.data?.workers||[]).forEach(w=>{
+      const ok=String(w.supervisor_id||'')===String(id) || String(w.app_supervisor_id||'')===String(id) || projectIds.has(String(w.project_id||''));
+      const name=w.name||w.full_name||w.worker_name;
+      if(ok && name) names.push(name);
+    });
+    const seen=new Set();
+    return names.filter(n=>{const k=normAr(n); if(!k||seen.has(k)) return false; seen.add(k); return true;}).join('، ') || '-';
+  }
+  function waText(type, supId, date, time){
+    const title = type==='out' ? 'حضور المشرف وعماله' : 'انصراف المشرف وعماله';
+    const label = type==='out' ? 'وقت الخروج من السكن' : 'وقت الرجوع للسكن';
+    return [
+      title,
+      '',
+      'المشرف: ' + supervisorNameById(supId),
+      'أسماء العمال: ' + workersForSupervisor(supId),
+      'التاريخ: ' + (date || '-'),
+      label + ': ' + (time || '-'),
+      '',
+      'شركة تصنيف لإدارة المرافق'
+    ].join('\n');
+  }
+  function openWhatsApp(text){
+    let opened=null;
+    try{ opened=window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank'); }catch(e){}
+    try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text); }catch(e){}
+    if(typeof msg==='function') msg(opened ? 'تم فتح واتساب وتجهيز الرسالة' : 'تم نسخ رسالة واتساب، افتح واتساب والصقها');
+  }
+  function currentKey(date,sup){ return 'tasneef_journey_wa_sent_v71_'+date+'_'+sup; }
+
+  const oldSaveJourneyV71 = window.saveJourneyV61;
+  window.saveJourneyV61 = async function(){
+    const date=document.getElementById('journeyDateV61')?.value || (typeof today==='function'?today():new Date().toISOString().slice(0,10));
+    const sup=getSupervisorId();
+    const start=document.getElementById('journeyStartV61')?.value || '';
+    const end=document.getElementById('journeyEndV61')?.value || '';
+    let before={};
+    try{ before=JSON.parse(localStorage.getItem(currentKey(date,sup))||'{}'); }catch(e){}
+
+    if(typeof oldSaveJourneyV71==='function'){
+      await oldSaveJourneyV71.apply(this, arguments);
+    }
+
+    if(!sup){ return; }
+    const messages=[];
+    if(start && start!==before.start){ messages.push({type:'out', time:start}); }
+    if(end && end!==before.end){ messages.push({type:'return', time:end}); }
+
+    if(messages.length){
+      localStorage.setItem(currentKey(date,sup), JSON.stringify({start:start||before.start||'', end:end||before.end||'', updated_at:new Date().toISOString()}));
+      messages.forEach((m,idx)=>{
+        setTimeout(()=>openWhatsApp(waText(m.type, sup, date, m.time)), idx*450);
+      });
+    }
+  };
+
+  window.sendJourneyHousingWhatsAppV71=function(type){
+    const date=document.getElementById('journeyDateV61')?.value || (typeof today==='function'?today():new Date().toISOString().slice(0,10));
+    const sup=getSupervisorId();
+    const time = type==='out' ? (document.getElementById('journeyStartV61')?.value||'') : (document.getElementById('journeyEndV61')?.value||'');
+    if(!sup){ if(typeof msg==='function') msg('اختر مشرف محدد أولًا','err'); return; }
+    if(!time){ if(typeof msg==='function') msg('أدخل الوقت أولًا','err'); return; }
+    openWhatsApp(waText(type, sup, date, time));
+  };
+})();
