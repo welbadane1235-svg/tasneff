@@ -2043,3 +2043,178 @@ function monthlyReportRowsV58(){return monthlyRowsV60()}
   window.renderAll=function(){ if(typeof oldRenderAllV65==='function') oldRenderAllV65.apply(this,arguments); setTimeout(()=>{lockSupervisorSelectV65(); ensureJourneyExtrasV65(); window.renderJourneyV61(false); renderSavedJourneyRowsV65();},350); };
   window.addEventListener('load',()=>setTimeout(()=>{lockSupervisorSelectV65(); ensureJourneyExtrasV65(); window.renderJourneyV61();},1200));
 })();
+
+/* ===== V66: Force cloud save for daily journeys (insert/update, visible errors, no local-only silence) ===== */
+(function(){
+  function uV66(){ try{return typeof session==='function'?session():JSON.parse(localStorage.getItem('tasneef_user')||'null')}catch(e){return null} }
+  function todayV66(){ return typeof today==='function'?today():new Date().toISOString().slice(0,10); }
+  function escV66(v){ return String(v ?? '').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function fmtMinsV66(m){ m=Math.max(0,Math.round(Number(m)||0)); const h=Math.floor(m/60), mm=m%60; return h+':'+String(mm).padStart(2,'0'); }
+  function localDateV66(date,time){ if(!date||!time) return null; return new Date(date+'T'+time+':00'); }
+  function isoV66(date,time,plusDay){ const d=localDateV66(date,time); if(!d) return null; if(plusDay) d.setDate(d.getDate()+1); return d.toISOString(); }
+  function rangeV66(date,start,end){
+    const s=localDateV66(date,start), e=localDateV66(date,end);
+    if(!s||!e) return {start:s,end:e,total:0,overnight:false};
+    let overnight=false;
+    if(e<s){ e.setDate(e.getDate()+1); overnight=true; }
+    return {start:s,end:e,total:Math.max(0,Math.round((e-s)/60000)),overnight};
+  }
+  function logDayV66(l){ return l.log_date || String(l.check_in||'').slice(0,10); }
+  function overlapV66(log,start,end){
+    if(!log.check_in||!log.check_out||!start||!end) return 0;
+    let a=new Date(log.check_in), b=new Date(log.check_out);
+    if(b<a) b=new Date(b.getTime()+86400000);
+    const os=Math.max(a.getTime(), start.getTime());
+    const oe=Math.min(b.getTime(), end.getTime());
+    return Math.max(0, Math.round((oe-os)/60000));
+  }
+  function getSupV66(){
+    const u=uV66();
+    if(u && u.role==='supervisor') return String(u.id);
+    const sel=document.getElementById('journeySupervisorV61');
+    return sel ? String(sel.value||'') : '';
+  }
+  function calcV66(date,sup,start,end){
+    const r=rangeV66(date,start,end);
+    let logs=(window.data?.logs||[]).filter(l=>logDayV66(l)===date && l.check_in && l.check_out);
+    if(sup) logs=logs.filter(l=>String(l.supervisor_id)===String(sup));
+    const raw=logs.reduce((a,l)=>a+overlapV66(l,r.start,r.end),0);
+    const work=Math.min(raw, r.total||0);
+    const travel=Math.max(0,(r.total||0)-work);
+    const productivity=r.total?Math.min(100,Math.round((work/r.total)*1000)/10):0;
+    return {total:r.total||0, work, rawWork:raw, travel, productivity, overnight:r.overnight, conflict: raw>(r.total||0)};
+  }
+  function supervisorNameV66(id){
+    const u=uV66();
+    if(u && String(u.id)===String(id)) return u.full_name||u.username||'المشرف';
+    try{ if(typeof supervisorName==='function') return supervisorName(id)||'المشرف'; }catch(e){}
+    const all=[...(window.data?.supervisors||[]), ...(window.data?.users||[]), ...(window.data?.app_users||[])];
+    const s=all.find(x=>String(x.id)===String(id));
+    return s ? (s.full_name||s.name||s.username||'المشرف') : 'المشرف';
+  }
+  function timeTextV66(v){ if(!v) return '-'; try{return new Date(v).toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});}catch(e){return '-'} }
+  function notifyV66(text,type){ if(typeof msg==='function') msg(text,type); else alert(text); }
+  function lockSupV66(){
+    const u=uV66(), sel=document.getElementById('journeySupervisorV61');
+    if(!sel) return;
+    if(u && u.role==='supervisor'){
+      sel.innerHTML='<option value="'+escV66(u.id)+'">'+escV66(u.full_name||u.username||'المشرف')+'</option>';
+      sel.value=String(u.id); sel.disabled=true;
+    } else {
+      sel.disabled=false;
+    }
+  }
+  async function fetchRowsV66(date,sup){
+    let q=sb.from('daily_journeys').select('*').eq('journey_date',date).order('supervisor_id',{ascending:true});
+    if(sup) q=q.eq('supervisor_id',Number(sup));
+    const {data:rows,error}=await q;
+    if(error) throw error;
+    return rows||[];
+  }
+  async function saveCloudV66(date,sup,start,end,calc){
+    if(!window.sb && typeof sb==='undefined') throw new Error('اتصال Supabase غير موجود في الصفحة');
+    const row={
+      supervisor_id:Number(sup),
+      journey_date:date,
+      housing_out_time:start?isoV66(date,start,false):null,
+      housing_return_time:end?isoV66(date,end,calc.overnight):null,
+      total_minutes:calc.total,
+      project_minutes:calc.work,
+      travel_minutes:calc.travel,
+      productivity_percent:calc.productivity,
+      updated_at:new Date().toISOString()
+    };
+    // First try manual update/insert. This avoids upsert/onConflict issues.
+    const found=await sb.from('daily_journeys').select('id').eq('supervisor_id',Number(sup)).eq('journey_date',date).limit(1);
+    if(found.error) throw found.error;
+    if(found.data && found.data[0]){
+      const {error}=await sb.from('daily_journeys').update(row).eq('id',found.data[0].id);
+      if(error) throw error;
+      return 'updated';
+    } else {
+      row.created_at=new Date().toISOString();
+      const {error}=await sb.from('daily_journeys').insert(row);
+      if(error) throw error;
+      return 'inserted';
+    }
+  }
+  function ensureBoxV66(){
+    const box=document.getElementById('journeyBoxV61'); if(!box) return;
+    if(!document.getElementById('journeyCloudStatusV66')){
+      const d=document.createElement('div');
+      d.id='journeyCloudStatusV66';
+      d.style.cssText='margin:10px 0;padding:10px;border-radius:12px;background:#f3faf7;border:1px solid #cfe4dc;color:#064b3b;font-weight:700;display:none';
+      box.insertBefore(d, document.getElementById('journeySavedRowsV65') || null);
+    }
+    if(!document.getElementById('journeySavedRowsV65')){
+      const div=document.createElement('div');
+      div.id='journeySavedRowsV65';
+      div.className='table-wrap';
+      div.style.marginTop='16px';
+      div.innerHTML='<table><thead><tr><th>التاريخ</th><th>المشرف</th><th>خروج السكن</th><th>رجوع السكن</th><th>إجمالي اليوم</th><th>داخل المشاريع</th><th>تنقل / ضائع</th><th>الإنتاجية</th></tr></thead><tbody><tr><td colspan="8">جاري التحميل...</td></tr></tbody></table>';
+      box.appendChild(div);
+    }
+  }
+  function statusV66(text,isError){
+    const d=document.getElementById('journeyCloudStatusV66'); if(!d) return;
+    d.style.display='block';
+    d.style.background=isError?'#fff1f2':'#f3faf7';
+    d.style.borderColor=isError?'#fecdd3':'#cfe4dc';
+    d.style.color=isError?'#991b1b':'#064b3b';
+    d.textContent=text;
+  }
+  async function renderRowsV66(){
+    ensureBoxV66();
+    const div=document.getElementById('journeySavedRowsV65'); if(!div) return;
+    const date=document.getElementById('journeyDateV61')?.value||todayV66();
+    const sup=getSupV66();
+    const tbody=div.querySelector('tbody'); if(!tbody) return;
+    try{
+      const rows=await fetchRowsV66(date,sup);
+      tbody.innerHTML=rows.map(r=>'<tr><td>'+escV66(r.journey_date)+'</td><td>'+escV66(supervisorNameV66(r.supervisor_id))+'</td><td>'+timeTextV66(r.housing_out_time)+'</td><td>'+timeTextV66(r.housing_return_time)+'</td><td>'+fmtMinsV66(r.total_minutes)+'</td><td>'+fmtMinsV66(r.project_minutes)+'</td><td>'+fmtMinsV66(r.travel_minutes)+'</td><td>'+Number(r.productivity_percent||0).toFixed(1)+'%</td></tr>').join('') || '<tr><td colspan="8">لا توجد رحلات محفوظة لهذا اليوم</td></tr>';
+    }catch(e){
+      tbody.innerHTML='<tr><td colspan="8">خطأ تحميل الرحلات: '+escV66(e.message||e)+'</td></tr>';
+      statusV66('خطأ في قراءة جدول daily_journeys: '+(e.message||e), true);
+    }
+  }
+  const prevRenderV66=window.renderJourneyV61;
+  window.renderJourneyV61=function(loadCloud){
+    lockSupV66(); ensureBoxV66();
+    const date=document.getElementById('journeyDateV61')?.value||todayV66();
+    const sup=getSupV66();
+    const start=document.getElementById('journeyStartV61')?.value||'';
+    const end=document.getElementById('journeyEndV61')?.value||'';
+    const c=calcV66(date,sup,start,end);
+    const res=document.getElementById('journeyResultV61');
+    if(res){
+      const warn=c.conflict?'<div class="kpi" style="grid-column:1/-1"><small>تنبيه</small><b style="font-size:18px;color:#9a6b00">تم احتساب وقت المشاريع داخل فترة رحلة السكن فقط، ومنع تجاوز الإنتاجية 100%</b></div>':'';
+      res.innerHTML='<div class="kpi"><small>إجمالي اليوم</small><b>'+fmtMinsV66(c.total)+'</b></div><div class="kpi"><small>داخل المشاريع</small><b>'+fmtMinsV66(c.work)+'</b></div><div class="kpi"><small>تنقل / ضائع</small><b>'+fmtMinsV66(c.travel)+'</b></div><div class="kpi"><small>نسبة الإنتاجية</small><b>'+c.productivity+'%</b></div>'+warn;
+    }
+    setTimeout(renderRowsV66,80);
+  };
+  window.saveJourneyV61=async function(){
+    lockSupV66(); ensureBoxV66();
+    const date=document.getElementById('journeyDateV61')?.value||todayV66();
+    const sup=getSupV66();
+    const start=document.getElementById('journeyStartV61')?.value||'';
+    const end=document.getElementById('journeyEndV61')?.value||'';
+    if(!sup){ notifyV66('اختر مشرف محدد لحفظ رحلة التشغيل','err'); return; }
+    if(!start && !end){ notifyV66('أدخل وقت الخروج من السكن أو وقت الرجوع للسكن','err'); return; }
+    const c=calcV66(date,sup,start,end);
+    try{
+      const action=await saveCloudV66(date,sup,start,end,c);
+      localStorage.setItem('tasneef_journey_'+date+'_'+sup, JSON.stringify({start,end,updated_at:new Date().toISOString(),cloud:true}));
+      statusV66('تم حفظ رحلة التشغيل في السحابة بنجاح ('+(action==='inserted'?'إضافة':'تحديث')+').');
+      notifyV66('تم حفظ رحلة التشغيل في السحابة');
+    }catch(e){
+      statusV66('فشل حفظ الرحلة في السحابة: '+(e.message||e), true);
+      notifyV66('فشل حفظ الرحلة في السحابة: '+(e.message||e),'err');
+      return;
+    }
+    window.renderJourneyV61(false);
+    renderRowsV66();
+  };
+  const oldRenderAllV66=window.renderAll;
+  window.renderAll=function(){ if(typeof oldRenderAllV66==='function') oldRenderAllV66.apply(this,arguments); setTimeout(()=>{lockSupV66(); ensureBoxV66(); window.renderJourneyV61(false); renderRowsV66();},450); };
+  window.addEventListener('load',()=>setTimeout(()=>{lockSupV66(); ensureBoxV66(); window.renderJourneyV61(false); renderRowsV66();},1500));
+})();
