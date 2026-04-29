@@ -1526,3 +1526,133 @@ function printMonthlyReportV57(){
   const html=`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير الأوقات الشهرية</title><style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;color:#123d32;background:#fff;font-size:11px}.page{min-height:100vh;padding:14px;background:radial-gradient(circle at top left,rgba(10,90,73,.10),transparent 32%),linear-gradient(135deg,#fff 0%,#fff 62%,rgba(199,162,77,.08));border:2px solid #0a5a49}.top{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0a5a49;padding-bottom:10px;margin-bottom:10px}.brand{display:flex;align-items:center;gap:10px}.logo{width:54px;height:54px;border-radius:50%;border:3px solid #c7a24d;display:grid;place-items:center;font-weight:900;color:#0a5a49}.brand h2{margin:0;font-size:19px;color:#0a5a49}.title{text-align:left}.title h1{margin:0;font-size:28px;color:#0a5a49}.title p{margin:4px 0 0;color:#68766e}.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}.box{background:#fff;border:1px solid #d9e6e1;border-radius:13px;padding:9px;text-align:center}.box b{display:block;color:#63756d;font-size:10px}.box strong{font-size:16px;color:#0a5a49}.section{margin:12px 0 8px;text-align:center}.section span{display:inline-block;background:#0a5a49;color:#fff;border:2px solid #c7a24d;border-radius:999px;padding:7px 40px;font-weight:900}.super-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.super-card{background:#fff;border:2px solid #0a5a49;border-radius:10px;overflow:hidden;min-height:245px}.super-head{display:flex;justify-content:space-between;align-items:center;background:#f7fbfa;border-bottom:1px solid #d9e6e1;padding:7px 9px;color:#0a5a49}.super-head b{font-size:13px}.super-head span{font-weight:900}.mini,.details{width:100%;border-collapse:collapse}.mini th{background:#0a5a49;color:#fff;padding:6px;font-size:10px}.mini td{border-bottom:1px solid #e5eeee;padding:5px;text-align:center}.pname{text-align:right!important;font-weight:700}.workers{padding:8px;text-align:center}.workers b{display:block;color:#0a5a49;margin-bottom:5px}.workers p{margin:0;line-height:1.7;color:#243b34}.commitment{padding:7px;text-align:center;border-top:1px solid #e5eeee;color:#0a5a49}.details{margin-top:8px;border-radius:10px;overflow:hidden}.details th{background:#0a5a49;color:#fff;padding:7px}.details td{border:1px solid #e0e8e5;padding:6px;text-align:center}.percent,.pill{display:inline-block;border-radius:999px;padding:3px 8px;font-weight:900}.ok{background:#e5f6ec;color:#107338}.warn{background:#fff3d6;color:#8a5c00}.bad{background:#ffe5e5;color:#9d2020}.neutral{background:#edf1f4;color:#52616b}.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:8px}.kpi{background:#fff;border:1px solid #d9e6e1;border-radius:13px;padding:9px;text-align:center}.kpi strong{display:block;color:#0a5a49;font-size:16px}.kpi span{font-size:10px;color:#68766e}.bottom{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.panel{background:#fff;border:1px solid #d9e6e1;border-radius:12px;padding:9px}.panel h3{margin:0 0 8px;color:#0a5a49}.line{height:22px;border-bottom:1px dashed #afbeb8}.footer{text-align:center;margin-top:8px;color:#6a766f}.avoid{break-inside:avoid}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.page{border-radius:0}.super-card,.kpi,.panel{break-inside:avoid}}</style></head><body><div class="page"><div class="top"><div class="brand"><div class="logo">تصنيف</div><div><h2>شركة تصنيف</h2><small>إدارة المرافق والتشغيل</small></div></div><div class="title"><h1>تقرير الأوقات الشهرية</h1><p>المسؤول: وائل شاكر</p></div></div><div class="meta"><div class="box"><b>الشهر</b><strong>${reportEscV52(monthLabelV57(month))}</strong></div><div class="box"><b>المشرف</b><strong>${reportEscV52(sup)}</strong></div><div class="box"><b>عدد المشاريع</b><strong>${rows.length}</strong></div><div class="box"><b>نسبة الالتزام الإجمالية</b><strong>${reportEscV52(percentText(commitmentTotal))}</strong></div></div><div class="section"><span>ملخص المشرفين والمشاريع</span></div><div class="super-grid avoid">${groupCards}</div><div class="section"><span>تفاصيل الأوقات الشهرية</span></div><table class="details"><thead><tr><th>المشرف</th><th>المشروع</th><th>أسماء العمال</th><th>الوقت الفعلي</th><th>الوقت المطلوب</th><th>الفرق</th><th>نسبة العمل</th><th>نسبة الالتزام</th><th>حالة الوقت</th></tr></thead><tbody>${detailRows}</tbody></table><div class="section"><span>ملخص التقرير</span></div><div class="kpis"><div class="kpi"><strong>${reportEscV52(minsToText(actualTotal))}</strong><span>إجمالي الوقت الفعلي</span></div><div class="kpi"><strong>${reportEscV52(minsToText(requiredTotal))}</strong><span>إجمالي الوقت المطلوب</span></div><div class="kpi"><strong>${reportEscV52(monthlyDiffTextV57(actualTotal-requiredTotal))}</strong><span>إجمالي فرق الوقت</span></div><div class="kpi"><strong>${reportEscV52(percentText(commitmentTotal))}</strong><span>نسبة الالتزام</span></div><div class="kpi"><strong>${over}</strong><span>زيادة وقت</span></div><div class="kpi"><strong>${under}</strong><span>ناقص وقت</span></div></div><div class="bottom"><div class="panel"><h3>ملاحظات المدير</h3><div class="line"></div><div class="line"></div></div><div class="panel"><h3>اعتماد مدير التشغيل</h3><p>الاسم: وائل شاكر</p><div class="line">التوقيع:</div></div></div><div class="footer">ملاحظة: نسبة العمل = وقت المشروع ÷ إجمالي وقت المشرف. نسبة الالتزام = الوقت الفعلي ÷ الوقت المطلوب.</div><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></div></body></html>`;
   const w=window.open('','_blank'); if(!w){msg('المتصفح منع فتح نافذة التقرير. اسمح بالنوافذ المنبثقة','err');return} w.document.open();w.document.write(html);w.document.close();
 }
+
+/* ===== V60: Correct monthly percentages and unique workers count ===== */
+function tasneefNormNameV60(name){return String(name||'').trim().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ')}
+function uniqueWorkersCountV60(){const set=new Set();(data.workers||[]).forEach(w=>{const st=String(w.status||'active').toLowerCase();if(st==='deleted')return;const key=tasneefNormNameV60(w.name);if(key)set.add(key)});return set.size}
+function uniqueWorkersForProjectTextV60(projectId){const m=new Map();(data.workers||[]).forEach(w=>{const st=String(w.status||'active').toLowerCase();if(st==='deleted'||st==='inactive')return;const pid=(typeof workerProjectId==='function')?workerProjectId(w):(w.project_id||w.assigned_project_id||'');if(String(pid)!==String(projectId))return;const key=tasneefNormNameV60(w.name);if(key&&!m.has(key))m.set(key,String(w.name||'').trim())});return [...m.values()].join('، ')||'-'}
+function renderDashboard(){if(!$('kpiUsers'))return;$('kpiUsers').textContent=data.users.length;$('kpiProjects').textContent=data.projects.length;$('kpiWorkers').textContent=uniqueWorkersCountV60();$('kpiTodayLogs').textContent=data.logs.filter(l=>(l.log_date||String(l.check_in||'').slice(0,10))===today()).length;const div=$('todaySummary');if(div)div.innerHTML=data.supervisors.map(s=>{const logs=data.logs.filter(l=>String(l.supervisor_id)===String(s.id)&&(l.log_date||String(l.check_in||'').slice(0,10))===today());const mins=logs.reduce((a,l)=>a+(Number(l.duration_minutes)||minutesBetween(l.check_in,l.check_out)),0);return `<div class="summary-item"><b>${esc(s.full_name)}</b><br>عدد التسجيلات: ${logs.length}<br>إجمالي الوقت: ${minsToText(mins)}</div>`}).join('')||'<div class="summary-item">لا توجد تسجيلات اليوم</div>'}
+function monthlyStatusFromDiffV60(diff,required){if(!Number(required||0))return{text:'غير محدد',cls:'neutral'};diff=Number(diff||0);if(diff<-5)return{text:'ناقص وقت',cls:'bad'};if(diff>5)return{text:'زيادة وقت',cls:'warn'};return{text:'ضمن الوقت',cls:'ok'}}
+function monthlyCommitmentClassV60(percent,required){if(!Number(required||0))return'neutral';percent=Number(percent||0);if(percent>=95&&percent<=105)return'ok';if(percent>105)return'warn';return'bad'}
+function monthlyRowsV60(){const month=$('monthlyMonth')?.value||today().slice(0,7);const sid=$('monthlySupervisor')?.value;let logs=(data.logs||[]).filter(l=>{const d=l.log_date||String(l.check_in||'').slice(0,10);return d&&d.slice(0,7)===month});if(sid)logs=logs.filter(l=>String(l.supervisor_id)===String(sid));const map=new Map();logs.forEach(l=>{const k=String(l.supervisor_id||'')+'_'+String(l.project_id||'');if(!map.has(k))map.set(k,{s:l.supervisor_id,p:l.project_id,a:0,r:0,t:0});const x=map.get(k);x.a+=Number((typeof logActualMinutes==='function'?logActualMinutes(l):(l.duration_minutes||minutesBetween(l.check_in,l.check_out)))||0);x.r+=Number((typeof logRequiredMinutes==='function'?logRequiredMinutes(l):l.required_minutes)||0);x.t+=Number(l.travel_minutes||0)});const vals=[...map.values()];const supTotals={};vals.forEach(r=>{const s=String(r.s||'');supTotals[s]=(supTotals[s]||0)+Number(r.a||0)});return vals.map(r=>{const supTotal=supTotals[String(r.s||'')]||0;const workPercent=supTotal?(r.a/supTotal*100):0;const commitmentPercent=r.r?(r.a/r.r*100):0;const diff=r.a-r.r;const st=monthlyStatusFromDiffV60(diff,r.r);return{...r,supTotal,workers:uniqueWorkersForProjectTextV60(r.p),workPercent,commitmentPercent,ccls:monthlyCommitmentClassV60(commitmentPercent,r.r),diff,st:st.text,cls:st.cls}}).sort((a,b)=>{const s=supervisorName(a.s).localeCompare(supervisorName(b.s),'ar');return s||projectName(a.p).localeCompare(projectName(b.p),'ar')})}
+function renderMonthly(){const body=$('monthlyBody');if(!body)return;const table=body.closest('table');if(table&&table.tHead)table.tHead.innerHTML='<tr><th>المشرف</th><th>المشروع</th><th>أسماء العمال</th><th>الساعات المطلوبة</th><th>الساعات الفعلية</th><th>وقت الانتقال</th><th>نسبة العمل</th><th>نسبة الالتزام</th><th>حالة الأداء</th></tr>';const vals=monthlyRowsV60();body.innerHTML=vals.map(r=>`<tr><td>${esc(supervisorName(r.s))}</td><td>${esc(projectName(r.p))}</td><td>${esc(r.workers)}</td><td>${minsToText(r.r)}</td><td>${minsToText(r.a)}</td><td>${r.t} دقيقة</td><td><span class="badge green">${percentText(r.workPercent)}</span></td><td><span class="badge ${r.ccls}">${percentText(r.commitmentPercent)}</span></td><td><span class="badge ${r.cls}">${r.st}</span></td></tr>`).join('')||'<tr><td colspan="9">لا توجد بيانات</td></tr>';const total=vals.reduce((a,r)=>a+r.a,0),required=vals.reduce((a,r)=>a+r.r,0),travel=vals.reduce((a,r)=>a+r.t,0),commitment=required?total/required*100:0;const diff=total-required,st=monthlyStatusFromDiffV60(diff,required);if($('monthlySummary'))$('monthlySummary').innerHTML=`<div class="kpi"><small>الساعات المطلوبة</small><b>${minsToText(required)}</b></div><div class="kpi"><small>الساعات الفعلية</small><b>${minsToText(total)}</b></div><div class="kpi"><small>فرق الوقت</small><b>${monthlyDiffTextV57(diff)}</b></div><div class="kpi"><small>وقت الانتقال</small><b>${travel} دقيقة</b></div><div class="kpi"><small>نسبة الالتزام</small><b>${percentText(commitment)}</b></div><div class="kpi"><small>حالة الأداء</small><b><span class="badge ${st.cls}">${st.text}</span></b></div>`}
+function exportMonthlyCSV(){const rows=[...document.querySelectorAll('#monthlyBody tr')].map(tr=>[...tr.children].map(td=>td.textContent.trim()));const csv=['المشرف,المشروع,أسماء العمال,الساعات المطلوبة,الساعات الفعلية,وقت الانتقال,نسبة العمل,نسبة الالتزام,حالة الأداء',...rows.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(','))].join('\n');download('monthly.csv',csv)}
+function monthlyBaseRowsV59(){return monthlyRowsV60()}
+function monthlyReportRowsV58(){return monthlyRowsV60()}
+
+/* ===== V61: حماية السجلات + السجلات المفتوحة + رحلة التشغيل ===== */
+(function(){
+  const OLD_DELETE_ROW_V61 = window.deleteRow;
+  function normDateV61(v){ return v || today(); }
+  function logDayV61(l){ return l.log_date || String(l.check_in||l.created_at||'').slice(0,10); }
+  function logActualV61(l){
+    if(typeof logActualMinutes==='function') return Number(logActualMinutes(l)||0);
+    const saved=Number(l.duration_minutes||0); if(saved>0) return saved;
+    if(typeof minutesBetween==='function') return minutesBetween(l.check_in,l.check_out);
+    if(!l.check_in||!l.check_out) return 0;
+    return Math.max(0, Math.round((new Date(l.check_out)-new Date(l.check_in))/60000));
+  }
+  function hmToMinutesV61(t){ if(!t) return null; const parts=String(t).split(':').map(Number); if(parts.length<2||!Number.isFinite(parts[0])||!Number.isFinite(parts[1])) return null; return parts[0]*60+parts[1]; }
+  function minutesRangeV61(start,end){ const a=hmToMinutesV61(start), b=hmToMinutesV61(end); if(a===null||b===null) return 0; return b>=a?b-a:(b+1440)-a; }
+  function fmtMinsV61(mins){ return typeof minsToText==='function'?minsToText(mins):String(mins)+' د'; }
+  function openLogsForDateV61(dateStr){
+    return (data.logs||[]).filter(l=>logDayV61(l)===dateStr && l.check_in && !l.check_out);
+  }
+  function insertOpenLogsDashboardV61(){
+    const dash=document.getElementById('dashboard'); if(!dash) return;
+    let box=document.getElementById('openLogsDashboardV61');
+    if(!box){
+      box=document.createElement('div');
+      box.id='openLogsDashboardV61';
+      box.className='card';
+      const anchor=document.getElementById('todaySummary')?.closest('.card') || dash.querySelector('.card') || dash;
+      anchor.parentNode.insertBefore(box, anchor.nextSibling);
+    }
+    const date=today();
+    const rows=openLogsForDateV61(date).sort((a,b)=>String(supervisorName(a.supervisor_id)).localeCompare(String(supervisorName(b.supervisor_id)),'ar'));
+    const bySup={}; rows.forEach(l=>{const s=supervisorName(l.supervisor_id)||'غير محدد'; bySup[s]=(bySup[s]||0)+1;});
+    const summary=Object.entries(bySup).map(([s,c])=>`<span class="badge amber" style="margin:3px">${esc(s)}: ${c}</span>`).join('');
+    box.innerHTML=`<h2>السجلات المفتوحة اليوم</h2>
+      <p class="footer-note">هذه سجلات دخول لم يتم تسجيل خروج لها بعد. لا يتم حذفها؛ فقط تظهر للتنبيه والمتابعة.</p>
+      <div style="margin:8px 0">${summary || '<span class="badge green">لا توجد سجلات مفتوحة</span>'}</div>
+      <div class="table-wrap" style="max-height:260px"><table><thead><tr><th>المشرف</th><th>المشروع</th><th>الدخول</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody>${rows.map(l=>`<tr><td>${esc(supervisorName(l.supervisor_id))}</td><td>${esc(projectName(l.project_id))}</td><td>${timeOnly(l.check_in)}</td><td>${esc(logDayV61(l))}</td><td><button class="light" onclick="editTimeLog(${l.id});showPage&&showPage('daily')">فتح السجل</button></td></tr>`).join('') || '<tr><td colspan="5">لا توجد سجلات مفتوحة</td></tr>'}</tbody></table></div>`;
+  }
+  const OLD_RENDER_DASHBOARD_V61 = window.renderDashboard;
+  window.renderDashboard=function(){ if(typeof OLD_RENDER_DASHBOARD_V61==='function') OLD_RENDER_DASHBOARD_V61.apply(this,arguments); insertOpenLogsDashboardV61(); };
+
+  window.deleteRow=async function(table,id){
+    if(table==='time_logs'){
+      const log=(data.logs||[]).find(x=>String(x.id)===String(id));
+      const label=log?`${projectName(log.project_id)} - ${logDayV61(log)} - ${timeOnly(log.check_in)}`:String(id);
+      const typed=prompt('حماية السجلات اليومية:\nلن يتم حذف السجل إلا بكتابة كلمة حذف يدويًا.\nالسجل: '+label+'\n\nاكتب: حذف يدويًا');
+      if(typed!=='حذف يدويًا') return msg('تم إلغاء الحذف لحماية السجلات اليومية');
+    }
+    if(typeof OLD_DELETE_ROW_V61==='function') return OLD_DELETE_ROW_V61.apply(this,arguments);
+  };
+
+  function journeyKeyV61(date,sup){ return 'tasneef_journey_'+date+'_'+(sup||'all'); }
+  function loadJourneyV61(date,sup){ try{return JSON.parse(localStorage.getItem(journeyKeyV61(date,sup))||'{}')}catch(e){return{}} }
+  function saveJourneyV61(date,sup,row){ localStorage.setItem(journeyKeyV61(date,sup), JSON.stringify(row||{})); }
+  function journeyLogsV61(date,sup){
+    let rows=(data.logs||[]).filter(l=>logDayV61(l)===date && l.check_in && l.check_out);
+    if(sup) rows=rows.filter(l=>String(l.supervisor_id)===String(sup));
+    return rows;
+  }
+  function calcJourneyV61(date,sup,start,end){
+    const total=minutesRangeV61(start,end);
+    const work=journeyLogsV61(date,sup).reduce((a,l)=>a+logActualV61(l),0);
+    const travel=Math.max(0,total-work);
+    const productivity=total?Math.round(work/total*1000)/10:0;
+    return {total,work,travel,productivity};
+  }
+  function ensureJourneyBoxV61(){
+    const daily=document.getElementById('daily') || document.querySelector('.mobile-shell'); if(!daily) return;
+    if(document.getElementById('journeyBoxV61')) return;
+    const card=document.createElement('section');
+    card.id='journeyBoxV61';
+    card.className='card';
+    card.innerHTML=`<h2>رحلة التشغيل اليومية</h2>
+      <p class="footer-note">تحسب من خروج الفريق من السكن إلى رجوعه، وتقارنها بوقت العمل داخل المشاريع لمعرفة وقت التنقل والإنتاجية.</p>
+      <div class="split">
+        <div><label>التاريخ</label><input type="date" id="journeyDateV61"></div>
+        <div><label>المشرف</label><select id="journeySupervisorV61"><option value="">الكل</option></select></div>
+      </div>
+      <div class="split">
+        <div><label>وقت الخروج من السكن</label><input type="time" id="journeyStartV61"></div>
+        <div><label>وقت الرجوع للسكن</label><input type="time" id="journeyEndV61"></div>
+      </div>
+      <div class="actions"><button type="button" onclick="saveJourneyV61()">حفظ وحساب</button><button type="button" class="light" onclick="renderJourneyV61()">تحديث الحساب</button></div>
+      <div id="journeyResultV61" class="kpis small"></div>`;
+    const target=document.getElementById('daily')?.querySelector('.card:nth-child(2)') || document.querySelector('.mobile-shell .card');
+    if(target && target.parentNode) target.parentNode.insertBefore(card,target); else daily.appendChild(card);
+    const sel=document.getElementById('journeySupervisorV61');
+    if(sel && (data.supervisors||[]).length) sel.innerHTML='<option value="">الكل</option>'+(data.supervisors||[]).map(s=>`<option value="${s.id}">${esc(s.full_name)}</option>`).join('');
+    const jd=document.getElementById('journeyDateV61'); if(jd) jd.value=today();
+    ['journeyDateV61','journeySupervisorV61','journeyStartV61','journeyEndV61'].forEach(id=>{const el=document.getElementById(id); if(el) el.addEventListener('change',window.renderJourneyV61);});
+    window.renderJourneyV61();
+  }
+  window.renderJourneyV61=function(){
+    const date=document.getElementById('journeyDateV61')?.value||today();
+    const sup=document.getElementById('journeySupervisorV61')?.value||'';
+    const saved=loadJourneyV61(date,sup);
+    const sEl=document.getElementById('journeyStartV61'), eEl=document.getElementById('journeyEndV61');
+    if(sEl && !sEl.value && saved.start) sEl.value=saved.start;
+    if(eEl && !eEl.value && saved.end) eEl.value=saved.end;
+    const start=sEl?.value||saved.start||'', end=eEl?.value||saved.end||'';
+    const c=calcJourneyV61(date,sup,start,end);
+    const result=document.getElementById('journeyResultV61'); if(!result) return;
+    result.innerHTML=`<div class="kpi"><small>إجمالي اليوم</small><b>${fmtMinsV61(c.total)}</b></div><div class="kpi"><small>داخل المشاريع</small><b>${fmtMinsV61(c.work)}</b></div><div class="kpi"><small>تنقل / ضائع</small><b>${fmtMinsV61(c.travel)}</b></div><div class="kpi"><small>نسبة الإنتاجية</small><b>${c.productivity}%</b></div>`;
+  };
+  window.saveJourneyV61=function(){
+    const date=document.getElementById('journeyDateV61')?.value||today();
+    const sup=document.getElementById('journeySupervisorV61')?.value||'';
+    const start=document.getElementById('journeyStartV61')?.value||'';
+    const end=document.getElementById('journeyEndV61')?.value||'';
+    saveJourneyV61(date,sup,{start,end,updated_at:new Date().toISOString()});
+    window.renderJourneyV61();
+    msg('تم حفظ رحلة التشغيل لهذا اليوم');
+  };
+  const OLD_RENDER_ALL_V61=window.renderAll;
+  window.renderAll=function(){ if(typeof OLD_RENDER_ALL_V61==='function') OLD_RENDER_ALL_V61.apply(this,arguments); setTimeout(()=>{ensureJourneyBoxV61(); insertOpenLogsDashboardV61();},100); };
+  window.addEventListener('load',()=>setTimeout(()=>{ensureJourneyBoxV61(); insertOpenLogsDashboardV61();},800));
+})();
