@@ -2296,3 +2296,116 @@ function monthlyReportRowsV58(){return monthlyRowsV60()}
   };
   window.addEventListener('load',()=>setTimeout(()=>{ bindV67(); window.loadSavedJourneyToFormV67(true); },1800));
 })();
+
+/* ===== V68: Daily summary uses saved daily_journeys for work/travel ===== */
+(function(){
+  function esc68(v){ try{return typeof esc==='function'?esc(v):String(v??'');}catch(e){return String(v??'');} }
+  function session68(){ try{return typeof session==='function'?session():JSON.parse(localStorage.getItem('tasneef_user')||'null')}catch(e){return null} }
+  function today68(){ return typeof today==='function'?today():new Date().toISOString().slice(0,10); }
+  function addDays68(dateObj, days){ const d=new Date(dateObj); d.setDate(d.getDate()+days); return d; }
+  function localDate68(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+  function range68(){
+    const mode=document.getElementById('summaryRange')?.value || 'today';
+    const custom=document.getElementById('summaryDate')?.value;
+    const now=new Date(); const t=localDate68(now);
+    if(mode==='custom'){ const d=custom||t; return {start:d,end:d,label:d}; }
+    if(mode==='yesterday'){ const d=localDate68(addDays68(now,-1)); return {start:d,end:d,label:'أمس'}; }
+    if(mode==='week'){ return {start:localDate68(addDays68(now,-6)),end:t,label:'آخر 7 أيام'}; }
+    return {start:t,end:t,label:'اليوم'};
+  }
+  function inRange68(ds,r){ return ds && ds>=r.start && ds<=r.end; }
+  function dateOfLog68(l){ return l.log_date || String(l.check_in||'').slice(0,10) || ''; }
+  function durationText68(mins){
+    mins=Math.max(0,Math.round(Number(mins)||0)); const h=Math.floor(mins/60), m=mins%60;
+    if(h && m) return `${h}س ${m}د`; if(h) return `${h}س`; return `${m}د`;
+  }
+  function card68(label,value){ return `<div class="summary-card-mini"><small>${esc68(label)}</small><b>${esc68(value)}</b></div>`; }
+  async function fetchJourneys68(r, supervisorId){
+    if(typeof sb==='undefined' || !sb) return [];
+    try{
+      let q=sb.from('daily_journeys').select('*').gte('journey_date',r.start).lte('journey_date',r.end);
+      if(supervisorId) q=q.eq('supervisor_id',Number(supervisorId));
+      const {data,error}=await q;
+      if(error) throw error;
+      return data||[];
+    }catch(e){ console.warn('V68 daily_journeys summary fetch failed:', e.message||e); return []; }
+  }
+  function fallbackLogWork68(logs){
+    return logs.reduce((sum,l)=>{
+      const saved=Number(l.duration_minutes||0);
+      let calc=0; try{ calc=(typeof minutesBetween==='function')?minutesBetween(l.check_in,l.check_out):0; }catch(e){}
+      return sum + (saved>0?saved:calc);
+    },0);
+  }
+  function fallbackLogTravel68(logs){ return logs.reduce((sum,l)=>sum+Number(l.travel_minutes||0),0); }
+
+  window.renderSupervisorDailySummary = async function(){
+    const cards=document.getElementById('supervisorSummaryCards');
+    const body=document.getElementById('supervisorSummaryBody');
+    if(!cards && !body) return;
+    const u=session68();
+    const r=range68();
+    const supervisorId=(u && u.role==='supervisor') ? String(u.id) : '';
+
+    const logs=(window.data?.logs||[]).filter(l=>{
+      const ds=dateOfLog68(l);
+      const bySup=!supervisorId || !l.supervisor_id || String(l.supervisor_id)===String(supervisorId);
+      return bySup && inRange68(ds,r);
+    });
+
+    let workMinutes=fallbackLogWork68(logs);
+    let travelMinutes=fallbackLogTravel68(logs);
+    const journeys=await fetchJourneys68(r, supervisorId);
+    if(journeys.length){
+      workMinutes=journeys.reduce((s,j)=>s+Number(j.project_minutes||0),0);
+      travelMinutes=journeys.reduce((s,j)=>s+Number(j.travel_minutes||0),0);
+    }
+
+    const attendance=(window.data?.attendance||[]).filter(a=>{
+      const ds=a.attendance_date || String(a.created_at||'').slice(0,10);
+      const bySup=!supervisorId || !a.supervisor_id || String(a.supervisor_id)===String(supervisorId);
+      return bySup && inRange68(ds,r);
+    });
+    const present=attendance.filter(a=>a.status==='present').length;
+    const absent=attendance.filter(a=>a.status==='absent').length;
+    const tickets=(window.data?.tickets||[]).filter(t=>inRange68(String(t.created_at||'').slice(0,10),r));
+    const openTickets=tickets.filter(t=>(t.status||'open')!=='closed').length;
+    const closedTickets=tickets.filter(t=>(t.status||'open')==='closed').length;
+
+    if(cards){
+      cards.innerHTML=[
+        card68('عدد التسجيلات', logs.length),
+        card68('ساعات العمل', durationText68(workMinutes)),
+        card68('وقت التنقل', durationText68(travelMinutes)),
+        card68('الحضور', present),
+        card68('الغياب', absent),
+        card68('التكتات المفتوحة', openTickets),
+        card68('التكتات المغلقة', closedTickets),
+        card68('الفترة', r.label)
+      ].join('');
+    }
+    if(body){
+      const rows=[
+        ['عدد تسجيلات الدخول والخروج', logs.length],
+        ['إجمالي ساعات العمل', durationText68(workMinutes)],
+        ['إجمالي وقت التنقل', durationText68(travelMinutes)],
+        ['عدد الحضور', present],
+        ['عدد الغياب', absent],
+        ['التكتات المفتوحة', openTickets],
+        ['التكتات المغلقة', closedTickets]
+      ];
+      body.innerHTML=rows.map(x=>`<tr><td>${esc68(x[0])}</td><td>${esc68(x[1])}</td></tr>`).join('');
+    }
+  };
+
+  const prevShowV68=window.showSupervisorWindow;
+  window.showSupervisorWindow=function(id,btn){
+    if(typeof prevShowV68==='function') prevShowV68(id,btn);
+    if(id==='supSummary') setTimeout(()=>window.renderSupervisorDailySummary(),80);
+  };
+  const prevRenderAllV68=window.renderAll;
+  window.renderAll=function(){
+    if(typeof prevRenderAllV68==='function') prevRenderAllV68.apply(this,arguments);
+    if(document.getElementById('supSummary')?.classList.contains('active')) setTimeout(()=>window.renderSupervisorDailySummary(),150);
+  };
+})();
