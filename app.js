@@ -111,33 +111,22 @@ function diffText(m){ m=Number(m||0); return (m>0?'+':'') + m + ' دقيقة'; }
 function logDateText(l){ return l.log_date || String(l.check_in || l.created_at || today()).slice(0,10); }
 function logWorkersNames(l){
   const pid=String(l.project_id||''), sid=String(l.supervisor_id||'');
-  const seen=new Set();
-  const names=[];
-  (data.workers||[]).filter(w =>
+  const rows=(data.workers||[]).filter(w =>
     (pid && String(workerProjectId(w)||'')===pid) ||
     (!pid && sid && String(workerSupId(w)||'')===sid)
-  ).filter(w => String(w.status||'active').toLowerCase() !== 'inactive' && String(w.status||'active').toLowerCase() !== 'deleted')
-  .forEach(w=>{
-    const raw=String(w.name||'').trim();
-    if(!raw) return;
-    const key=(typeof tasneefNormNameV60==='function'?tasneefNormNameV60(raw):raw.replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim());
-    if(key && !seen.has(key)){ seen.add(key); names.push(raw); }
-  });
-  return names.join('، ') || '-';
+  ).filter(w => w.status !== 'inactive');
+  return rows.map(w=>w.name).filter(Boolean).join('، ') || '-';
 }
 function buildLogWhatsAppMessage(l, type){
   const isOut = type==='out' || !!l.check_out;
-  const title = isOut ? 'انصراف المشرف وعماله' : 'حضور المشرف وعماله';
-  const timeLabel = isOut ? 'وقت الانصراف' : 'وقت الحضور';
   return [
-    title,
+    isOut ? 'تم تسجيل خروج' : 'تم تسجيل دخول',
     '',
-    'المشرف: ' + supervisorName(l.supervisor_id),
     'اسم المشروع: ' + projectName(l.project_id),
     'نوع التنظيف: ' + visitTypeText(l.visit_type),
-    'أسماء العمال: ' + logWorkersNames(l),
+    'اسم العمال: ' + logWorkersNames(l),
     'التاريخ: ' + logDateText(l),
-    timeLabel + ': ' + (isOut ? timeOnly(l.check_out) : timeOnly(l.check_in))
+    'الوقت: ' + (isOut ? timeOnly(l.check_out) : timeOnly(l.check_in))
   ].join('\n');
 }
 function copyWhatsappText(text){
@@ -145,48 +134,17 @@ function copyWhatsappText(text){
   try{ const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }catch(e){}
   return Promise.resolve();
 }
-function prepareWhatsappPopupV63(){
-  try{
-    const w = window.open('', '_blank');
-    if(w){
-      try{ w.document.write('<html dir="rtl"><head><title>فتح واتساب</title></head><body style="font-family:Tahoma;padding:30px;text-align:center"><h3>جاري تجهيز رسالة واتساب...</h3><p>إذا لم ينتقل تلقائيًا، ارجع للتطبيق واضغط زر واتساب.</p></body></html>'); w.document.close(); }catch(e){}
-      window.__tasneefWaPopup = w;
-    }
-    return w;
-  }catch(e){ return null; }
-}
-function openWhatsappText(text){
-  const url = 'https://wa.me/?text=' + encodeURIComponent(text);
-  let w = window.__tasneefWaPopup || null;
-  window.__tasneefWaPopup = null;
-  try{
-    if(w && !w.closed){ w.location.href = url; return true; }
-  }catch(e){}
-  try{
-    const opened = window.open(url, '_blank');
-    if(opened) return true;
-  }catch(e){}
-  try{
-    const a=document.createElement('a');
-    a.href=url; a.target='_blank'; a.rel='noopener';
-    document.body.appendChild(a); a.click(); a.remove();
-    return true;
-  }catch(e){}
-  return false;
-}
-function sendLogWhatsapp(id,type){
+function openWhatsappText(text){ window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank'); }
+window.sendLogWhatsapp = function(id, type){
   const l=(data.logs||[]).find(x=>String(x.id)===String(id));
-  if(!l) return msg('السجل غير موجود','err');
+  if(!l) return msg('لم يتم العثور على سجل الدخول والخروج','err');
   const msgText=buildLogWhatsAppMessage(l, type || (l.check_out?'out':'in'));
-  openWhatsappText(msgText);
-  copyWhatsappText(msgText).catch(()=>{});
-  msg('تم تجهيز رسالة الواتساب');
-}
-function sendLogWhatsappFromRow(row,type){
+  copyWhatsappText(msgText).finally(()=>{ openWhatsappText(msgText); msg('تم تجهيز رسالة الواتساب'); });
+};
+function sendLogWhatsappFromRow(row, type){
+  if(!row) return;
   const msgText=buildLogWhatsAppMessage(row, type || (row.check_out?'out':'in'));
-  const ok = openWhatsappText(msgText);
-  copyWhatsappText(msgText).catch(()=>{});
-  msg(ok ? 'تم فتح واتساب وتجهيز الرسالة' : 'تم نسخ رسالة الواتساب، افتح واتساب والصقها');
+  copyWhatsappText(msgText).finally(()=>openWhatsappText(msgText));
 }
 function logWhatsappButtons(l){
   if(l.check_out){ return `<button class="small" style="background:#128C7E;color:#fff" onclick="sendLogWhatsapp(${l.id},'out')">واتساب خروج</button>`; }
@@ -341,27 +299,8 @@ function download(name,text){ const blob=new Blob([text],{type:'text/csv;charset
 async function exportTable(table){ const {data:rows,error}=await sb.from(table).select('*'); if(error) return msg(error.message,'err'); download(`${table}.csv`, toCSV(rows||[])); }
 function exportMonthlyCSV(){ const rows=[...document.querySelectorAll('#monthlyBody tr')].map(tr=>[...tr.children].map(td=>td.textContent)); const csv=['المشرف,المشروع,عدد السجلات,الساعات المطلوبة,الساعات الفعلية,وقت الانتقال,نسبة العمل,حالة الأداء',...rows.map(r=>r.map(x=>'"'+x+'"').join(','))].join('\n'); download('monthly.csv',csv); }
 async function initSupervisor(){ const u=requireRole('supervisor'); if(!u) return; await loadAll(); data.projects=data.projects.filter(p=>String(p.supervisor_id)===String(u.id)); data.workers=data.workers.filter(w=>String(workerSupId(w))===String(u.id)); data.logs=data.logs.filter(l=>String(l.supervisor_id)===String(u.id)); const supProjectIds = new Set(data.projects.map(p=>String(p.id))); data.tickets=data.tickets.filter(t=>String(t.supervisor_id)===String(u.id) || String(t.created_by)===String(u.id) || supProjectIds.has(String(t.project_id))); $('supTitle').textContent=`لوحة المشرف - ${u.full_name}`; fillSelect('logProject',data.projects,'name','اختر المشروع'); fillSelect('attendanceProject',data.projects,'name','اختر المشروع'); fillSelect('ticketProject',data.projects,'name','اختر المشروع'); if($('logDate')) $('logDate').value=today(); if($('attendanceDate')) $('attendanceDate').value=today(); renderSupervisorAttendanceList(); renderTimeLogs(); }
-async function supervisorCheckIn(){
-  if(!$('logProject').value) return msg('اختر المشروع','err');
-  prepareWhatsappPopupV63();
-  $('logDate').value=today();
-  $('logIn').value=nowTime();
-  $('logOut').value='';
-  await saveTimeLog();
-  await initSupervisor();
-}
-async function supervisorCheckOut(){
-  const u=session();
-  const pid=$('logProject').value;
-  const date=$('logDate')?.value||today();
-  if(!pid) return msg('اختر المشروع','err');
-  prepareWhatsappPopupV63();
-  const open=data.logs.find(l=>String(l.project_id)===String(pid)&&String(l.supervisor_id)===String(u.id)&&!l.check_out&&(l.log_date||String(l.check_in||'').slice(0,10))===date);
-  if(open) editTimeLog(open.id);
-  $('logOut').value=nowTime();
-  await saveTimeLog();
-  await initSupervisor();
-}
+async function supervisorCheckIn(){ if(!$('logProject').value) return msg('اختر المشروع','err'); $('logDate').value=today(); $('logIn').value=nowTime(); $('logOut').value=''; await saveTimeLog(); await initSupervisor(); }
+async function supervisorCheckOut(){ const u=session(); const pid=$('logProject').value; const open=data.logs.find(l=>String(l.project_id)===String(pid)&&!l.check_out); if(open) editTimeLog(open.id); $('logOut').value=nowTime(); await saveTimeLog(); await initSupervisor(); }
 function renderSupervisorAttendanceList(){ const div=$('supervisorAttendanceList'); if(!div) return; div.innerHTML=data.workers.map(w=>`<div class="quick-item"><b>${esc(w.name)}</b><select data-worker="${w.id}"><option value="present">حاضر</option><option value="absent">غائب</option></select></div>`).join('')||'<div class="quick-item">لا يوجد عمال مرتبطين بك</div>'; }
 async function saveSupervisorAttendance(){ const u=session(); const date=$('attendanceDate').value||today(), project=Number($('attendanceProject').value)||null; const rows=[...document.querySelectorAll('#supervisorAttendanceList select')].map(s=>({attendance_date:date, worker_id:Number(s.dataset.worker), supervisor_id:u.id, project_id:project, status:s.value, created_by:u.id})); if(!rows.length) return; const {error}=await sb.from('attendance').upsert(rows,{onConflict:'attendance_date,worker_id'}); if(error) return msg(error.message,'err'); msg('تم حفظ التحضير'); await initSupervisor(); }
 
@@ -1716,135 +1655,4 @@ function monthlyReportRowsV58(){return monthlyRowsV60()}
   const OLD_RENDER_ALL_V61=window.renderAll;
   window.renderAll=function(){ if(typeof OLD_RENDER_ALL_V61==='function') OLD_RENDER_ALL_V61.apply(this,arguments); setTimeout(()=>{ensureJourneyBoxV61(); insertOpenLogsDashboardV61();},100); };
   window.addEventListener('load',()=>setTimeout(()=>{ensureJourneyBoxV61(); insertOpenLogsDashboardV61();},800));
-})();
-
-
-/* ===== V62: WhatsApp messages use attendance/departure wording with supervisor and workers ===== */
-
-/* ===== V64: WhatsApp for housing journey tied to logged-in supervisor account ===== */
-(function(){
-  function escV64(v){
-    return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
-  function normNameV64(v){
-    return String(v || '')
-      .trim()
-      .replace(/[أإآ]/g,'ا')
-      .replace(/ى/g,'ي')
-      .replace(/ة/g,'ه')
-      .replace(/\s+/g,' ');
-  }
-  function currentUserV64(){
-    try { return typeof session === 'function' ? session() : JSON.parse(localStorage.getItem('tasneef_user') || 'null'); }
-    catch(e){ return null; }
-  }
-  function currentJourneySupervisorIdV64(){
-    const u=currentUserV64();
-    if(u && u.role === 'supervisor') return String(u.id);
-    const sel=document.getElementById('journeySupervisorV61');
-    return sel ? String(sel.value || '') : '';
-  }
-  function supervisorLabelV64(id){
-    const u=currentUserV64();
-    if(u && String(u.id)===String(id)) return u.full_name || u.username || 'المشرف';
-    if(typeof supervisorName === 'function') return supervisorName(id) || 'المشرف';
-    const s=(data.supervisors||[]).find(x=>String(x.id)===String(id));
-    return s ? (s.full_name || s.username || 'المشرف') : 'المشرف';
-  }
-  function todayV64(){ return typeof today === 'function' ? today() : new Date().toISOString().slice(0,10); }
-  function getSupervisorWorkersV64(supervisorId){
-    const names=[];
-    const projectIds=(data.projects||[])
-      .filter(p => String(p.supervisor_id || '') === String(supervisorId))
-      .map(p => String(p.id));
-    (data.workers||[]).forEach(w=>{
-      const bySupervisor = String(w.supervisor_id || '') === String(supervisorId) || String(w.app_supervisor_id || '') === String(supervisorId);
-      const byProject = projectIds.includes(String(w.project_id || ''));
-      if(bySupervisor || byProject){
-        const n=String(w.name || w.full_name || '').trim();
-        if(n) names.push(n);
-      }
-    });
-    const seen=new Set();
-    return names.filter(n=>{
-      const key=normNameV64(n);
-      if(!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }
-  function openWhatsappV64(text){
-    const url='https://wa.me/?text=' + encodeURIComponent(text);
-    let opened=null;
-    try { opened=window.open(url, '_blank'); } catch(e){}
-    try { if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text); } catch(e){}
-    if(typeof msg === 'function'){
-      msg(opened ? 'تم فتح واتساب وتجهيز الرسالة' : 'تم نسخ رسالة الواتساب، افتح واتساب والصقها');
-    }
-  }
-  function buildJourneyWhatsappV64(type, supervisorId, date, timeValue){
-    const workers=getSupervisorWorkersV64(supervisorId);
-    const title = type === 'start' ? 'حضور المشرف وعماله' : 'انصراف المشرف وعماله';
-    const timeLabel = type === 'start' ? 'وقت الخروج من السكن' : 'وقت الرجوع للسكن';
-    return [
-      title,
-      '',
-      'المشرف: ' + supervisorLabelV64(supervisorId),
-      'أسماء العمال: ' + (workers.length ? workers.join('، ') : '-'),
-      'التاريخ: ' + date,
-      timeLabel + ': ' + (timeValue || '-'),
-      '',
-      'شركة تصنيف لإدارة المرافق'
-    ].join('\n');
-  }
-  function lockJourneySupervisorForSupervisorV64(){
-    const u=currentUserV64();
-    const sel=document.getElementById('journeySupervisorV61');
-    if(!sel || !u || u.role !== 'supervisor') return;
-    sel.innerHTML = '<option value="'+escV64(u.id)+'">'+escV64(u.full_name || u.username || 'المشرف')+'</option>';
-    sel.value = String(u.id);
-    sel.disabled = true;
-  }
-  const oldRenderJourneyV64 = window.renderJourneyV61;
-  window.renderJourneyV61 = function(){
-    lockJourneySupervisorForSupervisorV64();
-    if(typeof oldRenderJourneyV64 === 'function') return oldRenderJourneyV64.apply(this, arguments);
-  };
-  const oldSaveJourneyV64 = window.saveJourneyV61;
-  window.saveJourneyV61 = function(){
-    const u=currentUserV64();
-    const date=document.getElementById('journeyDateV61')?.value || todayV64();
-    let sup=currentJourneySupervisorIdV64();
-    if(u && u.role === 'supervisor') sup=String(u.id);
-    if(!sup){
-      if(typeof msg==='function') msg('اختر مشرف محدد لإرسال رسالة واتساب','err');
-      return;
-    }
-    const start=document.getElementById('journeyStartV61')?.value || '';
-    const end=document.getElementById('journeyEndV61')?.value || '';
-    let previous={};
-    try{
-      if(typeof loadJourneyV61 === 'function') previous = loadJourneyV61(date, sup) || {};
-      else previous = JSON.parse(localStorage.getItem('tasneef_journey_'+date+'_'+sup) || '{}');
-    }catch(e){ previous={}; }
-
-    if(typeof oldSaveJourneyV64 === 'function') oldSaveJourneyV64.apply(this, arguments);
-
-    // أرسل واتساب بناءً على الحقل الذي تم إدخاله/تغييره الآن.
-    if(start && start !== previous.start){
-      openWhatsappV64(buildJourneyWhatsappV64('start', sup, date, start));
-    } else if(end && end !== previous.end){
-      openWhatsappV64(buildJourneyWhatsappV64('end', sup, date, end));
-    } else if(start && !end){
-      openWhatsappV64(buildJourneyWhatsappV64('start', sup, date, start));
-    } else if(end){
-      openWhatsappV64(buildJourneyWhatsappV64('end', sup, date, end));
-    }
-  };
-  const oldRenderAllV64=window.renderAll;
-  window.renderAll=function(){
-    if(typeof oldRenderAllV64 === 'function') oldRenderAllV64.apply(this, arguments);
-    setTimeout(lockJourneySupervisorForSupervisorV64, 200);
-  };
-  window.addEventListener('load', ()=>setTimeout(lockJourneySupervisorForSupervisorV64, 900));
 })();
